@@ -43,10 +43,15 @@ bool dirty[240] = {false};
 
 void ula_tick(TFT_eSPI &tft);
 
+uint32_t frames = 0;
+int32_t frame_millis = 0;
 void drawDisplay(void *pvParameters)
 {
   while (1)
   {
+    if(frame_millis == 0) {
+      frame_millis = millis();
+    }
     for(int i = 0; i<488*313; i++) {
       ula_tick(tft);
     }
@@ -55,6 +60,12 @@ void drawDisplay(void *pvParameters)
     tft.setWindow(0, 0, 279, 239);
     tft.pushPixelsDMA(frameBuffer, 280 * 240);
     tft.endWrite();
+    frames++;
+    if (millis() - frame_millis > 1000) {
+      Serial.printf("Frame rate=%d\n", frames);
+      frames = 0;
+      frame_millis = millis();
+    }
   }
 }
 
