@@ -56,7 +56,7 @@ int oldkeys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 // mapeamos hardware a teclas
 // mapeamos teclas a INS
 
-void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t *lastpix){
+void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80){
   // TODO - reading buttons
   return;
 //   int c;
@@ -66,7 +66,7 @@ void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_
 //     AS_printf("B="); AS_print(c);
 //     AS_printf("\tM="); AS_print(mappingkey[emuopt.mappingindex][c]);
 //     AS_printf("\n");
-//     updatekey(tft, emuopt, spectrumZ80, lastpix, mappingkey[emuopt.mappingindex][c], keys[c]);
+    // updatekey(tft, emuopt, spectrumZ80, mappingkey[emuopt.mappingindex][c], keys[c]);
 // //    paint_tecla (mappingkey[emuopt.mappingindex][c],keys[c]);
 // //    paint_button(c,keys[c]);
 //   }
@@ -91,13 +91,13 @@ int mirabotones(void){
   return -1;
 }
 
-void updatekey(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t *lastpix, uint8_t key, uint8_t state){
+void updatekey(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t key, uint8_t state){
   uint8_t n;
   switch (key) {
     case SPECKEY_NONE :
       break;
     case VEGAKEY_MENU :
-      if (state==1) gui_Main_Menu(tft, emuopt, spectrumZ80, lastpix);
+      if (state==1) gui_Main_Menu(tft, emuopt, spectrumZ80);
       break;
     case JOYK_LEFT :
       if (state==1) kempston_port &=!0x01;

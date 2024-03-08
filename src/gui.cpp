@@ -136,7 +136,7 @@ int gui_draw_menu(TFT_eSPI &tft, int w, const char *title, int n, char data[][25
 
 // SPECIFIC FUNCTIONS
 
-void gui_Main_Menu(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t *lastpix)
+void gui_Main_Menu(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80)
 {
   char options[7][25] = {
       "Cambiar Mapa de teclado",
@@ -193,10 +193,10 @@ void gui_Main_Menu(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uin
   }
   tft.fillScreen(TFT_BLACK);
   // tft.fillRect(0,0,320,240,tft.color565(0,0,0));
-  for (r = 0; r < (320 * 240); r++)
-  {
-    *(lastpix + r) = 0;
-  }
+  // for (r = 0; r < (320 * 240); r++)
+  // {
+  //   *(lastpix + r) = 0;
+  // }
 }
 
 void show_splash(TFT_eSPI &tft)

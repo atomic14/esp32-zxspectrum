@@ -43,7 +43,7 @@ extern uint8_t speckey[];
 extern int keys[];
 extern int oldkeys[];
 
-void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t *lastpix);
+void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80);
 int mirabotones(void);
 void updatekey(TFT_eSPI &tft, tipo_emuopt &emuopt, uint8_t key, uint8_t state);
 void paint_button(TFT_eSPI &tft, int b, int state);

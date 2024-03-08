@@ -19,14 +19,9 @@
 
 #define USE_ESPI
 
-#define USE_DMA_TO_TFT
 #include <TFT_eSPI.h>
 TFT_eSPI tft = TFT_eSPI();
 
-// dma bitmap max 64K
-//  16bits * 320 px * 80 px, -> complete screen in 3 parts. in 6 if used doble_buffer (1 on DMA, 1 on drawing).
-
-// #define USE_DUAL_CORE
 
 #include "hardware.h"
 #include "snaps.h"
@@ -43,19 +38,10 @@ Z80Regs spectrumZ80;
 tipo_mem mem;
 tipo_hwopt hwopt;
 tipo_emuopt emuopt;
-uint8_t *lastpix;
-/*FIXME: para una buena orientacion a objetos, mem y hwopts deberian pasarse como puntero a
- *cada funcion que lo necesite, igual que hacemos con spectrumZ80
- */
-
-#ifdef USE_DUAL_CORE
-#include "soc/timer_group_struct.h"
-#include "soc/timer_group_reg.h"
-TaskHandle_t Ula_Task;
-#endif
+uint16_t *frameBuffer = NULL;
+bool dirty[240] = {false};
 
 void ula_tick(TFT_eSPI &tft);
-void ula_do_ticks(void *pvParameters);
 
 void setup(void)
 {
@@ -71,12 +57,6 @@ void setup(void)
     AS_printf("Waiting %i\n", i);
   }
   AS_printf("OpenVega+ Boot!\n");
-  // pinmode(25);
-  // pinmode(26);
-  //  dac_output_enable(DAC_CHANNEL_1);
-  //  dac_output_enable(DAC_CHANNEL_2);
-  //  dac_output_voltage(DAC_CHANNEL_1, 0);
-  //  dac_output_voltage(DAC_CHANNEL_2, 0);
   keypad_i2c_init();
   // Initialize SPIFFS
   if (!SPIFFS.begin(true))
@@ -86,19 +66,16 @@ void setup(void)
   }
 
   // This is supous that provide por CPU to the program.
-  WiFi.mode(WIFI_OFF);
-  btStop();
+  // WiFi.mode(WIFI_OFF);
+  // btStop();
 
   tft.begin();
-#ifdef USE_DMA_TO_TFT
   // DMA - should work with ESP32, STM32F2xx/F4xx/F7xx processors  >>>>>> DMA IS FOR SPI DISPLAYS ONLY <<<<<<
   tft.initDMA(); // Initialise the DMA engine
-#endif
   tft.setRotation(3);
   tft.fillScreen(TFT_WHITE);
   tft.setSwapBytes(true);
   show_splash(tft);
-  AS_printf("\nAntes del buffer lastpix\n");
   AS_printf("Total heap: ");
   AS_print(ESP.getHeapSize());
   AS_printf("\n");
@@ -112,13 +89,13 @@ void setup(void)
   AS_print(ESP.getFreePsram());
   AS_printf("\n");
 
-  lastpix = (uint8_t *)malloc(320 * 240 * sizeof(uint8_t));
-  if (lastpix == NULL)
+  frameBuffer = (uint16_t *)malloc(280 * 240 * sizeof(uint16_t));
+  if (frameBuffer == NULL)
   {
     AS_printf("Error! memory not allocated for screenbuffer.\n");
     delay(10000);
   }
-  memset(lastpix, 0, 320 * 240 * sizeof(uint8_t));
+  memset(frameBuffer, 0, 280 * 240 * sizeof(uint16_t));
 
   AS_printf("\nDespues\n");
   AS_printf("Total heap: ");
@@ -133,17 +110,6 @@ void setup(void)
   AS_printf("Free PSRAM: ");
   AS_print(ESP.getFreePsram());
   AS_printf("\n");
-
-#ifdef USE_DUAL_CORE
-  xTaskCreatePinnedToCore(
-      ula_do_ticks, /* Task function. */
-      "ULA",        /* name of task. */
-      16384,        /* Stack size of task */
-      NULL,         /* parameter of the task */
-      1,            /* priority of the task */
-      &Ula_Task,    /* Task handle to keep track of created task */
-      0);           /* pin task to core 0 */
-#endif
 
   // FIXME porque 69888?? ¿quiza un frame, para que pinte la pantalla una vez?
   Z80Reset(&spectrumZ80, 69888);
@@ -160,11 +126,6 @@ void setup(void)
 }
 
 long pend_ula_ticks = 0;
-
-/*void loop (void){
-  draw_scanline();
-}*/
-
 const uint8_t SoundTable[4] = {0, 2, 0, 2};
 
 // void draw_scanline(){
@@ -177,24 +138,16 @@ void loop(void)
   c = Z80Run(&spectrumZ80, 128);
   while (pend_ula_ticks > 0)
   {
-#ifdef USE_DUAL_CORE
-    delay(1);
-#else
     pend_ula_ticks--;
     ula_tick(tft);
-#endif
   }
 
   pend_ula_ticks += 192;
   c = Z80Run(&spectrumZ80, 96);
   while (pend_ula_ticks > 0)
   {
-#ifdef USE_DUAL_CORE
-    delay(1);
-#else
     pend_ula_ticks--;
     ula_tick(tft);
-#endif
   }
 
   //  AS_printf("PC=%i\n",c);
@@ -206,45 +159,11 @@ void loop(void)
   }
 }
 
-#ifdef USE_DUAL_CORE
-void ula_do_ticks(void *pvParameters)
-{
-  static int watchdogLast = millis();
-  for (;;)
-  {
-    if (pend_ula_ticks > 0)
-    {
-      pend_ula_ticks--;
-      ula_tick(tft);
-    }
-    else
-    {
-      if (millis() - watchdogLast > 1000)
-      {
-        watchdogLast = millis();
-        vTaskDelay(1);
-      }
-    }
-    // TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
-    // TIMERG0.wdt_feed = 1;
-    // TIMERG0.wdtwprotect = 0;
-  }
-}
-#endif
-
-uint16_t *screen = NULL;
 void ula_tick(TFT_eSPI &tft)
 {
 
-#ifdef USE_ADA
   const int specpal565[16] = {
       0x0000, 0x001B, 0xB800, 0xB817, 0x05E0, 0x05F7, 0xBDE0, 0xC618, 0x0000, 0x001F, 0xF800, 0xF81F, 0x07E0, 0x07FF, 0xFFE0, 0xFFFF};
-#endif
-#ifdef USE_ESPI
-  const int specpal565[16] = {
-      0x0000, 0x001B, 0xB800, 0xB817, 0x05E0, 0x05F7, 0xBDE0, 0xC618, 0x0000, 0x001F, 0xF800, 0xF81F, 0x07E0, 0x07FF, 0xFFE0, 0xFFFF};
-  // 0x0000, 0xB800, 0x001B, 0xB817,0x05F7,0x05E0, 0xBDE0,0xC618, 0x0000, 0xF800,0x001F,0xF81F,0x07FF,0x07E0,0xFFE0,0xFFFF};
-#endif
 
   uint8_t color;
   uint8_t pixel;
@@ -272,7 +191,7 @@ void ula_tick(TFT_eSPI &tft)
     if (cv >= 313)
     {
       cv = 0;
-      leebotones(tft, emuopt, spectrumZ80, lastpix);
+      leebotones(tft, emuopt, spectrumZ80);
     }
     if (cv == 288)
     {
@@ -280,9 +199,6 @@ void ula_tick(TFT_eSPI &tft)
       cf++;
       if (cf >= 32)
         cf = 0;
-      //    leebotones();
-      //  cf2++; if (cf2>=50) cf2=0;
-      //  cf3++; if (cf3>=2) cf3=0;
     }
     if ((cv < 218) or (cv > 288))
       py++;
@@ -290,16 +206,6 @@ void ula_tick(TFT_eSPI &tft)
   if ((ch == 0) and (cv == 248))
     spectrumZ80.petint = 1;
 
-  // Read the first ATTR of each col in advance. FIXME
-  /*
-   if (cv=312 and ch==447) {
-    attr=z80_peek(0x5800);
-   }
-   if (cv<192 and ch==447) {
-    fil=cv>>3;
-    attr=z80_peek(0x5800 + 32*cv>>3  +0);
-   }
-  */
   if ((cv >= 192) or (ch >= 256))
   {
     hwopt.portFF = 0xFF;
@@ -346,48 +252,28 @@ void ula_tick(TFT_eSPI &tft)
   if ((px == 0) and (py == 0))
     tft.startWrite();
 
-  if ((px < 280) and (py < 240))
-  { // and (cf3==0)) {
-    if (*(lastpix + px + 320 * py) != color)
-    {
-      //     tft.drawPixel(px,py,specpal565[color]);
-      *(lastpix + px + 320 * py) = color;
-    }
-  }
-
-  // if ((px==319) and (py==239)) tft.endWrite();
-
-  if ((px == 319) and (py == 239))
+  if ((px < 294) and (py < 240))
   {
-    if (!screen) {
-      screen = (uint16_t *)malloc(280 * 240 * sizeof(uint16_t));
-      if (screen == NULL)
-      {
-        AS_printf("Error! memory not allocated for screenbuffer.\n");
-        delay(10000);
-      }
-      return;
+    uint16_t tftColor = specpal565[color];
+    uint16_t *pixelAddress = frameBuffer + px - 14 + 280 * py;
+    if (tftColor != *pixelAddress) {
+      *pixelAddress = tftColor;
+      dirty[py] = true;
     }
-    for (int y = 0; y < 240; y++)
-    {
-      for (int x = 0; x < 280; x++)
-      {
-        screen[x + y * 280] = specpal565[*(lastpix + y * 320 + x)];
-      }
-    }
-    tft.startWrite();
-    tft.setWindow(0, 0, 279, 239);
-    tft.pushPixelsDMA(screen, 280*240);
-    tft.endWrite();
   }
-  /*
-   // Frame indication
-   if ((px==0) and (py==16)) {
-    tft.fillRect(306,0,14,10,tft.color565(0,0,0));
-    tft.setTextSize(1);
-    tft.setCursor(307, 1);
-    tft.setTextColor(ILI9341_WHITE);
-    tft.print(cf2);
-   }
-  */
+
+  if ((px == 294) and (py == 240))
+  {
+    // tft.startWrite();
+    for(int y = 0; y<240; y++) {
+      if (dirty[y]) {
+        tft.setWindow(0, y, 279, y);
+        tft.pushPixelsDMA(frameBuffer + 280*y, 280);
+        dirty[y] = false;
+      }
+    }
+    // tft.setWindow(0, 0, 279, 239);
+    // tft.pushPixelsDMA(frameBuffer, 280*240);
+    // tft.endWrite();
+  }
 }
