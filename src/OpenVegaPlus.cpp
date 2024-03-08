@@ -43,6 +43,21 @@ bool dirty[240] = {false};
 
 void ula_tick(TFT_eSPI &tft);
 
+void drawDisplay(void *pvParameters)
+{
+  while (1)
+  {
+    for(int i = 0; i<488*313; i++) {
+      ula_tick(tft);
+    }
+    tft.startWrite();
+    tft.dmaWait();
+    tft.setWindow(0, 0, 279, 239);
+    tft.pushPixelsDMA(frameBuffer, 280 * 240);
+    tft.endWrite();
+  }
+}
+
 void setup(void)
 {
   Serial.begin(115200);
@@ -74,7 +89,6 @@ void setup(void)
   tft.initDMA(); // Initialise the DMA engine
   tft.setRotation(3);
   tft.fillScreen(TFT_WHITE);
-  tft.setSwapBytes(true);
   show_splash(tft);
   AS_printf("Total heap: ");
   AS_print(ESP.getHeapSize());
@@ -123,32 +137,37 @@ void setup(void)
 
   delay(2000);
   AS_printf("Entrando en el loop\n");
+
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 0);
 }
 
 long pend_ula_ticks = 0;
 const uint8_t SoundTable[4] = {0, 2, 0, 2};
-
+uint32_t c = 0;
+int lastMillis = 0;
 // void draw_scanline(){
 void loop(void)
 {
-  uint16_t c = 0;
+  if (lastMillis == 0) {
+    lastMillis = millis();
+  }
   // dividimos el scanline en la parte central, y los bordes y retrazo, para la emulacion del puerto FF
 
   pend_ula_ticks += 256;
-  c = Z80Run(&spectrumZ80, 128);
-  while (pend_ula_ticks > 0)
-  {
-    pend_ula_ticks--;
-    ula_tick(tft);
-  }
+  c += Z80Run(&spectrumZ80, 128);
+  // while (pend_ula_ticks > 0)
+  // {
+  //   pend_ula_ticks--;
+  //   ula_tick(tft);
+  // }
 
   pend_ula_ticks += 192;
-  c = Z80Run(&spectrumZ80, 96);
-  while (pend_ula_ticks > 0)
-  {
-    pend_ula_ticks--;
-    ula_tick(tft);
-  }
+  c += Z80Run(&spectrumZ80, 96);
+  // while (pend_ula_ticks > 0)
+  // {
+  //   pend_ula_ticks--;
+  //   ula_tick(tft);
+  // }
 
   //  AS_printf("PC=%i\n",c);
   // Sound on each scanline means 15.6Khz, not bad...
@@ -157,13 +176,18 @@ void loop(void)
     // TODO - add sound
     // dac_output_voltage(DAC_CHANNEL_1, SoundTable[hwopt.SoundBits]);
   }
+  if (millis() - lastMillis > 1000) {
+    lastMillis = millis();
+    Serial.printf("Executed at %.2fMHz cycles\n", c/1000000.0);
+    c = 0;
+  }
 }
 
 void ula_tick(TFT_eSPI &tft)
 {
 
   const int specpal565[16] = {
-      0x0000, 0x001B, 0xB800, 0xB817, 0x05E0, 0x05F7, 0xBDE0, 0xC618, 0x0000, 0x001F, 0xF800, 0xF81F, 0x07E0, 0x07FF, 0xFFE0, 0xFFFF};
+      0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
   uint8_t color;
   uint8_t pixel;
@@ -258,16 +282,17 @@ void ula_tick(TFT_eSPI &tft)
     }
   }
 
-  if ((px == 294) and (py == 240))
-  {
-    tft.startWrite();
-    for(int y = 0; y<240; y++) {
-      if (dirty[y]) {
-        tft.setWindow(0, y, 279, y);
-        tft.pushPixelsDMA(frameBuffer + 280*y, 280);
-        dirty[y] = false;
-      }
-    }
-    tft.endWrite();
-  }
+  // if ((px == 294) and (py == 240))
+  // {
+  // }
+  //   tft.startWrite();
+  //   for(int y = 0; y<240; y++) {
+  //     if (dirty[y]) {
+  //       tft.setWindow(0, y, 279, y);
+  //       tft.pushPixelsDMA(frameBuffer + 280*y, 280);
+  //       dirty[y] = false;
+  //     }
+  //   }
+  //   tft.endWrite();
+  // }
 }
