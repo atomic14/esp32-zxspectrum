@@ -248,10 +248,6 @@ void ula_tick(TFT_eSPI &tft)
       color = color + 8;
     }
   }
-  // Paint the real screen
-  if ((px == 0) and (py == 0))
-    tft.startWrite();
-
   if ((px < 294) and (py < 240))
   {
     uint16_t tftColor = specpal565[color];
@@ -264,7 +260,7 @@ void ula_tick(TFT_eSPI &tft)
 
   if ((px == 294) and (py == 240))
   {
-    // tft.startWrite();
+    tft.startWrite();
     for(int y = 0; y<240; y++) {
       if (dirty[y]) {
         tft.setWindow(0, y, 279, y);
@@ -272,8 +268,6 @@ void ula_tick(TFT_eSPI &tft)
         dirty[y] = false;
       }
     }
-    // tft.setWindow(0, 0, 279, 239);
-    // tft.pushPixelsDMA(frameBuffer, 280*240);
-    // tft.endWrite();
+    tft.endWrite();
   }
 }
