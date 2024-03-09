@@ -158,8 +158,7 @@ void drawDisplay(void *pvParameters)
 
 void z80Runner(void *pvParameter)
 {
-  int8_t audioBuffer[256];
-  int audioPos = 0;
+  int8_t audioBuffer[400];
   int lastMillis = 0;
   while (1)
   {
@@ -168,23 +167,22 @@ void z80Runner(void *pvParameter)
     if (xQueueReceive(cpuRunTimerQueue, &evt, portMAX_DELAY))
     {
       runs++;
-      c += 175;
-      Z80Run(&spectrumZ80, 175);
-      if (hwopt.SoundBits != 0)
-      {
-        audioBuffer[audioPos] = 20;
+      // run for 1/50th of a second - (400*175)/3.5E6MHz
+      for(int i = 0; i<400; i++) {
+        // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
+        c += 175;
+        Z80Run(&spectrumZ80, 175);
+        if (hwopt.SoundBits != 0)
+        {
+          audioBuffer[i] = 20;
+        }
+        else
+        {
+          audioBuffer[i] = -20;
+        }
       }
-      else
-      {
-        audioBuffer[audioPos] = -20;
-      }
-      audioPos++;
-      if (audioPos == 256)
-      {
-        audioPos = 0;
-        // write the audio buffer to the I2S device (blocking for 1 second if necessary
-        audioOutput->write(audioBuffer, 256);
-      }
+      // write the audio buffer to the I2S device (blocking for 1 second if necessary
+      audioOutput->write(audioBuffer, 400);
     }
   }
 }
@@ -200,20 +198,7 @@ IRAM_ATTR void onTimerCallback(void *param)
   uint32_t value = 0;
   BaseType_t high_task_awoken = pdFALSE;
   xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
-  if (timerCount < 350)
-  {
-    hwopt.portFF = 0;
-  }
-  else
-  {
-    hwopt.portFF = 0xFF;
-  }
-  // is it time to render a frame? (50 times per second)
-  if (timerCount == 400)
-  {
-    timerCount = 0;
-    xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
-  }
+  xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
   if (high_task_awoken == pdTRUE)
   {
     portYIELD_FROM_ISR();
@@ -338,7 +323,7 @@ void setup(void)
   {
     Serial.printf("Error setting timer counter value: %d\n", result);
   }
-  result = timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 20000);
+  result = timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 50);
   if (result != ESP_OK)
   {
     Serial.printf("Error setting timer alarm value: %d\n", result);
