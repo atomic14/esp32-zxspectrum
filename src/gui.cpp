@@ -20,8 +20,8 @@
 // GENERIC FUNCTIONS:
 #include <TFT_eSPI.h>
 #include "gui.h"
-#include "spectrum.h"
-#include "snaps.h"
+#include "z80/spectrum.h"
+#include "z80/snaps.h"
 
 void gui_draw_window(TFT_eSPI &tft, int w, int h, const char *title)
 {

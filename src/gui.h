@@ -2,8 +2,8 @@
 
 class TFT_eSPI;
 
-#include "hardware.h"
-#include "z80.h"
+#include "z80/hardware.h"
+#include "z80/z80.h"
 
 void gui_draw_window(TFT_eSPI &tft, int w, int h, const char *title);
 void gui_update_menu(TFT_eSPI &tft, int w, int h, int n, int s, char data[][25]);

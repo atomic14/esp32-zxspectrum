@@ -15,6 +15,7 @@
  *
  *======================================================================
  */
+#include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "spectrum.h"
@@ -172,7 +173,7 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
       if (regs->ICount <= 0) {
          regs->petint=0;
          regs->ICount += regs->IPeriod;
-         loop = regs->ICount + loop;
+        // TODO - this seems to really break things!  loop = regs->ICount + loop;
          Z80Interrupt (regs, tmpreg.W);
       }
   }

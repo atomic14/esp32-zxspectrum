@@ -73,7 +73,7 @@ uint8_t dato = 0xFF;
 void z80_out(uint16_t port,uint8_t dato){
   if (!(port & 0x01)) {
     hwopt.BorderColor = (dato & 0x07);
-    hwopt.SoundBits = (dato & 0x18)>>3;
+    hwopt.SoundBits = (dato & B00010000);
   }  
 }
 

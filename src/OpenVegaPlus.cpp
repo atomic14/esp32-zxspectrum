@@ -13,20 +13,19 @@
  *======================================================================
  */
 #include <WiFi.h>
+#include <TFT_eSPI.h>
 #include "SPIFFS.h"
 #include "SPI.h"
 #include "gui.h"
+#include "driver/timer.h"
+#include "AudioOutput/I2SOutput.h"
+#include "z80/hardware.h"
+#include "z80/snaps.h"
+#include "z80/spectrum.h"
+#include "z80/z80.h"
 
-#define USE_ESPI
-
-#include <TFT_eSPI.h>
 TFT_eSPI tft = TFT_eSPI();
-
-
-#include "hardware.h"
-#include "snaps.h"
-#include "spectrum.h"
-#include "z80.h"
+AudioOutput *audioOutput = NULL;
 
 /* Definimos unos objetos
  *  spectrumZ80 es el procesador en si
@@ -40,17 +39,19 @@ tipo_hwopt hwopt;
 tipo_emuopt emuopt;
 uint16_t *frameBuffer = NULL;
 
-void ula_tick();
-
+xQueueHandle cpuRunTimerQueue;
+xQueueHandle frameRenderTimerQueue;
 
 const int screenWidth = TFT_HEIGHT;
 const int screenHeight = TFT_WIDTH;
-const int borderWidth = (screenWidth-256)/2;
-const int borderHeight = (screenHeight-192)/2;
+const int borderWidth = (screenWidth - 256) / 2;
+const int borderHeight = (screenHeight - 192) / 2;
 
 const int specpal565[16] = {
     0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
+uint32_t c = 0;
+uint32_t runs = 0;
 
 void drawDisplay(void *pvParameters)
 {
@@ -62,96 +63,163 @@ void drawDisplay(void *pvParameters)
   tft.endWrite();
   while (1)
   {
-    if(frame_millis == 0) {
-      frame_millis = millis();
-    }
-    tft.startWrite();
-    tft.dmaWait();
-    // do the border
-    uint8_t borderColor = hwopt.BorderColor &B00000111;
-    // TODO - can the border color be bright?
-    uint16_t tftColor = specpal565[borderColor];
-    if (tftColor != lastBorderColor) {
-      // do the border with some simple rects - no need to push pixels for a solid color
-      tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
-      tft.fillRect(0, screenHeight-borderHeight, screenWidth, borderHeight, tftColor);
-      tft.fillRect(0, borderHeight, borderWidth, screenHeight-borderHeight, tftColor);
-      tft.fillRect(screenWidth-borderWidth, borderHeight, borderWidth, screenHeight-borderHeight, tftColor);
-      lastBorderColor = tftColor;
-    }
-    // do the pixels
-    uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
-    uint8_t *pixelBase = mem.p + mem.vo[hwopt.videopage];
-    for(int attrY = 0; attrY < 192/8; attrY++) {
-      bool dirty = false;
-      for(int attrX = 0; attrX < 256/8; attrX++) {
-        // read the value of the attribute
-        uint8_t attr = *(attrBase + 32 * attrY + attrX) ;
-        uint8_t inkColor = attr & B00000111;
-        uint8_t paperColor = (attr & B00111000) >> 3;
-        if ((attr & B01000000) != 0)
+    uint32_t evt;
+    if (xQueueReceive(frameRenderTimerQueue, &evt, portMAX_DELAY))
+    {
+      if (frame_millis == 0)
+      {
+        frame_millis = millis();
+      }
+      tft.startWrite();
+      tft.dmaWait();
+      // do the border
+      uint8_t borderColor = hwopt.BorderColor & B00000111;
+      // TODO - can the border color be bright?
+      uint16_t tftColor = specpal565[borderColor];
+      if (tftColor != lastBorderColor)
+      {
+        // do the border with some simple rects - no need to push pixels for a solid color
+        tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
+        tft.fillRect(0, screenHeight - borderHeight, screenWidth, borderHeight, tftColor);
+        tft.fillRect(0, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
+        tft.fillRect(screenWidth - borderWidth, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
+        lastBorderColor = tftColor;
+      }
+      // do the pixels
+      uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
+      uint8_t *pixelBase = mem.p + mem.vo[hwopt.videopage];
+      for (int attrY = 0; attrY < 192 / 8; attrY++)
+      {
+        bool dirty = false;
+        for (int attrX = 0; attrX < 256 / 8; attrX++)
         {
-          inkColor = inkColor + 8;
-          paperColor = paperColor + 8;
-        }
-        uint16_t tftInkColor = specpal565[inkColor];
-        uint16_t tftPaperColor = specpal565[paperColor];
-        for(int y = attrY*8; y<attrY*8+8; y++) {
-          // read the value of the pixels
-          int col = (attrX*8 & B11111000) >> 3;
-          int scan = (y & B11000000) + ((y & B111) << 3) + ((y & B111000) >> 3);
-          uint8_t row = *(pixelBase + 32 * scan + col);
-          for(int x = attrX*8; x<attrX*8+8; x++) {
-            uint16_t *pixelAddress = frameBuffer + x + 256 * y;
-            if (row & (1 << (7 - (x & 7)))) {
-              if (tftInkColor != *pixelAddress) {
-                *pixelAddress = tftInkColor;
-                dirty = true;
+          // read the value of the attribute
+          uint8_t attr = *(attrBase + 32 * attrY + attrX);
+          uint8_t inkColor = attr & B00000111;
+          uint8_t paperColor = (attr & B00111000) >> 3;
+          if ((attr & B01000000) != 0)
+          {
+            inkColor = inkColor + 8;
+            paperColor = paperColor + 8;
+          }
+          uint16_t tftInkColor = specpal565[inkColor];
+          uint16_t tftPaperColor = specpal565[paperColor];
+          for (int y = attrY * 8; y < attrY * 8 + 8; y++)
+          {
+            // read the value of the pixels
+            int col = (attrX * 8 & B11111000) >> 3;
+            int scan = (y & B11000000) + ((y & B111) << 3) + ((y & B111000) >> 3);
+            uint8_t row = *(pixelBase + 32 * scan + col);
+            for (int x = attrX * 8; x < attrX * 8 + 8; x++)
+            {
+              uint16_t *pixelAddress = frameBuffer + x + 256 * y;
+              if (row & (1 << (7 - (x & 7))))
+              {
+                if (tftInkColor != *pixelAddress)
+                {
+                  *pixelAddress = tftInkColor;
+                  dirty = true;
+                }
               }
-            } else {
-              if (tftPaperColor != *pixelAddress) {
-                *pixelAddress = tftPaperColor;
-                dirty = true;
+              else
+              {
+                if (tftPaperColor != *pixelAddress)
+                {
+                  *pixelAddress = tftPaperColor;
+                  dirty = true;
+                }
               }
             }
           }
         }
+        if (dirty)
+        {
+          // push out this block of pixels 256 * 8
+          tft.dmaWait();
+          tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
+          tft.pushPixelsDMA(frameBuffer + attrY * 8 * 256, 256 * 8);
+        }
       }
-      if (dirty) {
-        // push out this block of pixels 256 * 8
-        tft.dmaWait();
-        tft.setWindow(borderWidth, borderHeight + attrY*8, borderWidth+255, borderHeight + attrY*8+7);
-        tft.pushPixelsDMA(frameBuffer + attrY * 8 * 256, 256 * 8);
+      tft.endWrite();
+      frames++;
+      if (millis() - frame_millis > 1000)
+      {
+        vTaskDelay(1);
+        Serial.printf("Frame rate=%d\n", frames);
+        frames = 0;
+        frame_millis = millis();
+        Serial.printf("Executed at %d cycles %d runs\n", c, runs);
+        c = 0;
+        runs = 0;
       }
-    }
-    tft.endWrite();
-    frames++;
-    if (millis() - frame_millis > 1000) {
-      vTaskDelay(1);
-      Serial.printf("Frame rate=%d\n", frames);
-      frames = 0;
-      frame_millis = millis();
     }
   }
 }
 
-void z80Runner(void *pvParameter) {
-  long pend_ula_ticks = 0;
-  const uint8_t SoundTable[4] = {0, 2, 0, 2};
-  uint32_t c = 0;
+void z80Runner(void *pvParameter)
+{
+  int8_t audioBuffer[256];
+  int audioPos = 0;
   int lastMillis = 0;
-  while(1) {
-    if (lastMillis == 0) {
-      lastMillis = millis();
+  while (1)
+  {
+    uint32_t evt;
+    size_t bytes_written = 0;
+    if (xQueueReceive(cpuRunTimerQueue, &evt, portMAX_DELAY))
+    {
+      runs++;
+      c += 175;
+      Z80Run(&spectrumZ80, 175);
+      if (hwopt.SoundBits != 0)
+      {
+        audioBuffer[audioPos] = 20;
+      }
+      else
+      {
+        audioBuffer[audioPos] = -20;
+      }
+      audioPos++;
+      if (audioPos == 256)
+      {
+        audioPos = 0;
+        // write the audio buffer to the I2S device (blocking for 1 second if necessary
+        audioOutput->write(audioBuffer, 256);
+      }
     }
-    c += Z80Run(&spectrumZ80, 224);
-    if (millis() - lastMillis > 1000) {
-      lastMillis = millis();
-      Serial.printf("Executed at %.2fMHz cycles\n", c/1000000.0);
-      c = 0;
-    }
-    vTaskDelay(1);
   }
+}
+
+IRAM_ATTR void onTimerCallback(void *param)
+{
+  static uint32_t timerCount = 0;
+  timerCount++;
+  timer_spinlock_take(TIMER_GROUP_0);
+  timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
+  timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
+  timer_spinlock_give(TIMER_GROUP_0);
+  uint32_t value = 0;
+  BaseType_t high_task_awoken = pdFALSE;
+  xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
+  if (timerCount < 350)
+  {
+    hwopt.portFF = 0;
+  }
+  else
+  {
+    hwopt.portFF = 0xFF;
+  }
+  // is it time to render a frame? (50 times per second)
+  if (timerCount == 400)
+  {
+    timerCount = 0;
+    xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
+  }
+  if (high_task_awoken == pdTRUE)
+  {
+    portYIELD_FROM_ISR();
+  }
+
+  // return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
 }
 
 void setup(void)
@@ -168,6 +236,21 @@ void setup(void)
     AS_printf("Waiting %i\n", i);
   }
   AS_printf("OpenVega+ Boot!\n");
+  pinMode(SPK_MODE, OUTPUT);
+  digitalWrite(SPK_MODE, HIGH);
+  i2s_pin_config_t i2s_speaker_pins = {
+      .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
+      .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
+      .data_out_num = I2S_SPEAKER_SERIAL_DATA,
+      .data_in_num = I2S_PIN_NO_CHANGE};
+
+  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
+  audioOutput->start(20000);
+  int8_t dummyAudio[256] = {0};
+  for(int i = 0; i<10; i++){
+    audioOutput->write(dummyAudio, 256);
+  }
+
   keypad_i2c_init();
   // Initialize SPIFFS
   if (!SPIFFS.begin(true))
@@ -187,8 +270,7 @@ void setup(void)
   // DMA - should work with ESP32, STM32F2xx/F4xx/F7xx processors  >>>>>> DMA IS FOR SPI DISPLAYS ONLY <<<<<<
   tft.initDMA(); // Initialise the DMA engine
   tft.setRotation(3);
-  tft.fillScreen(TFT_WHITE);
-  show_splash(tft);
+  tft.fillScreen(TFT_BLACK);
   AS_printf("Total heap: ");
   AS_print(ESP.getHeapSize());
   AS_printf("\n");
@@ -236,107 +318,51 @@ void setup(void)
 
   delay(2000);
   AS_printf("Entrando en el loop\n");
-
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 0);
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 1);
+  cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
+  frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
+  // create a timer that will fire at the sample rate
+  timer_config_t timer_config = {
+      .alarm_en = TIMER_ALARM_EN,
+      .counter_en = TIMER_PAUSE,
+      .intr_type = TIMER_INTR_LEVEL,
+      .counter_dir = TIMER_COUNT_UP,
+      .auto_reload = TIMER_AUTORELOAD_EN,
+      .divider = 80};
+  esp_err_t result = timer_init(TIMER_GROUP_0, TIMER_0, &timer_config);
+  if (result != ESP_OK)
+  {
+    Serial.printf("Error initializing timer: %d\n", result);
+  }
+  result = timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
+  if (result != ESP_OK)
+  {
+    Serial.printf("Error setting timer counter value: %d\n", result);
+  }
+  result = timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 20000);
+  if (result != ESP_OK)
+  {
+    Serial.printf("Error setting timer alarm value: %d\n", result);
+  }
+  // timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000);
+  result = timer_enable_intr(TIMER_GROUP_0, TIMER_0);
+  if (result != ESP_OK)
+  {
+    Serial.printf("Error enabling timer interrupt: %d\n", result);
+  }
+  result = timer_isr_register(TIMER_GROUP_0, TIMER_0, &onTimerCallback, NULL, ESP_INTR_FLAG_IRAM, NULL);
+  if (result != ESP_OK)
+  {
+    Serial.printf("Error registering timer interrupt: %d\n", result);
+    // print the string error
+    const char *err = esp_err_to_name(result);
+    Serial.printf("Error: %s\n", err);
+  }
+  result = timer_start(TIMER_GROUP_0, TIMER_0);
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
 }
 
 void loop(void)
 {
-  vTaskDelay(10000);
-}
-
-void ula_tick()
-{
-  uint8_t color;
-  uint8_t pixel;
-  int col, fil, scan, inkOpap;
-  static int px = 31;  // emulator hardware pixel to be paint, x coordinate
-  static int py = 24;  // emulator hardware pixel to be paint, y coordinate
-  static int ch = 447; // 0-447 is the horizontal bean position
-  static int cv = 312; // 0-312 is the vertical bean position
-  static int cf = 0;   // 0-32 counter for flash
-                       //  static int cf2=0;
-                       //  static int cf3=0;
-  static uint8_t attr; // last attrib memory read
-
-  ch++;
-  if (ch >= 448)
-    ch = 0;
-  if (ch == 416)
-    px = 0;
-  if ((ch <= 288) or (ch > 416))
-    px++;
-
-  if (ch == 0)
-  {
-    cv++;
-    if (cv >= 313)
-    {
-      cv = 0;
-      leebotones(tft, emuopt, spectrumZ80);
-    }
-    if (cv == 288)
-    {
-      py = 0;
-      cf++;
-      if (cf >= 32)
-        cf = 0;
-    }
-    if ((cv < 218) or (cv > 288))
-      py++;
-  }
-  if ((ch == 0) and (cv == 248))
-    spectrumZ80.petint = 1;
-
-  if ((cv >= 192) or (ch >= 256))
-  {
-    hwopt.portFF = 0xFF;
-    color = hwopt.BorderColor;
-  }
-  else
-  {
-    pixel = 7 - (ch & B111);
-    col = (ch & B11111000) >> 3;
-    fil = cv >> 3;
-    scan = (cv & B11000000) + ((cv & B111) << 3) + ((cv & B111000) >> 3);
-    // FIXME: Two acces to mem in same tick, really ATTR is Access a pixel early
-    //        so a reading must be done when cv<192 and ch=447 for 0x5800 + 32*fil
-    //        later attr for col+1 on ch & B111 == 0b111
-    //        deberia ir en un if separado para no leer 33 valores, el ultimo no hace falta asi que ch<250
-    if ((ch & B111) == 0b000)
-    {
-      attr = readvmem(0x1800 + 32 * fil + col, hwopt.videopage);
-    }
-    if ((ch & B111) == 0b000)
-    {
-      hwopt.portFF = readvmem(0x0000 + 32 * scan + col, hwopt.videopage);
-    }
-    inkOpap = (hwopt.portFF >> pixel) & 1;
-    // FLASH
-    if ((cf >= 16) && ((attr & B10000000) != 0))
-      inkOpap = !inkOpap;
-    // INK or PAPER
-    if (inkOpap != 0)
-    {
-      color = attr & B000111;
-    }
-    else
-    {
-      color = (attr & B111000) >> 3;
-    }
-    // BRIGHT
-    if ((attr & B01000000) != 0)
-    {
-      color = color + 8;
-    }
-  }
-  if ((px < 256) and (py < 192))
-  {
-    uint16_t tftColor = specpal565[color];
-    uint16_t *pixelAddress = frameBuffer + px + 256 * py;
-    if (tftColor != *pixelAddress) {
-      *pixelAddress = tftColor;
-    }
-  }
+  vTaskDelay(1000);
 }
