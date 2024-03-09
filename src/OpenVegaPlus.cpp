@@ -41,24 +41,25 @@ tipo_emuopt emuopt;
 uint16_t *frameBuffer = NULL;
 bool dirty[240] = {false};
 
-void ula_tick(TFT_eSPI &tft);
+void ula_tick();
 
-uint32_t frames = 0;
-int32_t frame_millis = 0;
 void drawDisplay(void *pvParameters)
 {
+  uint32_t frames = 0;
+  int32_t frame_millis = 0;
   while (1)
   {
     if(frame_millis == 0) {
       frame_millis = millis();
     }
-    for(int i = 0; i<488*313; i++) {
-      ula_tick(tft);
-    }
+
     tft.startWrite();
     tft.dmaWait();
     tft.setWindow(0, 0, 279, 239);
     tft.pushPixelsDMA(frameBuffer, 280 * 240);
+    for(int i = 0; i<488*313; i++) {
+      ula_tick();
+    }
     tft.endWrite();
     frames++;
     if (millis() - frame_millis > 1000) {
@@ -66,6 +67,25 @@ void drawDisplay(void *pvParameters)
       frames = 0;
       frame_millis = millis();
     }
+  }
+}
+
+void z80Runner(void *pvParameter) {
+  long pend_ula_ticks = 0;
+  const uint8_t SoundTable[4] = {0, 2, 0, 2};
+  uint32_t c = 0;
+  int lastMillis = 0;
+  while(1) {
+    if (lastMillis == 0) {
+      lastMillis = millis();
+    }
+    c += Z80Run(&spectrumZ80, 224);
+    if (millis() - lastMillis > 1000) {
+      lastMillis = millis();
+      Serial.printf("Executed at %.2fMHz cycles\n", c/1000000.0);
+      c = 0;
+    }
+    vTaskDelay(1);
   }
 }
 
@@ -77,7 +97,7 @@ void setup(void)
   pinMode(TFT_POWER, OUTPUT);
   digitalWrite(TFT_POWER, LOW);
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 5; i++)
   {
     delay(1000);
     AS_printf("Waiting %i\n", i);
@@ -150,51 +170,15 @@ void setup(void)
   AS_printf("Entrando en el loop\n");
 
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 1);
 }
 
-long pend_ula_ticks = 0;
-const uint8_t SoundTable[4] = {0, 2, 0, 2};
-uint32_t c = 0;
-int lastMillis = 0;
-// void draw_scanline(){
 void loop(void)
 {
-  if (lastMillis == 0) {
-    lastMillis = millis();
-  }
-  // dividimos el scanline en la parte central, y los bordes y retrazo, para la emulacion del puerto FF
-
-  pend_ula_ticks += 256;
-  c += Z80Run(&spectrumZ80, 128);
-  // while (pend_ula_ticks > 0)
-  // {
-  //   pend_ula_ticks--;
-  //   ula_tick(tft);
-  // }
-
-  pend_ula_ticks += 192;
-  c += Z80Run(&spectrumZ80, 96);
-  // while (pend_ula_ticks > 0)
-  // {
-  //   pend_ula_ticks--;
-  //   ula_tick(tft);
-  // }
-
-  //  AS_printf("PC=%i\n",c);
-  // Sound on each scanline means 15.6Khz, not bad...
-  if (emuopt.sonido == 1)
-  {
-    // TODO - add sound
-    // dac_output_voltage(DAC_CHANNEL_1, SoundTable[hwopt.SoundBits]);
-  }
-  if (millis() - lastMillis > 1000) {
-    lastMillis = millis();
-    Serial.printf("Executed at %.2fMHz cycles\n", c/1000000.0);
-    c = 0;
-  }
+  vTaskDelay(10000);
 }
 
-void ula_tick(TFT_eSPI &tft)
+void ula_tick()
 {
 
   const int specpal565[16] = {
@@ -292,18 +276,4 @@ void ula_tick(TFT_eSPI &tft)
       dirty[py] = true;
     }
   }
-
-  // if ((px == 294) and (py == 240))
-  // {
-  // }
-  //   tft.startWrite();
-  //   for(int y = 0; y<240; y++) {
-  //     if (dirty[y]) {
-  //       tft.setWindow(0, y, 279, y);
-  //       tft.pushPixelsDMA(frameBuffer + 280*y, 280);
-  //       dirty[y] = false;
-  //     }
-  //   }
-  //   tft.endWrite();
-  // }
 }
