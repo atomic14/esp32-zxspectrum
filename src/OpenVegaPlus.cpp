@@ -39,30 +39,95 @@ tipo_mem mem;
 tipo_hwopt hwopt;
 tipo_emuopt emuopt;
 uint16_t *frameBuffer = NULL;
-bool dirty[240] = {false};
 
 void ula_tick();
+
+
+const int screenWidth = TFT_HEIGHT;
+const int screenHeight = TFT_WIDTH;
+const int borderWidth = (screenWidth-256)/2;
+const int borderHeight = (screenHeight-192)/2;
+
+const int specpal565[16] = {
+    0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
+
 
 void drawDisplay(void *pvParameters)
 {
   uint32_t frames = 0;
   int32_t frame_millis = 0;
+  uint16_t lastBorderColor = 0;
+  tft.startWrite();
+  tft.fillScreen(TFT_BLACK);
+  tft.endWrite();
   while (1)
   {
     if(frame_millis == 0) {
       frame_millis = millis();
     }
-
     tft.startWrite();
     tft.dmaWait();
-    tft.setWindow(0, 0, 279, 239);
-    tft.pushPixelsDMA(frameBuffer, 280 * 240);
-    for(int i = 0; i<488*313; i++) {
-      ula_tick();
+    // do the border
+    uint8_t borderColor = hwopt.BorderColor &B00000111;
+    // TODO - can the border color be bright?
+    uint16_t tftColor = specpal565[borderColor];
+    if (tftColor != lastBorderColor) {
+      // do the border with some simple rects - no need to push pixels for a solid color
+      tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
+      tft.fillRect(0, screenHeight-borderHeight, screenWidth, borderHeight, tftColor);
+      tft.fillRect(0, borderHeight, borderWidth, screenHeight-borderHeight, tftColor);
+      tft.fillRect(screenWidth-borderWidth, borderHeight, borderWidth, screenHeight-borderHeight, tftColor);
+      lastBorderColor = tftColor;
+    }
+    // do the pixels
+    uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
+    uint8_t *pixelBase = mem.p + mem.vo[hwopt.videopage];
+    for(int attrY = 0; attrY < 192/8; attrY++) {
+      bool dirty = false;
+      for(int attrX = 0; attrX < 256/8; attrX++) {
+        // read the value of the attribute
+        uint8_t attr = *(attrBase + 32 * attrY + attrX) ;
+        uint8_t inkColor = attr & B00000111;
+        uint8_t paperColor = (attr & B00111000) >> 3;
+        if ((attr & B01000000) != 0)
+        {
+          inkColor = inkColor + 8;
+          paperColor = paperColor + 8;
+        }
+        uint16_t tftInkColor = specpal565[inkColor];
+        uint16_t tftPaperColor = specpal565[paperColor];
+        for(int y = attrY*8; y<attrY*8+8; y++) {
+          // read the value of the pixels
+          int col = (attrX*8 & B11111000) >> 3;
+          int scan = (y & B11000000) + ((y & B111) << 3) + ((y & B111000) >> 3);
+          uint8_t row = *(pixelBase + 32 * scan + col);
+          for(int x = attrX*8; x<attrX*8+8; x++) {
+            uint16_t *pixelAddress = frameBuffer + x + 256 * y;
+            if (row & (1 << (7 - (x & 7)))) {
+              if (tftInkColor != *pixelAddress) {
+                *pixelAddress = tftInkColor;
+                dirty = true;
+              }
+            } else {
+              if (tftPaperColor != *pixelAddress) {
+                *pixelAddress = tftPaperColor;
+                dirty = true;
+              }
+            }
+          }
+        }
+      }
+      if (dirty) {
+        // push out this block of pixels 256 * 8
+        tft.dmaWait();
+        tft.setWindow(borderWidth, borderHeight + attrY*8, borderWidth+255, borderHeight + attrY*8+7);
+        tft.pushPixelsDMA(frameBuffer + attrY * 8 * 256, 256 * 8);
+      }
     }
     tft.endWrite();
     frames++;
     if (millis() - frame_millis > 1000) {
+      vTaskDelay(1);
       Serial.printf("Frame rate=%d\n", frames);
       frames = 0;
       frame_millis = millis();
@@ -111,6 +176,9 @@ void setup(void)
     return;
   }
 
+  Serial.println("Border Width: " + String(borderWidth));
+  Serial.println("Border Height: " + String(borderHeight));
+
   // This is supous that provide por CPU to the program.
   // WiFi.mode(WIFI_OFF);
   // btStop();
@@ -134,13 +202,13 @@ void setup(void)
   AS_print(ESP.getFreePsram());
   AS_printf("\n");
 
-  frameBuffer = (uint16_t *)malloc(280 * 240 * sizeof(uint16_t));
+  frameBuffer = (uint16_t *)malloc(256 * 192 * sizeof(uint16_t));
   if (frameBuffer == NULL)
   {
     AS_printf("Error! memory not allocated for screenbuffer.\n");
     delay(10000);
   }
-  memset(frameBuffer, 0, 280 * 240 * sizeof(uint16_t));
+  memset(frameBuffer, 0, 256 * 192 * sizeof(uint16_t));
 
   AS_printf("\nDespues\n");
   AS_printf("Total heap: ");
@@ -180,10 +248,6 @@ void loop(void)
 
 void ula_tick()
 {
-
-  const int specpal565[16] = {
-      0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
-
   uint8_t color;
   uint8_t pixel;
   int col, fil, scan, inkOpap;
@@ -267,13 +331,12 @@ void ula_tick()
       color = color + 8;
     }
   }
-  if ((px < 294) and (py < 240))
+  if ((px < 256) and (py < 192))
   {
     uint16_t tftColor = specpal565[color];
-    uint16_t *pixelAddress = frameBuffer + px - 14 + 280 * py;
+    uint16_t *pixelAddress = frameBuffer + px + 256 * py;
     if (tftColor != *pixelAddress) {
       *pixelAddress = tftColor;
-      dirty[py] = true;
     }
   }
 }
