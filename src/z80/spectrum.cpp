@@ -127,10 +127,10 @@ int load_48krom(const char *filename){
   File f;
   f=SPIFFS.open(filename,FILE_READ);
   if (!f) {
-    AS_printf("Algo fallo cargando 1 bloque de rom\n");
+    Serial.printf("Algo fallo cargando 1 bloque de rom\n");
     return 1;
   }
-  AS_printf("Cargando %s\tSIZE: %i\n", filename, f.size()); // 48.rom"); AS_printf("\tSIZE: "); AS_print(f.size()); AS_printf("\n");
+  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size()); // 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
   f.read(mem.p,f.size()); 
   f.close();
   return 0;
@@ -140,11 +140,11 @@ int load_128krom(const char *filename){
   File f;
   f=SPIFFS.open(filename,FILE_READ);
   if (!f) {
-    AS_printf("Algo fallo cargando 2 bloques de rom\n");
+    Serial.printf("Algo fallo cargando 2 bloques de rom\n");
     return 1;
   }
-  AS_printf("Cargando %s\tSIZE: %i\n", filename, f.size());
-  //AS_printf("Cargando 48.rom"); AS_printf("\tSIZE: "); AS_print(f.size()); AS_printf("\n");
+  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size());
+  //Serial.printf("Cargando 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
   f.read(mem.p,f.size()); 
   f.close();
   return 0;
@@ -154,11 +154,11 @@ int load_p3rom(const char *filename){
   File f;
   f=SPIFFS.open(filename,FILE_READ);
   if (!f) {
-    AS_printf("Algo fallo cargando 4 bloques de rom\n");
+    Serial.printf("Algo fallo cargando 4 bloques de rom\n");
     return 1;
   } 
-  AS_printf("Cargando %s\tSIZE: %i\n", filename, f.size());
-  //AS_printf("Cargando 48.rom"); AS_printf("\tSIZE: "); AS_print(f.size()); AS_printf("\n");
+  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size());
+  //Serial.printf("Cargando 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
   f.read(mem.p,f.size()); 
   f.close();
   return 0;
@@ -451,7 +451,7 @@ void outbankm_128k(uint8_t dato){
 
 int init_plus2(void){
   init_128k();
-  AS_printf(__FILE__": Init +2 hardware.\n");
+  Serial.printf(__FILE__": Init +2 hardware.\n");
   hwopt.hw_model=SPECMDL_PLUS2;
   return load_128krom("/p2.rom");
 }

@@ -63,9 +63,9 @@ void leebotones(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80){
 //   keypad_i2c_read();
 //   for(c=0;c<12;c++){
 //   if (keys[c]!=oldkeys[c]) {
-//     AS_printf("B="); AS_print(c);
-//     AS_printf("\tM="); AS_print(mappingkey[emuopt.mappingindex][c]);
-//     AS_printf("\n");
+//     Serial.printf("B="); Serial.println(c);
+//     Serial.printf("\tM="); Serial.println(mappingkey[emuopt.mappingindex][c]);
+//     Serial.printf("\n");
     // updatekey(tft, emuopt, spectrumZ80, mappingkey[emuopt.mappingindex][c], keys[c]);
 // //    paint_tecla (mappingkey[emuopt.mappingindex][c],keys[c]);
 // //    paint_button(c,keys[c]);
@@ -125,9 +125,9 @@ void updatekey(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80, uint8_t
 
       if (state==1) speckey[ key2specy[0][key] ] &=  key2specy[1][key] ;
       else          speckey[ key2specy[0][key] ] |= ((key2specy[1][key])^0xFF) ;
-//      AS_printf("Fila %i, state %i, es:",key2specy[0][key],state); AS_print(speckey[ key2specy[0][key] ],BIN);
-//      AS_printf(" sacado de:"); AS_print(n,BIN); 
-//      AS_print("\n");
+//      Serial.printf("Fila %i, state %i, es:",key2specy[0][key],state); Serial.println(speckey[ key2specy[0][key] ],BIN);
+//      Serial.printf(" sacado de:"); Serial.println(n,BIN); 
+//      Serial.println("\n");
       break;
   }
 }

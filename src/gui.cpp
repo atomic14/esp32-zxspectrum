@@ -154,9 +154,9 @@ void gui_Main_Menu(TFT_eSPI &tft, tipo_emuopt &emuopt, Z80Regs &spectrumZ80)
     emuopt.mappingindex++;
     if (emuopt.mappingindex > 3)
       emuopt.mappingindex = 0;
-    AS_printf("now mapping is ");
-    AS_print(emuopt.mappingindex);
-    AS_printf("\n");
+    Serial.printf("now mapping is ");
+    Serial.println(emuopt.mappingindex);
+    Serial.printf("\n");
     break;
   case 4:
     reset_spectrum(&spectrumZ80);

@@ -248,7 +248,7 @@ Z80Patch (register Z80Regs * regs)
   extern tipo_emuopt emuopt;
     if (emuopt.tapefile[0] != 0)
     {
-    //  AS_printf("Z80patch:%x\n",tapfile);
+    //  Serial.printf("Z80patch:%x\n",tapfile);
       LoadTAP (regs, tapfile);
       POP (PC);
     }

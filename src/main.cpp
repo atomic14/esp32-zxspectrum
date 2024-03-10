@@ -22,6 +22,7 @@
 #include "AudioOutput/I2SOutput.h"
 #include "AudioOutput/PDMOutput.h"
 #include "AudioOutput/DACOutput.h"
+#include "AudioOutput/BuzzerOutput.h"
 #include "z80/hardware.h"
 #include "z80/snaps.h"
 #include "z80/spectrum.h"
@@ -153,11 +154,9 @@ void drawDisplay(void *pvParameters)
       frames++;
       if (millis() - frame_millis > 1000)
       {
-        vTaskDelay(1);
-        Serial.printf("Frame rate=%d\n", frames);
+        Serial.printf("Executed at %.2FMHz cycles, frame rate=%d\n", c/1000000.0, frames);
         frames = 0;
         frame_millis = millis();
-        Serial.printf("Executed at %.2FMHz cycles\n", c/1000000.0);
         c = 0;
       }
     }
@@ -194,36 +193,8 @@ void z80Runner(void *pvParameter)
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
     // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 400/20KHz = 1/50th of a second
-    #ifndef BUZZER_GPIO_NUM
     audioOutput->write(audioBuffer, 400);
-    #endif
   }
-}
-
-int sampleIndex = 0;
-bool IRAM_ATTR onTimerCallback(void *args)
-{
-    BaseType_t high_task_awoken = pdFALSE;
-    z80RunForCycles(175);
-    if (hwopt.SoundBits != 0)
-    {
-      #ifdef BUZZER_GPIO_NUM
-      digitalWrite(BUZZER_GPIO_NUM, HIGH);
-      #endif
-    }
-    else
-    {
-      #ifdef BUZZER_GPIO_NUM
-      digitalWrite(BUZZER_GPIO_NUM, LOW);
-      #endif
-    }
-    sampleIndex++;
-    if (sampleIndex == 400) {
-      sampleIndex = 0;
-      uint32_t evt = 0;
-      xQueueSendFromISR(frameRenderTimerQueue, &evt, &high_task_awoken);
-    }
-    return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
 }
 
 void setup(void)
@@ -235,13 +206,13 @@ void setup(void)
   pinMode(TFT_POWER, OUTPUT);
   digitalWrite(TFT_POWER, LOW);
 #endif
-
-  for (int i = 0; i < 5; i++)
+  // wait for the serial monitor to connect
+  for (int i = 0; i < 3; i++)
   {
     delay(1000);
-    AS_printf("Waiting %i\n", i);
+    Serial.printf("Waiting %i\n", i);
   }
-  AS_printf("OpenVega+ Boot!\n");
+  Serial.printf("OpenVega+ Boot!\n");
   #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
@@ -250,7 +221,7 @@ void setup(void)
   audioOutput = new DACOutput(I2S_NUM_0);
 #endif
 #ifdef BUZZER_GPIO_NUM
-  pinMode(BUZZER_GPIO_NUM, OUTPUT);
+  audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
 #endif
 #ifdef PDM_GPIO_NUM
   // i2s speaker pins
@@ -275,15 +246,13 @@ void setup(void)
 
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
-  #ifndef BUZZER_GPIO_NUM
   audioOutput->start(20000);
-  #endif
 
   keypad_i2c_init();
   // Initialize SPIFFS
   if (!SPIFFS.begin(true))
   {
-    AS_printf("An Error has occurred while mounting SPIFFS\n");
+    Serial.printf("An Error has occurred while mounting SPIFFS\n");
     return;
   }
 
@@ -301,79 +270,61 @@ void setup(void)
   #endif
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
-  AS_printf("Total heap: ");
-  AS_print(ESP.getHeapSize());
-  AS_printf("\n");
-  AS_printf("Free heap: ");
-  AS_print(ESP.getFreeHeap());
-  AS_printf("\n");
-  AS_printf("Total PSRAM: ");
-  AS_print(ESP.getPsramSize());
-  AS_printf("\n");
-  AS_printf("Free PSRAM: ");
-  AS_print(ESP.getFreePsram());
-  AS_printf("\n");
+  Serial.printf("Total heap: ");
+  Serial.println(ESP.getHeapSize());
+  Serial.printf("\n");
+  Serial.printf("Free heap: ");
+  Serial.println(ESP.getFreeHeap());
+  Serial.printf("\n");
+  Serial.printf("Total PSRAM: ");
+  Serial.println(ESP.getPsramSize());
+  Serial.printf("\n");
+  Serial.printf("Free PSRAM: ");
+  Serial.println(ESP.getFreePsram());
+  Serial.printf("\n");
 
   frameBuffer = (uint16_t *)malloc(256 * 192 * sizeof(uint16_t));
   if (frameBuffer == NULL)
   {
-    AS_printf("Error! memory not allocated for screenbuffer.\n");
+    Serial.printf("Error! memory not allocated for screenbuffer.\n");
     delay(10000);
   }
   memset(frameBuffer, 0, 256 * 192 * sizeof(uint16_t));
 
-  AS_printf("\nDespues\n");
-  AS_printf("Total heap: ");
-  AS_print(ESP.getHeapSize());
-  AS_printf("\n");
-  AS_printf("Free heap: ");
-  AS_print(ESP.getFreeHeap());
-  AS_printf("\n");
-  AS_printf("Total PSRAM: ");
-  AS_print(ESP.getPsramSize());
-  AS_printf("\n");
-  AS_printf("Free PSRAM: ");
-  AS_print(ESP.getFreePsram());
-  AS_printf("\n");
+  Serial.printf("\nDespues\n");
+  Serial.printf("Total heap: ");
+  Serial.println(ESP.getHeapSize());
+  Serial.printf("\n");
+  Serial.printf("Free heap: ");
+  Serial.println(ESP.getFreeHeap());
+  Serial.printf("\n");
+  Serial.printf("Total PSRAM: ");
+  Serial.println(ESP.getPsramSize());
+  Serial.printf("\n");
+  Serial.printf("Free PSRAM: ");
+  Serial.println(ESP.getFreePsram());
+  Serial.printf("\n");
 
   // FIXME porque 69888?? ¿quiza un frame, para que pinte la pantalla una vez?
   Z80Reset(&spectrumZ80, 69888);
   Z80FlagTables();
-  AS_printf("Z80 Initialization completed\n");
+  Serial.printf("Z80 Initialization completed\n");
 
   init_spectrum(SPECMDL_48K, "/48.rom");
   reset_spectrum(&spectrumZ80);
   Load_SNA(&spectrumZ80, "/manic.sna");
   //  Load_SNA(&spectrumZ80,"/t1.sna");
-
-  delay(2000);
-  AS_printf("Entrando en el loop\n");
+  Serial.printf("Entrando en el loop\n");
   // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
-  #ifdef BUZZER_GPIO_NUM
-  // create a timer that will fire at the sample rate of 20KHz
-  timer_config_t timer_config = {
-      .alarm_en = TIMER_ALARM_EN,
-      .counter_en = TIMER_PAUSE,
-      .intr_type = TIMER_INTR_LEVEL,
-      .counter_dir = TIMER_COUNT_UP,
-      .auto_reload = TIMER_AUTORELOAD_EN,
-      .divider = 80};
-  ESP_ERROR_CHECK(timer_init(TIMER_GROUP_0, TIMER_0, &timer_config));
-  ESP_ERROR_CHECK(timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0));
-  ESP_ERROR_CHECK(timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 20000));
-  ESP_ERROR_CHECK(timer_enable_intr(TIMER_GROUP_0, TIMER_0));
-  ESP_ERROR_CHECK(timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, onTimerCallback, NULL, 0));
-  ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
-  #else
   // use the I2S output to control the frame rate
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
-  #endif
 }
 
 void loop(void)
 {
+  // nothing to do here
   vTaskDelay(1000);
 }

@@ -38,10 +38,10 @@ uint8_t LoadSnapshot (Z80Regs * regs, const char *fname, tipo_mem &mem) {
   FILE *snafp;
   File snapfile;
   uint8_t ret;
-  AS_printf("Cargamos un snapshot (por definir)\n");
+  Serial.printf("Cargamos un snapshot (por definir)\n");
   snapfile = SPIFFS.open(fname, "rb");
   if (!snapfile) {
-    AS_printf("  Fallo el intento de abrir\n");
+    Serial.printf("  Fallo el intento de abrir\n");
     return (0);
   }
   switch (typeoffile (fname)) {
@@ -67,7 +67,7 @@ uint8_t LoadSnapshot (Z80Regs * regs, const char *fname, tipo_mem &mem) {
     return (1);
     break;
   default:
-    AS_printf("  tipo desconocido\n");
+    Serial.printf("  tipo desconocido\n");
     snapfile.close();
     return (0);
     break;
@@ -152,31 +152,31 @@ void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
 
   switch (tipo) {
       case Z80BL_V1UNCOMP:
-		AS_printf (" Uncompressed V1.\n");
+		Serial.printf (" Uncompressed V1.\n");
 		fread (mem.p + pc, 0xC000, 1, fp);
 	      break;
       case Z80BL_V2UNCOMP:
-	      	AS_printf (" Uncompressed V2.\n");
+	      	Serial.printf (" Uncompressed V2.\n");
 		fread (mem.p + pc, 0x4000, 1,fp);
 	      break;
        default:
 	  
   limit = pc + ((tipo == Z80BL_V1COMPRE) ? 0xc000 : 0x4000); // v1=> bloque de 48K, V2 =>de 16K
-/*   AS_printf (" tipo: %x PC: %x  limit:0x \n",tipo,pc, limit);
+/*   Serial.printf (" tipo: %x PC: %x  limit:0x \n",tipo,pc, limit);
   if ((tipo == Z80BL_V1UNCOMP) || (tipo == Z80BL_V2UNCOMP)) {
-      AS_printf (" Block uncompres.\n");
+      Serial.printf (" Block uncompres.\n");
     for (cont = pc; cont < limit; cont++)
 //      regs->RAM[cont] = fgetc (fp);
 //      writemem (cont, fgetc (fp));
         *(mem.p+cont)=fgetc(fp);
-	    AS_printf("pc=%x\n",cont);
+	    Serial.printf("pc=%x\n",cont);
   } else {
 */   
-    AS_printf (" Compressed.\n");
+    Serial.printf (" Compressed.\n");
     last = 0;
     last2 = 0;
     c = 0;
-    AS_printf ("cargando desde %x hasta %x\n",pc,limit);
+    Serial.printf ("cargando desde %x hasta %x\n",pc,limit);
     do {
       last2 = last;
       last = c;
@@ -203,7 +203,7 @@ void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
 //	            writemem (pc++, c);
               *(mem.p+pc++)=c;
       }
-//    AS_printf("pc=%i\ limit=%i\n",pc,limit);
+//    Serial.printf("pc=%i\ limit=%i\n",pc,limit);
     } while (pc < limit);
   }
 }
@@ -219,148 +219,148 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
   // Check file version
   if ((uint16_t) buffer[6] == 0)  {
     if ((uint16_t) buffer[30] == 23) {
-      AS_printf ("Fichero Z80: Version 2.0\n");
+      Serial.printf ("Fichero Z80: Version 2.0\n");
       ver = 2;
     } else if (( (uint16_t)buffer[30] == 54 )||( (uint16_t)buffer[30] == 55 )) 
 	{
-      AS_printf ("Fichero Z80: Version 3.0\n");
+      Serial.printf ("Fichero Z80: Version 3.0\n");
       ver = 3;
     } else {
-      AS_printf ("Fichero Z80: Version Desconocida (%04X)\n",(uint16_t) buffer[30]);
+      Serial.printf ("Fichero Z80: Version Desconocida (%04X)\n",(uint16_t) buffer[30]);
     }
     // version>=2 more hardware allowed
     switch (buffer[34]) {	/* is it 48K? */
     case 0:
 	  if ((buffer[37] & 0x80) == 0x80 ){
-		 AS_printf("Hardware 16K (1)\n");
+		 Serial.printf("Hardware 16K (1)\n");
 		 hwmodel=SPECMDL_16K;
 		 np=1;
 	  } else {
-        AS_printf ("Hardware 48K (2)\n");
+        Serial.printf ("Hardware 48K (2)\n");
 	    hwmodel=SPECMDL_48K;
 		np=3;
 	  }
       break;
     case 1:
-      AS_printf ("Hardware 48K + IF1 (3)\n");
+      Serial.printf ("Hardware 48K + IF1 (3)\n");
 	  hwmodel=SPECMDL_48KIF1;
 	  break;
     case 2:
-      AS_printf ("Hardware 48K + SAMRAM (4)\n");
+      Serial.printf ("Hardware 48K + SAMRAM (4)\n");
       return (-1);
 	  break;
     case 3:
       if (ver == 2) {
 	     if ((buffer[37] & 0x80) == 0x80 ){
-		    AS_printf("Hardware +2 128K (5)\n");
+		    Serial.printf("Hardware +2 128K (5)\n");
 		    hwmodel=SPECMDL_PLUS2;
 			np=8;
 	     } else {
-            AS_printf ("Hardware 128K (6)\n");
+            Serial.printf ("Hardware 128K (6)\n");
 	        hwmodel=SPECMDL_128K;
 			np=8;
 	     }
       } else {
-	     AS_printf ("48K + M.G.T. (7)\n");
+	     Serial.printf ("48K + M.G.T. (7)\n");
 	     return (-1);
       }
 	  break;
     case 4:
       if (ver == 2) {
-	    AS_printf ("Hardware 128K + IF1 (8)\n");
+	    Serial.printf ("Hardware 128K + IF1 (8)\n");
 	    return (-1);
       } else {
 	     if ((buffer[37] & 0x80) == 0x80 ){
-		    AS_printf("Hardware +2 128K (9)\n");
+		    Serial.printf("Hardware +2 128K (9)\n");
 		    hwmodel=SPECMDL_PLUS2;
 			np=8;
 	     } else {
-            AS_printf ("Hardware 128K (A)\n");
+            Serial.printf ("Hardware 128K (A)\n");
 	        hwmodel=SPECMDL_128K;
 			np=8;
 	     }
       }
 	  break;
     case 5:
-      AS_printf ("Hardware 128K + IF1 (B)\n");
+      Serial.printf ("Hardware 128K + IF1 (B)\n");
       return (-1);
 	  break;
     case 6:
-      AS_printf ("Hardware 128K + M.G.T (C)\n");
+      Serial.printf ("Hardware 128K + M.G.T (C)\n");
       return (-1);
 	  break;
     case 7:
 	    if ((buffer[37] & 0x80) == 0x80 ){
-		   AS_printf("Hardware +2A 128K (D)\n");
+		   Serial.printf("Hardware +2A 128K (D)\n");
         	   hwmodel=SPECMDL_PLUS3;
 		   np=8;
 	    } else {
-           AS_printf ("Hardware Spectrum +3 (E)\n");
+           Serial.printf ("Hardware Spectrum +3 (E)\n");
                    hwmodel=SPECMDL_PLUS3;
 		   np=8;
 		}
 	    break;
     case 8:
 	     if ((buffer[37] & 0x80) == 0x80 ){
-		    AS_printf("Hardware +2A 128K (F)\n");
+		    Serial.printf("Hardware +2A 128K (F)\n");
                     hwmodel=SPECMDL_PLUS3;
 		    np=8;
 	     } else {
-                   AS_printf ("Hardware Spectrum +3 (xzx deprecated)(10)\n");
+                   Serial.printf ("Hardware Spectrum +3 (xzx deprecated)(10)\n");
                    hwmodel=SPECMDL_PLUS3;
 		   np=8;
 	     }
 		 break;
     case 9:
-      AS_printf ("Pentagon 128K (11)\n");
+      Serial.printf ("Pentagon 128K (11)\n");
 	  np=8;
       return (-1);
 	  break;
     case 10:
-      AS_printf ("Hardware Scorpion (12)\n");
+      Serial.printf ("Hardware Scorpion (12)\n");
       np=16;
       return (-1);
 	  break;
     case 11:
-      AS_printf ("Hardware Didaktik-Kompakt (13)\n");
+      Serial.printf ("Hardware Didaktik-Kompakt (13)\n");
       return (-1);
 	  break;
     case 12:
-      AS_printf ("Hardware Spectrum +2 128K (14)\n");
+      Serial.printf ("Hardware Spectrum +2 128K (14)\n");
      hwmodel=SPECMDL_PLUS2;
      np=8;
 	 break;
     case 13:
-          AS_printf ("Hardware Spectrum +2A 128K (15)\n");
+          Serial.printf ("Hardware Spectrum +2A 128K (15)\n");
 	  hwmodel=SPECMDL_PLUS3;
   	  np=8;
 	  break;
     case 14:
-      AS_printf ("Hardware Timex TC2048 (16)\n");
+      Serial.printf ("Hardware Timex TC2048 (16)\n");
       return (-1);
 	  break;
     case 64:
-      AS_printf ("Hardware Inves Spectrum + 48K (Aspectrum Specific)(17)\n");
+      Serial.printf ("Hardware Inves Spectrum + 48K (Aspectrum Specific)(17)\n");
       hwmodel=SPECMDL_INVES;     
       np=4;
 	  break;
     case 65:
-      AS_printf ("Hardware Spectrum 128K Spanish (Aspectrum Specific)(18)\n");
+      Serial.printf ("Hardware Spectrum 128K Spanish (Aspectrum Specific)(18)\n");
      hwmodel=SPECMDL_128K;
      np=8;
 	 break;
     case 128:
-      AS_printf ("Hardware Timex TC2068 (19)\n");
+      Serial.printf ("Hardware Timex TC2068 (19)\n");
       return (-1);
 	  break;
     default:
-      AS_printf ("Unknown hardware, %x\n", buffer[34]);
+      Serial.printf ("Unknown hardware, %x\n", buffer[34]);
       return (-1);
 	  break;
     }
 /*
 	if (hwmodel!=SPECMDL_48K) {
-		AS_printf("Hardware no soporta carga de .Z80\n");
+		Serial.printf("Hardware no soporta carga de .Z80\n");
 		return (-1);
 	}
 */	
@@ -369,7 +369,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
       if (init_spectrum (hwmodel, "")==1) return (1); // si falla la arquitectura no sigo
     }
 	
-	if (np==0) AS_printf("YEPA te has colado np=0\n");
+	if (np==0) Serial.printf("YEPA te has colado np=0\n");
 		
     sig = 30 + 2 + buffer[30];
     fseek (fp, sig, SEEK_SET);
@@ -378,7 +378,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
       tam = tam + (fgetc (fp) << 8);
       pag = fgetc (fp);
       sig = sig + tam + 3;
-      AS_printf (" pagina a cargar es: %i, tama�o:%x\n", pag, tam);
+      Serial.printf (" pagina a cargar es: %i, tama�o:%x\n", pag, tam);
 	switch (hwmodel) {
 		 case SPECMDL_16K:
 		 case SPECMDL_48K:
@@ -394,7 +394,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
 					break;
 				  default:
 					ini = 0x4000;
-					AS_printf
+					Serial.printf
 					  ("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
 					break;
 				  }
@@ -429,7 +429,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
 					break;
 				  default:
           ini = 0x04000;
-          AS_printf("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
+          Serial.printf("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
 			    break;																				
 			  }			      
 			 break;
@@ -449,7 +449,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
 					break;
 				  default:
           ini = 0x4000;
-          AS_printf ("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
+          Serial.printf ("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
 					break;
 			 }
 			 break;
@@ -471,7 +471,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
     // aki abria que a�adir lo del sonido claro.
     
   } else {
-    AS_printf ("Fichero Z80: Version 1.0\n");
+    Serial.printf ("Fichero Z80: Version 1.0\n");
 
     if ( hwopt.hw_model != SPECMDL_48K ) { // V1 es siempre 48K camb. arquit. si no es correcta.
         end_spectrum ();
@@ -479,11 +479,11 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
     }
     
     if (buffer[12] & 0x20) {
-      AS_printf ("Fichero Z80: Comprimido\n");
+      Serial.printf ("Fichero Z80: Comprimido\n");
       fseek (fp, 30, SEEK_SET);
       UncompressZ80 (Z80BL_V1COMPRE, 0x4000, regs, fp);
     } else {
-      AS_printf ("Fichero Z80: Sin comprimir\n");
+      Serial.printf ("Fichero Z80: Sin comprimir\n");
       fseek (fp, 30, SEEK_SET);
       UncompressZ80 (Z80BL_V1UNCOMP, 0x4000, regs, fp);
     }
@@ -567,7 +567,7 @@ uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
   regs->PC.B.h = buffer[31];
   hwopt.BorderColor = buffer[34];
   sword = (buffer[37] << 8) | buffer[36];
-  AS_printf ("\nSP_PC = %04X, SP_START =  %d,  SP_LENGTH = %d\n", regs->PC,
+  Serial.printf ("\nSP_PC = %04X, SP_START =  %d,  SP_LENGTH = %d\n", regs->PC,
 	    start, length);
 
   /* interrupt mode */
@@ -587,9 +587,9 @@ uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
 
 
   if (sword & 0x16) {
-    AS_printf ("\n\nPENDING INTERRUPT!!\n\n");
+    Serial.printf ("\n\nPENDING INTERRUPT!!\n\n");
   } else {
-    AS_printf ("\n\nno pending interrupt.\n\n");
+    Serial.printf ("\n\nno pending interrupt.\n\n");
   }
 
 //FIXME leer todo a la vez.
@@ -616,10 +616,10 @@ int Load_SNA (Z80Regs * regs, const char *filename){
   //FIXIT no extern
   extern tipo_hwopt hwopt;
   extern tipo_mem mem;
-  AS_print("Cargamos un SNA (by filename)\n");
+  Serial.println("Cargamos un SNA (by filename)\n");
   f=SPIFFS.open(filename,FILE_READ);
   if (!f) {
-    AS_print("Algo fallo cargando el SNA\n");
+    Serial.println("Algo fallo cargando el SNA\n");
     return 1;
   }
   if (f.size() == 49179) model = SPECMDL_48K ;  // es un 48Kb
@@ -717,9 +717,9 @@ uint8_t SaveSNA (Z80Regs * regs, FILE * fp){
 // SNA solo esta soportado en 48K, 128K y +2
 
   if ((hwopt.hw_model != SPECMDL_48K) && (hwopt.hw_model != SPECMDL_128K)) {
-    AS_print ("El modelo de Spectrum utilizado");
-    AS_print ("No permite grabar el snapshot en formato SNA");
-	  AS_print ("Utilize otro tipo de archivo (extension)");
+    Serial.println ("El modelo de Spectrum utilizado");
+    Serial.println ("No permite grabar el snapshot en formato SNA");
+	  Serial.println ("Utilize otro tipo de archivo (extension)");
     return 1;
   }
 
@@ -754,7 +754,7 @@ uint8_t SaveSNA (Z80Regs * regs, FILE * fp){
   sptmph = z80_peek (regs->SP.W - 2);
 
   if (hwopt.hw_model == SPECMDL_48K) {	// code for the 48K version.
-    AS_printf("Guardando SNA 48K\n");
+    Serial.printf("Guardando SNA 48K\n");
 	 /* save PC on the stack */
 //    Z80MemWrite (--(regs->SP.W), regs->PC.B.h, regs);
 //    Z80MemWrite (--(regs->SP.W), regs->PC.B.l, regs);
@@ -778,7 +778,7 @@ uint8_t SaveSNA (Z80Regs * regs, FILE * fp){
     z80_poke (regs->SP.W - 2, sptmph);
 
   } else {			// code for the 128K version
-    AS_printf("Guardando SNA 128K\n");
+    Serial.printf("Guardando SNA 128K\n");
     fputc (regs->SP.B.l, fp);
     fputc (regs->SP.B.h, fp);
     fputc (regs->IM, fp);
@@ -906,7 +906,7 @@ uint8_t SaveZ80 (Z80Regs * regs, FILE * fp){
   int c;
 
 	// 48K  .z80 are saved as ver 1.45 
-  AS_printf ("Guardando Z80...\n");
+  Serial.printf ("Guardando Z80...\n");
   fputc (regs->AF.B.h, fp);
   fputc (regs->AF.B.l, fp);
   fputc (regs->BC.B.l, fp);
@@ -915,11 +915,11 @@ uint8_t SaveZ80 (Z80Regs * regs, FILE * fp){
   fputc (regs->HL.B.h, fp);
 
 if (hwopt.hw_model==SPECMDL_48K) {  // si no es 48K entonces V 3.0
-  AS_printf ("...de 48K\n");
+  Serial.printf ("...de 48K\n");
   	fputc (regs->PC.B.l, fp);
   	fputc (regs->PC.B.h, fp);
 } else {
-   AS_printf ("...de NO 48K\n");
+   Serial.printf ("...de NO 48K\n");
 	fputc(0,fp);
 	fputc(0,fp);
 }
@@ -977,7 +977,7 @@ if (hwopt.hw_model==SPECMDL_48K) {
 			fputc(13,fp);
 			fputc(hwopt.BANKM,fp);
 		default:
-			AS_printf("ERROR: HW Type Desconocido, nunca deberias ver esto.\n");
+			Serial.printf("ERROR: HW Type Desconocido, nunca deberias ver esto.\n");
 			fputc(0,fp);
 			fputc(0,fp);
 		 	break;
@@ -1058,11 +1058,11 @@ int TZX_type;
 FILE *InitTape (FILE *fp){
 /* FIXME: tape support
   // extern tipo_emuopt emuopt;
-  //  AS_printf("Z80 InitTape llamado\n");
+  //  Serial.printf("Z80 InitTape llamado\n");
 
   if (fp = SPIFFS.open(emuopt.tapefile, "rb"))
     return fp;
-  //AS_printf("InitTape - abierto:%x\n",fp);
+  //Serial.printf("InitTape - abierto:%x\n",fp);
 
   switch (typeoffile (emuopt.tapefile)) {
   case TYPE_TZX:
@@ -1080,10 +1080,10 @@ FILE *InitTape (FILE *fp){
 
 int typeoffile (const char *name){
   int top;
-  //AS_printf("typeoffile llamado con %s\n",name);
+  //Serial.printf("typeoffile llamado con %s\n",name);
   for (top = 0; name[top] != 0; top++);
-  //      AS_printf("letra %c ascii: %i, top=%i\n",name[top],name[top],top);
-  //AS_printf("encontrado en %i, y extension es %s\n",top, &(name[top-4]) );
+  //      Serial.printf("letra %c ascii: %i, top=%i\n",name[top],name[top],top);
+  //Serial.printf("encontrado en %i, y extension es %s\n",top, &(name[top-4]) );
 
   if (strcmp (&(name[top - 4]), ".TAP") == 0)
     return TYPE_TAP;
@@ -1120,8 +1120,8 @@ int typeoffile (const char *name){
     WARNING: EXPERIMENTAL X'DDDDDD
 ------------------------------------------------------------------*/
 uint8_t LoadTAP (Z80Regs * regs, FILE * fp){
-  // AS_printf("Llamada LoadTAP generica\n");
-  // AS_printf("LoadTap:%x\n",fp);
+  // Serial.printf("Llamada LoadTAP generica\n");
+  // Serial.printf("LoadTap:%x\n",fp);
   switch (TZX_type) {
   case TYPE_TAP:
     return TAP_loadblock (regs, fp);
@@ -1130,15 +1130,15 @@ uint8_t LoadTAP (Z80Regs * regs, FILE * fp){
     return TZX_loadblock (regs, fp);
     break;
   default:
-    AS_printf ("Cargando algo que ni es TAP ni TZX, ���QUE CHUNGO!!!\n");
+    Serial.printf ("Cargando algo que ni es TAP ni TZX, ���QUE CHUNGO!!!\n");
     break;
   }
   return 0;
 }
 
 uint8_t RewindTAP (Z80Regs * regs, FILE * fp){
-  AS_printf ("Llamada RewindTAP generica\n");
-  //              AS_printf("LoadTap:%x\n",fp);
+  Serial.printf ("Llamada RewindTAP generica\n");
+  //              Serial.printf("LoadTap:%x\n",fp);
   switch (TZX_type) {
   case TYPE_TAP:
     TAP_rewind (fp);
@@ -1147,7 +1147,7 @@ uint8_t RewindTAP (Z80Regs * regs, FILE * fp){
     TZX_rewind ();
     break;
   default:
-    AS_printf ("Rebobinando algo que ni es TAP ni TZX, ���QUE CHUNGO!!!\n");
+    Serial.printf ("Rebobinando algo que ni es TAP ni TZX, ���QUE CHUNGO!!!\n");
     break;
   }
   return 0;
@@ -1156,14 +1156,14 @@ uint8_t RewindTAP (Z80Regs * regs, FILE * fp){
 uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   int blow, bhi, bytes, f, howmany,load;
   unsigned int where;
-  AS_printf ("Llamada TAP_loadblock\n");
-  AS_printf ("\n--- Trying to load from tape: reached %04Xh ---\n", regs->PC.W);
-  AS_printf ("On enter:  A=%d, IX=%d, DE=%d\n", regs->AF.B.h, regs->IX.W, regs->DE.W);
+  Serial.printf ("Llamada TAP_loadblock\n");
+  Serial.printf ("\n--- Trying to load from tape: reached %04Xh ---\n", regs->PC.W);
+  Serial.printf ("On enter:  A=%d, IX=%d, DE=%d\n", regs->AF.B.h, regs->IX.W, regs->DE.W);
 /*
   // auto tape-rewind function on end-of-file
   if( feof(fp) )
   {
-      AS_printf("END OF FILE: Tape rewind to 0...\n");
+      Serial.printf("END OF FILE: Tape rewind to 0...\n");
       fseek( fp, 0, SEEK_SET );
   }
 */
@@ -1171,7 +1171,7 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   blow = fgetc (fp);
   bhi = fgetc (fp);
   bytes = (bhi << 8) | blow;
-  AS_printf ("%d bytes to read on file, DE=%d requested.\n", bytes - 2, regs->DE.W);
+  Serial.printf ("%d bytes to read on file, DE=%d requested.\n", bytes - 2, regs->DE.W);
   where = regs->IX.W;
   load=   (regs->AF.B.l) & C_FLAG ;
   fgetc (fp);			/* read flag type and ignore it */
@@ -1183,7 +1183,7 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   if (bytes - 2 < howmany) {
     howmany = bytes - 2;
     (regs->AF.B.l &= ~(C_FLAG));
-    AS_printf ("Generating a tape load error (tapbytes < DE)...\n");
+    Serial.printf ("Generating a tape load error (tapbytes < DE)...\n");
     regs->IX.W += bytes - 2;
   } else  /* FIXME Deberia cambiarse la memoria hasta el momento en que se genera el error */
     regs->IX.W += regs->DE.W;
@@ -1204,7 +1204,7 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   }
 
   if (howmany == 17) {
-    AS_printf ("\n");
+    Serial.printf ("\n");
   }
   fgetc (fp);			/* read checksum (and ignore it :-) */
 
@@ -1213,7 +1213,7 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
     (regs->AF.B.l |= (C_FLAG));
 
   regs->DE.W = 0;
-  AS_printf ("On exit:  A=%d, IX=%d, DE=%d, F=%02Xh, PC=%04Xh\n",
+  Serial.printf ("On exit:  A=%d, IX=%d, DE=%d, F=%02Xh, PC=%04Xh\n",
 	    regs->AF.B.h, regs->IX.W, regs->DE.W, regs->AF.B.l,
 	    (z80_peek (regs->SP.W + 1) << 8) | z80_peek (regs->SP.W));
   return (0);
@@ -1252,7 +1252,7 @@ uint8_t TZX_init (FILE * fp){
   //comprueba si tiene la firma de un tzx
   char cadena[9];
   int vma, vme;
-  AS_printf ("Iniciando TZX\n");
+  Serial.printf ("Iniciando TZX\n");
   if (fgets (cadena, 9, fp) != NULL)
     if (memcmp (cadena, "ZXTape!\0x1A", 7) != 0)
       return -1;		// no es un archivo tzx.
@@ -1260,10 +1260,10 @@ uint8_t TZX_init (FILE * fp){
   //comprueba la version
   vma = fgetc (fp);
   vme = fgetc (fp);
-  AS_printf ("Encontrada signature TZX, Version: %i.%i\n", vma, vme);
+  Serial.printf ("Encontrada signature TZX, Version: %i.%i\n", vma, vme);
 
   if (vma > 1) {
-    AS_printf
+    Serial.printf
       ("Version no soportada, a dia 10/3/2003 significa TZX erroneo\n");
     return -1;
   }
@@ -1281,39 +1281,39 @@ uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
   int where, flags, howmany, bytes, f;
   int enviado = FALSE;
 
-  AS_printf ("Llamada TZX_loadblock, bloque actual: %i de %i\n",
+  Serial.printf ("Llamada TZX_loadblock, bloque actual: %i de %i\n",
 	    TZX_actualblock, TZX_numofblocks);
-  // AS_printf("TZX_loadblock:%x\n",fp);
+  // Serial.printf("TZX_loadblock:%x\n",fp);
   for (; TZX_actualblock < TZX_numofblocks; TZX_actualblock++) {
     if (TZX_actualblock >= TZX_numofblocks)
       break;			// el bucle for se comprueba siempre una vez.
-    AS_printf ("Evaluando bloque: %i - ", TZX_actualblock);
+    Serial.printf ("Evaluando bloque: %i - ", TZX_actualblock);
     if (TZX_index[TZX_actualblock].sup == FALSE) {
-      AS_printf ("Nulo\n");
+      Serial.printf ("Nulo\n");
       continue;			//si no era valido lo ignoro.
     }
     switch (TZX_index[TZX_actualblock].id) {
     case 0x10:
-      AS_printf ("Bloque Estandar\n");
-      //AS_printf(("seek a: %i\n",TZX_index[TZX_actualblock].offset+3));                      
+      Serial.printf ("Bloque Estandar\n");
+      //Serial.printf(("seek a: %i\n",TZX_index[TZX_actualblock].offset+3));                      
       fseek (fp, (TZX_index[TZX_actualblock].offset + 3), SEEK_SET);
-      // AS_printf("seek echo.\n");
+      // Serial.printf("seek echo.\n");
       bytes = fgetc (fp);
       bytes += fgetc (fp) * 0x100;
-      AS_printf ("Cargando...  pedido 0x%04x, proporcionado 0x%04x\n",
+      Serial.printf ("Cargando...  pedido 0x%04x, proporcionado 0x%04x\n",
 		regs->DE.W, bytes - 2);
 
       where = regs->IX.W;
       flags = fgetc (fp);	/* read flag type and ignore it */
       howmany = regs->DE.W;
       if (howmany == 17) {
-	AS_printf ("   Cabecera, NAME:");
+	Serial.printf ("   Cabecera, NAME:");
       }
 
       if (bytes - 2 < howmany) {
 	howmany = bytes - 2;
 	(regs->AF.B.l &= ~(C_FLAG));
-	AS_printf ("Generating a tape load error (tapbytes < DE)...\n");
+	Serial.printf ("Generating a tape load error (tapbytes < DE)...\n");
 	regs->IX.W += bytes - 2;
       } else
 	regs->IX.W += regs->DE.W;
@@ -1324,7 +1324,7 @@ uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
 	        putchar (z80_peek(where + f));
         }
       if (howmany == 17) {
-	        AS_printf ("\n");
+	        Serial.printf ("\n");
       }
 
       fgetc (fp);		/* read checksum (and ignore it :-) */
@@ -1338,54 +1338,54 @@ uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
       TZX_actualblock++;	// as I exit of the loop I need to use this.
       break;
     case 0x32:
-      AS_printf ("Bloque de ");
+      Serial.printf ("Bloque de ");
       fseek (fp, (TZX_index[TZX_actualblock].offset + 3), SEEK_SET);
       howmany = fgetc (fp);
-      AS_printf (" %i Informaciones:\n\n", howmany);
+      Serial.printf (" %i Informaciones:\n\n", howmany);
       for (; howmany > 0; howmany--) {
 	where = fgetc (fp);
 	switch (where) {
 	case 0x00:
-	  AS_printf ("Titulo....: ");
+	  Serial.printf ("Titulo....: ");
 	  break;
 	case 0x01:
-	  AS_printf ("Compania..: ");
+	  Serial.printf ("Compania..: ");
 	  break;
 	case 0x02:
-	  AS_printf ("Autores...: ");
+	  Serial.printf ("Autores...: ");
 	  break;
 	case 0x03:
-	  AS_printf ("Ano.......: ");
+	  Serial.printf ("Ano.......: ");
 	  break;
 	case 0x04:
-	  AS_printf ("Idioma....: ");
+	  Serial.printf ("Idioma....: ");
 	  break;
 	case 0x05:
-	  AS_printf ("Tipo......: ");
+	  Serial.printf ("Tipo......: ");
 	  break;
 	case 0x06:
-	  AS_printf ("Precio....: ");
+	  Serial.printf ("Precio....: ");
 	  break;
 	case 0x07:
-	  AS_printf ("Proteccion: ");
+	  Serial.printf ("Proteccion: ");
 	  break;
 	case 0x08:
-	  AS_printf ("Origen....: ");
+	  Serial.printf ("Origen....: ");
 	  break;
 	case 0xFF:
-	  AS_printf ("Comentario: ");
+	  Serial.printf ("Comentario: ");
 	  break;
 	}
 	where = fgetc (fp);
 	for (; where > 0; where--) {
-	  AS_printf ("%c", fgetc (fp));
+	  Serial.printf ("%c", fgetc (fp));
 	}
-	AS_printf ("\n");
+	Serial.printf ("\n");
       }
-      AS_printf ("\n");
+      Serial.printf ("\n");
       break;
     default:
-      AS_printf ("Aun no soportado\n");
+      Serial.printf ("Aun no soportado\n");
       break;
     }
     if (enviado == TRUE)
@@ -1457,7 +1457,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
   //nos vamos al principio        
   fseek (fp, 0, SEEK_SET);
   offset = 0;
-  AS_printf ("Iniciando la Generacion del Indice del fichero TZX\n");
+  Serial.printf ("Iniciando la Generacion del Indice del fichero TZX\n");
   // leemos el indice y tratamos el bloque hasta que llegemos al final.
   if ((c = getc (fp)) != EOF)
     do {
@@ -1471,7 +1471,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x100;
 	fseek (fp, size, SEEK_CUR);
 	size += 4;
-	AS_printf ("  Bloque 0x10, offset: %i, size %i, Standar Data \n",
+	Serial.printf ("  Bloque 0x10, offset: %i, size %i, Standar Data \n",
 		  offset, size);
 	offset += size;
 	valido = 1;
@@ -1485,7 +1485,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x10000;
 	fseek (fp, size, SEEK_CUR);
 	size += 18;
-	AS_printf ("  Bloque 0x11, offset: %i, size %i, Turbo Data\n", offset,
+	Serial.printf ("  Bloque 0x11, offset: %i, size %i, Turbo Data\n", offset,
 		  size);
 	offset += size;
 	funciona = 0;
@@ -1494,7 +1494,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       case 0x12:		// OK
 	TZX_index[TZX_numofblocks].sup = FALSE;
 	fseek (fp, 4, SEEK_CUR);
-	AS_printf ("  Bloque 0x12, offset: %i, size 4, Tono Puro\n", offset);
+	Serial.printf ("  Bloque 0x12, offset: %i, size 4, Tono Puro\n", offset);
 	offset += 4;
 	funciona = 0;
 	break;
@@ -1504,7 +1504,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = (fgetc (fp) * 2);
 	fseek (fp, size, SEEK_CUR);
 	size += 1;
-	AS_printf ("  Bloque 0x13, offset: %i, size %i, Pulsos\n", offset,
+	Serial.printf ("  Bloque 0x13, offset: %i, size %i, Pulsos\n", offset,
 		  size);
 	offset += size;
 	funciona = 0;
@@ -1518,7 +1518,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x10000;
 	fseek (fp, size, SEEK_CUR);
 	size += 10;
-	AS_printf ("  Bloque 0x14, offset: %i, size %i, RAW square data\n",
+	Serial.printf ("  Bloque 0x14, offset: %i, size %i, RAW square data\n",
 		  offset, size);
 	offset += size;
 	funciona = 0;
@@ -1532,7 +1532,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x10000;
 	fseek (fp, size, SEEK_CUR);
 	size += 8;
-	AS_printf ("  Bloque 0x15, offset: %i, size %i, .VOC data\n", offset,
+	Serial.printf ("  Bloque 0x15, offset: %i, size %i, .VOC data\n", offset,
 		  size);
 	offset += size;
 	funciona = 0;
@@ -1541,7 +1541,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       case 0x20:		// OK
 	TZX_index[TZX_numofblocks].sup = FALSE;
 	fseek (fp, 2, SEEK_CUR);
-	AS_printf ("  Bloque 0x20, offset: %i, size 2, Pause/stop tape\n",
+	Serial.printf ("  Bloque 0x20, offset: %i, size 2, Pause/stop tape\n",
 		  offset);
 	offset += 2;
 	break;
@@ -1551,34 +1551,34 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = fgetc (fp);
 	fseek (fp, size, SEEK_CUR);
 	size += 1;
-	AS_printf ("  Bloque 0x21, offset: %i, size %i, Group start\n", offset,
+	Serial.printf ("  Bloque 0x21, offset: %i, size %i, Group start\n", offset,
 		  size);
 	offset += size;
 	break;
 
       case 0x22:		// OK
 	TZX_index[TZX_numofblocks].sup = TRUE;
-	AS_printf ("  Bloque 0x22, offset: %i, size 0, Group end\n", offset);
+	Serial.printf ("  Bloque 0x22, offset: %i, size 0, Group end\n", offset);
 	offset += 0;
 	break;
 
       case 0x23:		// REV
 	TZX_index[TZX_numofblocks].sup = TRUE;
 	fseek (fp, 2, SEEK_CUR);
-	AS_printf ("  Bloque 0x23, offset: %i, size 2, Jump block\n", offset);
+	Serial.printf ("  Bloque 0x23, offset: %i, size 2, Jump block\n", offset);
 	offset += 2;
 	break;
 
       case 0x24:		// OK
 	TZX_index[TZX_numofblocks].sup = TRUE;
 	fseek (fp, 2, SEEK_CUR);
-	AS_printf ("  Bloque 0x24, offset: %i, size 2, loop block\n", offset);
+	Serial.printf ("  Bloque 0x24, offset: %i, size 2, loop block\n", offset);
 	offset += 2;
 	break;
 
       case 0x25:		// ok
 	TZX_index[TZX_numofblocks].sup = TRUE;
-	AS_printf ("  Bloque 0x25, offset: %i, size 0, loop end\n", offset);
+	Serial.printf ("  Bloque 0x25, offset: %i, size 0, loop end\n", offset);
 	offset += 0;
 	break;
 
@@ -1588,7 +1588,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = (size + fgetc (fp) * 0x100) * 2;
 	fseek (fp, size, SEEK_CUR);
 	size += 2;
-	AS_printf ("  Bloque 0x26, offset: %i, size %i, call block\n", offset,
+	Serial.printf ("  Bloque 0x26, offset: %i, size %i, call block\n", offset,
 		  size);
 	offset += size;
 	break;
@@ -1596,7 +1596,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 
       case 0x27:		// REV
 	TZX_index[TZX_numofblocks].sup = TRUE;
-	AS_printf ("  Bloque 0x27, offset: %i, size 0, Return\n", offset);
+	Serial.printf ("  Bloque 0x27, offset: %i, size 0, Return\n", offset);
 	offset += 0;
 	break;
 
@@ -1606,7 +1606,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x100;
 	fseek (fp, size, SEEK_CUR);
 	size += 2;
-	AS_printf ("  Bloque 0x28, offset: %i, size %i, selection block\n",
+	Serial.printf ("  Bloque 0x28, offset: %i, size %i, selection block\n",
 		  offset, size);
 	offset += size;
 	break;
@@ -1614,7 +1614,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       case 0x2A:		// REV
 	TZX_index[TZX_numofblocks].sup = FALSE;
 	fseek (fp, 4, SEEK_CUR);
-	AS_printf ("  Bloque 0x2A, offset: %i, size 4, Stop Tape if in 48K\n",
+	Serial.printf ("  Bloque 0x2A, offset: %i, size 4, Stop Tape if in 48K\n",
 		  offset);
 	offset += 4;
 	break;
@@ -1624,7 +1624,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = fgetc (fp);
 	fseek (fp, size, SEEK_CUR);
 	size += 1;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, texto\n", c, offset,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, texto\n", c, offset,
 		  size);
 	offset += size;
 	break;
@@ -1635,7 +1635,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = fgetc (fp);
 	fseek (fp, size, SEEK_CUR);
 	size += 2;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, mensaje\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, mensaje\n", c,
 		  offset, size);
 	offset += size;
 	break;
@@ -1646,7 +1646,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x100;
 	fseek (fp, size, SEEK_CUR);
 	size += 2;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, informacion\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, informacion\n", c,
 		  offset, size);
 	offset += size;
 	break;
@@ -1656,7 +1656,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = fgetc (fp) * 3;
 	fseek (fp, size, SEEK_CUR);
 	size += 1;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, hardware type\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, hardware type\n", c,
 		  offset, size);
 	offset += size;
 	break;
@@ -1665,7 +1665,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       case 0x34:		// REV
 	TZX_index[TZX_numofblocks].sup = FALSE;
 	fseek (fp, 8, SEEK_CUR);
-	AS_printf ("  Bloque 0x34, offset: %i, size 8, Emul. Info.\n", offset);
+	Serial.printf ("  Bloque 0x34, offset: %i, size 8, Emul. Info.\n", offset);
 	offset += 8;
 	break;
 
@@ -1678,7 +1678,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x1000000;
 	fseek (fp, size, SEEK_CUR);
 	size += 14;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, custom block\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, custom block\n", c,
 		  offset, size);
 	offset += size;
 	break;
@@ -1691,7 +1691,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x10000;
 	fseek (fp, size, SEEK_CUR);
 	size += 4;
-	AS_printf ("  Bloque 0x%02X, offset: %i, size %i, snapshot\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size %i, snapshot\n", c,
 		  offset, size);
 	offset += size;
 	break;
@@ -1699,7 +1699,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       case 0x5a:		// OK
 	TZX_index[TZX_numofblocks].sup = FALSE;
 	fseek (fp, 9, SEEK_CUR);
-	AS_printf ("  Bloque 0x%02X, offset: %i, size 9, Cabecera\n", c,
+	Serial.printf ("  Bloque 0x%02X, offset: %i, size 9, Cabecera\n", c,
 		  offset);
 	offset += 9;
 	break;
@@ -1714,7 +1714,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
 	size = size + fgetc (fp) * 0x1000000;
 	fseek (fp, size, SEEK_CUR);
 	size += 4;
-	AS_printf
+	Serial.printf
 	  ("  Bloque 0x%02X, offset: %i, size %i, Desconocido o no soportado\n",
 	   c, offset, size);
 	offset += size;
@@ -1724,7 +1724,7 @@ valido id(HEX) descripcion tama�o sin contar el ID
       TZX_numofblocks++;
       offset++;
     } while ((c = fgetc (fp)) != EOF);
-  AS_printf ("indice completo %i bloques,en offset: %i, %s es valido, %s.\n",
+  Serial.printf ("indice completo %i bloques,en offset: %i, %s es valido, %s.\n",
 	    TZX_numofblocks, offset, (valido == 1 ? "" : "no"),
 	    (funciona == 1 ? "funcionara" : "no funcionara"));
   return valido;

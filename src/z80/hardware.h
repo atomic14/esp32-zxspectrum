@@ -51,11 +51,6 @@ void pf575_write(uint16_t dato);
 void keypad_i2c_read(void);
 void keypad_i2c_init(void);
 
-//#include "HardwareSerial.h"
-//extern HardwareSerial Serial;
-#define AS_printf Serial.printf
-#define AS_print Serial.print
-
 #ifdef __cplusplus
   }
 #endif
