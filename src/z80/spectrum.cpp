@@ -210,7 +210,7 @@ int reset_spectrum(Z80Regs * regs){
       ret=reset_plus3();
       break;
   }
-  Z80Reset (regs, 0);
+  Z80Reset (regs);
 
   return ret;
 }

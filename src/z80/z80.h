@@ -131,8 +131,7 @@ typedef struct {
   uint16_t IRequest;
   int we_are_on_ddfd;
   /* the following is to take care of cycle counting */ 
-  int IPeriod, ICount, IBackup;
-  int petint; 
+  int cycles;
   /* DecodingErrors = set this to 1 for debugging purposes in order
    *    to trap undocumented or non implemented opcodes.
    *    Trace          = set this to 1 to start tracing. It's also set
@@ -148,7 +147,7 @@ typedef struct {
 /*====================================================================
    Function declarations, read the .c file to know what they do.
  ===================================================================*/ 
-void     Z80Reset (register Z80Regs * regs, int);
+void     Z80Reset (register Z80Regs * regs);
 void     Z80Interrupt (register Z80Regs *, register uint16_t);
 uint16_t Z80Run (register Z80Regs *, int);
 byte     Z80MemRead (register uint16_t, Z80Regs *);
@@ -162,6 +161,7 @@ uint16_t Z80Hardware (register Z80Regs *);
 void     Z80FlagTables (void);
 uint16_t ParseOpcode (char *, char *, char *, uint16_t, Z80Regs *);
 uint16_t Z80Dissasembler (Z80Regs *, char *, char *);
+void Z80WriteMem (uint16_t where, uint16_t A, Z80Regs * regs);
 
 #ifdef __cplusplus
   }

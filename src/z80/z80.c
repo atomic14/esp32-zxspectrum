@@ -62,7 +62,7 @@ byte ioblock_dec1_table[64];
 byte ioblock_2_table[0x100];
 
 /*====================================================================
-  void Z80Reset( Z80Regs *regs, int cycles )
+  void Z80Reset( Z80Regs *regs)
 
   This function simulates a z80 reset by setting the registers
   to the values they are supposed to take on a real z80 reset.
@@ -70,7 +70,7 @@ byte ioblock_2_table[0x100];
   of cycles required to check for interrupts and do special
   hardware checking/updating.
  ===================================================================*/
-void Z80Reset (Z80Regs * regs, int int_cycles) {
+void Z80Reset (Z80Regs * regs) {
   /* reset PC and the rest of main registers: */
   regs->PC.W = regs->R.W = 0x0000;
   regs->AF.W = regs->BC.W = regs->DE.W = regs->HL.W = 0x0000;
@@ -81,9 +81,9 @@ void Z80Reset (Z80Regs * regs, int int_cycles) {
   /* reset variables to their default values */
   regs->I = 0x00;
   regs->IFF1 = regs->IFF2 = regs->IM = regs->halted = 0x00;
-  regs->ICount = regs->IPeriod = int_cycles;
   regs->IRequest = INT_NOINT;
   regs->we_are_on_ddfd = regs->dobreak = 0;
+  regs->cycles = 0;
   //regs->BorderColor = 0;
 }
 
@@ -98,7 +98,7 @@ void Z80Reset (Z80Regs * regs, int int_cycles) {
   case statements into C files included here with #include to
   make this more readable (and programming easier! :).
 
-  This function will change regs->ICount register and will execute
+  This function will change regs->cycles register and will execute
   an interrupt when it reaches 0 (or <0). You can then do anything
   related to your machine emulation here, using the Z80Hardware()
   function. This function must be filled by yourself: put there
@@ -125,9 +125,10 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
   unsigned short tempword;
 
   /* emulate <numcycles> cycles */
-  loop = (regs->ICount - numcycles);
+  // loop = (regs->cycles - numcycles);
+  regs->cycles = numcycles;
   /* this is the emulation main loop */
-  while (regs->ICount > loop) {
+  while (regs->cycles > 0) {
       if (regs->halted == 1) {
        r_PC--;
        AddCycles (4);
@@ -164,18 +165,9 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
         regs->we_are_on_ddfd = 0;
         break;
       }
-
       /* patch ROM loading routine */
       // address contributed by Ignacio Burgueño :)
       if (r_PC >= 0x0556 && r_PC <= 0x056c) Z80Patch (regs);
-
-      /* check if it's time to do other hardware emulation */
-      if (regs->ICount <= 0) {
-         regs->petint=0;
-         regs->ICount += regs->IPeriod;
-        // TODO - this seems to really break things!  loop = regs->ICount + loop;
-         Z80Interrupt (regs, tmpreg.W);
-      }
   }
   return (regs->PC.W);
 }

@@ -101,10 +101,10 @@
 //  return( regs->RAM[A] );
 
 
-/* macros to change the ICount register */
-#define AddCycles(n) regs->ICount-=(n)
+/* macros to change the cycles register */
+#define AddCycles(n) regs->cycles-=(n)
 
-#define SubCycles(n) regs->ICount+=(n)
+#define SubCycles(n) regs->cycles+=(n)
 
 //#define AddR(n) r_R = (r_R+(n))
 #define AddR(n) r_R = ((r_R & 0x80) | ((r_R+(n)) & 0x7f ))

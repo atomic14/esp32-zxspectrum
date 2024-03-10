@@ -27,9 +27,11 @@
 #include "z80/snaps.h"
 #include "z80/spectrum.h"
 #include "z80/z80.h"
+#include "Nunchuk/wii_i2c.h"
 
 TFT_eSPI tft = TFT_eSPI();
 AudioOutput *audioOutput = NULL;
+unsigned int controller_type = 0;
 
 /* Definimos unos objetos
  *  spectrumZ80 es el procesador en si
@@ -200,6 +202,7 @@ void z80Runner(void *pvParameter)
         audioBuffer[i] = 0;
       }
     }
+    Z80Interrupt(&spectrumZ80, 0x38);
     // draw a frame
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
@@ -270,10 +273,24 @@ void setup(void)
   Serial.println("Border Width: " + String(borderWidth));
   Serial.println("Border Height: " + String(borderHeight));
 
-  // This is supous that provide por CPU to the program.
-  // WiFi.mode(WIFI_OFF);
-  // btStop();
-
+  #ifdef NUNCHUK_CLOCK
+  if (wii_i2c_init(0, NUNCHUK_DATA, NUNCHUK_CLOCK) != 0) {
+    Serial.printf("ERROR initializing wii i2c controller\n");
+  } else {
+    const unsigned char *ident = wii_i2c_read_ident();
+    if (! ident) {
+      Serial.printf("no ident :(\n");
+    } else {
+      controller_type = wii_i2c_decode_ident(ident);
+      switch (controller_type) {
+        case WII_I2C_IDENT_NUNCHUK: Serial.printf("-> nunchuk detected\n"); break;
+        case WII_I2C_IDENT_CLASSIC: Serial.printf("-> classic controller detected\n"); break;
+        default:                    Serial.printf("-> unknown controller detected: 0x%06x\n", controller_type); break;
+      }
+    }
+  }
+  #endif
+  
   tft.begin();
   // DMA - should work with ESP32, STM32F2xx/F4xx/F7xx processors  >>>>>> DMA IS FOR SPI DISPLAYS ONLY <<<<<<
   #ifdef USE_DMA
@@ -317,14 +334,15 @@ void setup(void)
   Serial.printf("\n");
 
   // FIXME porque 69888?? ¿quiza un frame, para que pinte la pantalla una vez?
-  Z80Reset(&spectrumZ80, 69888);
+  Z80Reset(&spectrumZ80);
   Z80FlagTables();
   Serial.printf("Z80 Initialization completed\n");
 
   init_spectrum(SPECMDL_48K, "/48.rom");
   reset_spectrum(&spectrumZ80);
-  Load_SNA(&spectrumZ80, "/manic.sna");
+  // Load_SNA(&spectrumZ80, "/manic.sna");
   //  Load_SNA(&spectrumZ80,"/t1.sna");
+  Load_SNA(&spectrumZ80, "/elite.sna");
   Serial.printf("Entrando en el loop\n");
   // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
@@ -334,8 +352,83 @@ void setup(void)
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
 }
 
+void show_nunchuk(const unsigned char *data)
+{
+  wii_i2c_nunchuk_state state;
+  wii_i2c_decode_nunchuk(data, &state);
+        
+  Serial.printf("a = (%5d,%5d,%5d)\n", state.acc_x, state.acc_y, state.acc_z);
+  Serial.printf("d = (%5d,%5d)\n", state.x, state.y);
+  Serial.printf("c=%d, z=%d\n", state.c, state.z);
+}
+
+void show_classic(const unsigned char *data)
+{
+  wii_i2c_classic_state state;
+  wii_i2c_decode_classic(data, &state);
+
+  Serial.printf("lx,ly = (%3d,%3d)\n", state.lx, state.ly);
+  Serial.printf("rx,ry = (%3d,%3d)\n", state.rx, state.ry);
+  Serial.printf("a lt,rt = (%3d,%3d)\n", state.a_lt, state.a_rt);
+  Serial.printf("d lt,rt = (%d,%d)\n", state.d_lt, state.d_rt);
+  Serial.printf("a,b,x,y = (%d,%d,%d,%d)\n", state.a, state.b, state.x, state.y);
+  Serial.printf("up, down, left, right = (%d,%d,%d,%d)\n", state.up, state.down, state.left, state.right);
+  Serial.printf("home, plus, minus = (%d,%d,%d)\n", state.home, state.plus, state.minus);
+  Serial.printf("zl, zr = (%d,%d)\n", state.zl, state.zr);
+}
+
 void loop(void)
 {
-  // nothing to do here
-  vTaskDelay(1000);
+  const unsigned char *data = wii_i2c_read_state();
+  wii_i2c_request_state();
+  if (data) {
+    switch (controller_type) {
+    case WII_I2C_IDENT_NUNCHUK: {
+      wii_i2c_nunchuk_state state;
+      wii_i2c_decode_nunchuk(data, &state);
+      if (state.x > 50) { // going right
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_1, 1);
+        Serial.printf("right\n");
+      } else if (state.x < -50) { // going left
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_Q, 1);
+        Serial.printf("left\n");
+      } else {
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_1, 0);
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_Q, 0);
+      }
+      // if (state.y > 50) { // going up
+      //   updatekey(tft, emuopt, spectrumZ80, JOYK_UP, 1);
+      //   Serial.printf("up\n");
+      // } else if (state.y < -50) { // going down
+      //   updatekey(tft, emuopt, spectrumZ80, JOYK_DOWN, 1);
+      //   Serial.printf("down\n");
+      // } else {
+      //   updatekey(tft, emuopt, spectrumZ80, JOYK_UP, 0);
+      //   updatekey(tft, emuopt, spectrumZ80, JOYK_DOWN, 0);
+      // }
+      if (state.z) { // button z pressed
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_N, 1);
+        Serial.printf("fire\n");
+      } else {
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_N, 0);
+      }
+      if (state.c) {
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_SPACE, 1);
+        Serial.printf("enter\n");
+      } else {
+        updatekey(tft, emuopt, spectrumZ80, SPECKEY_SPACE, 0);
+      
+      }
+    }
+    break;
+    case WII_I2C_IDENT_CLASSIC: show_classic(data); break;
+    default:
+      // Serial.printf("data: %02x %02x %02x %02x %02x %02x\n",
+      //               data[0], data[1], data[2], data[3], data[4], data[5]);
+      break;
+    }
+  } else {
+    Serial.printf("no data :(\n");
+  }
+  vTaskDelay(10);
 }

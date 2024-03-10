@@ -35,7 +35,7 @@
                              3 more for each memory write/read. */
 
 
-case NOP:
+case Z80_NOP:
 AddCycles (4);
 break;
 case LD_BC_NN:
@@ -1494,8 +1494,8 @@ r_IFF1 = r_IFF2 = 1;
 		       regs->IFF2 |= 0x01;
 		       if( regs->IRequest != INT_NOINT )
 		       {
-		       regs->IBackup = regs->ICount;
-		       regs->ICount = 0x1;
+		       regs->IBackup = regs->cycles;
+		       regs->cycles = 0x1;
 		       r_IFF |= 0x20;
 		       } */
 AddCycles (4);
