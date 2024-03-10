@@ -14,6 +14,7 @@
  */
 #include <WiFi.h>
 #include <TFT_eSPI.h>
+#include <esp_err.h>
 #include "SPIFFS.h"
 #include "SPI.h"
 #include "gui.h"
@@ -187,26 +188,40 @@ void z80Runner(void *pvParameter)
   }
 }
 
-IRAM_ATTR void onTimerCallback(void *param)
+bool IRAM_ATTR onTimerCallback(void *args)
 {
-  static uint32_t timerCount = 0;
-  timerCount++;
-  timer_spinlock_take(TIMER_GROUP_0);
-  timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
-  timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
-  timer_spinlock_give(TIMER_GROUP_0);
-  uint32_t value = 0;
-  BaseType_t high_task_awoken = pdFALSE;
-  // xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
-  z80Runner(NULL);
-  xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
-  if (high_task_awoken == pdTRUE)
-  {
-    portYIELD_FROM_ISR();
-  }
+    BaseType_t high_task_awoken = pdFALSE;
+    // trigger the timer event again
+    // timer_counter_value += info->alarm_interval * TIMER_SCALE;
+    // timer_group_set_alarm_value_in_isr(info->timer_group, info->timer_idx, timer_counter_value);
 
-  // return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
+    /* Now just send the event data back to the main program task */
+    uint32_t evt = 0;
+    z80Runner(NULL);
+    xQueueSendFromISR(frameRenderTimerQueue, &evt, &high_task_awoken);
+    return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
 }
+
+// IRAM_ATTR void onTimerCallback(void *param)
+// {
+//   static uint32_t timerCount = 0;
+//   timerCount++;
+//   timer_spinlock_take(TIMER_GROUP_0);
+//   timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
+//   timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
+//   timer_spinlock_give(TIMER_GROUP_0);
+//   uint32_t value = 0;
+//   BaseType_t high_task_awoken = pdFALSE;
+//   // xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
+//   z80Runner(NULL);
+//   xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
+//   if (high_task_awoken == pdTRUE)
+//   {
+//     portYIELD_FROM_ISR();
+//   }
+
+//   // return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
+// }
 
 void setup(void)
 {
@@ -308,9 +323,13 @@ void setup(void)
 
   delay(2000);
   AS_printf("Entrando en el loop\n");
-  cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
+  // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
-  // create a timer that will fire at the sample rate
+  // tasks to do the work
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
+  // turns out we can rn the z80 in the timer interrupt
+  // xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
+  // create a timer that will fire at the frame (50/s) rate
   timer_config_t timer_config = {
       .alarm_en = TIMER_ALARM_EN,
       .counter_en = TIMER_PAUSE,
@@ -318,38 +337,12 @@ void setup(void)
       .counter_dir = TIMER_COUNT_UP,
       .auto_reload = TIMER_AUTORELOAD_EN,
       .divider = 80};
-  esp_err_t result = timer_init(TIMER_GROUP_0, TIMER_0, &timer_config);
-  if (result != ESP_OK)
-  {
-    Serial.printf("Error initializing timer: %d\n", result);
-  }
-  result = timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);
-  if (result != ESP_OK)
-  {
-    Serial.printf("Error setting timer counter value: %d\n", result);
-  }
-  result = timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 50);
-  if (result != ESP_OK)
-  {
-    Serial.printf("Error setting timer alarm value: %d\n", result);
-  }
-  // timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000);
-  result = timer_enable_intr(TIMER_GROUP_0, TIMER_0);
-  if (result != ESP_OK)
-  {
-    Serial.printf("Error enabling timer interrupt: %d\n", result);
-  }
-  result = timer_isr_register(TIMER_GROUP_0, TIMER_0, &onTimerCallback, NULL, ESP_INTR_FLAG_IRAM, NULL);
-  if (result != ESP_OK)
-  {
-    Serial.printf("Error registering timer interrupt: %d\n", result);
-    // print the string error
-    const char *err = esp_err_to_name(result);
-    Serial.printf("Error: %s\n", err);
-  }
-  result = timer_start(TIMER_GROUP_0, TIMER_0);
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
-  // xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
+  ESP_ERROR_CHECK(timer_init(TIMER_GROUP_0, TIMER_0, &timer_config));
+  ESP_ERROR_CHECK(timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0));
+  ESP_ERROR_CHECK(timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 50));
+  ESP_ERROR_CHECK(timer_enable_intr(TIMER_GROUP_0, TIMER_0));
+  ESP_ERROR_CHECK(timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, onTimerCallback, NULL, 0));
+  ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
 }
 
 void loop(void)
