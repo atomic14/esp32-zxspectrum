@@ -160,11 +160,11 @@ void z80Runner(void *pvParameter)
 {
   int8_t audioBuffer[400];
   int lastMillis = 0;
-  while (1)
+  // while (1)
   {
     uint32_t evt;
     size_t bytes_written = 0;
-    if (xQueueReceive(cpuRunTimerQueue, &evt, portMAX_DELAY))
+    // if (xQueueReceive(cpuRunTimerQueue, &evt, portMAX_DELAY))
     {
       runs++;
       // run for 1/50th of a second - (400*175)/3.5E6MHz
@@ -178,7 +178,7 @@ void z80Runner(void *pvParameter)
         }
         else
         {
-          audioBuffer[i] = -20;
+          audioBuffer[i] = 0;
         }
       }
       // write the audio buffer to the I2S device (blocking for 1 second if necessary
@@ -197,7 +197,8 @@ IRAM_ATTR void onTimerCallback(void *param)
   timer_spinlock_give(TIMER_GROUP_0);
   uint32_t value = 0;
   BaseType_t high_task_awoken = pdFALSE;
-  xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
+  // xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
+  z80Runner(NULL);
   xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
   if (high_task_awoken == pdTRUE)
   {
@@ -211,9 +212,11 @@ void setup(void)
 {
   Serial.begin(115200);
 
+#ifdef TFT_POWER
   // turn on the TFT
   pinMode(TFT_POWER, OUTPUT);
   digitalWrite(TFT_POWER, LOW);
+#endif
 
   for (int i = 0; i < 5; i++)
   {
@@ -221,8 +224,10 @@ void setup(void)
     AS_printf("Waiting %i\n", i);
   }
   AS_printf("OpenVega+ Boot!\n");
+  #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
+  #endif
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
       .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
@@ -344,7 +349,7 @@ void setup(void)
   }
   result = timer_start(TIMER_GROUP_0, TIMER_0);
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
+  // xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
 }
 
 void loop(void)
