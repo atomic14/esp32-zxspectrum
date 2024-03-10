@@ -20,6 +20,8 @@
 #include "gui.h"
 #include "driver/timer.h"
 #include "AudioOutput/I2SOutput.h"
+#include "AudioOutput/PDMOutput.h"
+#include "AudioOutput/DACOutput.h"
 #include "z80/hardware.h"
 #include "z80/snaps.h"
 #include "z80/spectrum.h"
@@ -52,7 +54,6 @@ const int specpal565[16] = {
     0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
 uint32_t c = 0;
-uint32_t runs = 0;
 
 void drawDisplay(void *pvParameters)
 {
@@ -72,7 +73,9 @@ void drawDisplay(void *pvParameters)
         frame_millis = millis();
       }
       tft.startWrite();
+      #ifdef USE_DMA
       tft.dmaWait();
+      #endif
       // do the border
       uint8_t borderColor = hwopt.BorderColor & B00000111;
       // TODO - can the border color be bright?
@@ -136,9 +139,14 @@ void drawDisplay(void *pvParameters)
         if (dirty)
         {
           // push out this block of pixels 256 * 8
+          #ifdef USE_DMA
           tft.dmaWait();
           tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
           tft.pushPixelsDMA(frameBuffer + attrY * 8 * 256, 256 * 8);
+          #else
+          tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
+          tft.pushPixels(frameBuffer + attrY * 8 * 256, 256 * 8);
+          #endif
         }
       }
       tft.endWrite();
@@ -149,79 +157,74 @@ void drawDisplay(void *pvParameters)
         Serial.printf("Frame rate=%d\n", frames);
         frames = 0;
         frame_millis = millis();
-        Serial.printf("Executed at %d cycles %d runs\n", c, runs);
+        Serial.printf("Executed at %.2FMHz cycles\n", c/1000000.0);
         c = 0;
-        runs = 0;
       }
     }
   }
+}
+
+void z80RunForCycles(uint32_t cycles)
+{
+  c += cycles;
+  Z80Run(&spectrumZ80, cycles);
 }
 
 void z80Runner(void *pvParameter)
 {
   int8_t audioBuffer[400];
-  int lastMillis = 0;
-  // while (1)
+  // int lastMillis = 0;
+  while (1)
   {
-    uint32_t evt;
     size_t bytes_written = 0;
-    // if (xQueueReceive(cpuRunTimerQueue, &evt, portMAX_DELAY))
-    {
-      runs++;
-      // run for 1/50th of a second - (400*175)/3.5E6MHz
-      for(int i = 0; i<400; i++) {
-        // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
-        c += 175;
-        Z80Run(&spectrumZ80, 175);
-        if (hwopt.SoundBits != 0)
-        {
-          audioBuffer[i] = 20;
-        }
-        else
-        {
-          audioBuffer[i] = 0;
-        }
+    // run for 1/50th of a second - (400*175)/3.5E6MHz
+    for(int i = 0; i<400; i++) {
+      // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
+      z80RunForCycles(175);
+      if (hwopt.SoundBits != 0)
+      {
+        audioBuffer[i] = 20;
       }
-      // write the audio buffer to the I2S device (blocking for 1 second if necessary
-      audioOutput->write(audioBuffer, 400);
+      else
+      {
+        audioBuffer[i] = 0;
+      }
     }
+    // draw a frame
+    uint32_t evt = 0;
+    xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
+    // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 400/20KHz = 1/50th of a second
+    #ifndef BUZZER_GPIO_NUM
+    audioOutput->write(audioBuffer, 400);
+    #endif
   }
 }
 
+int sampleIndex = 0;
 bool IRAM_ATTR onTimerCallback(void *args)
 {
     BaseType_t high_task_awoken = pdFALSE;
-    // trigger the timer event again
-    // timer_counter_value += info->alarm_interval * TIMER_SCALE;
-    // timer_group_set_alarm_value_in_isr(info->timer_group, info->timer_idx, timer_counter_value);
-
-    /* Now just send the event data back to the main program task */
-    uint32_t evt = 0;
-    z80Runner(NULL);
-    xQueueSendFromISR(frameRenderTimerQueue, &evt, &high_task_awoken);
+    z80RunForCycles(175);
+    if (hwopt.SoundBits != 0)
+    {
+      #ifdef BUZZER_GPIO_NUM
+      digitalWrite(BUZZER_GPIO_NUM, HIGH);
+      #endif
+    }
+    else
+    {
+      #ifdef BUZZER_GPIO_NUM
+      digitalWrite(BUZZER_GPIO_NUM, LOW);
+      #endif
+    }
+    sampleIndex++;
+    if (sampleIndex == 400) {
+      sampleIndex = 0;
+      uint32_t evt = 0;
+      xQueueSendFromISR(frameRenderTimerQueue, &evt, &high_task_awoken);
+    }
     return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
 }
-
-// IRAM_ATTR void onTimerCallback(void *param)
-// {
-//   static uint32_t timerCount = 0;
-//   timerCount++;
-//   timer_spinlock_take(TIMER_GROUP_0);
-//   timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
-//   timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
-//   timer_spinlock_give(TIMER_GROUP_0);
-//   uint32_t value = 0;
-//   BaseType_t high_task_awoken = pdFALSE;
-//   // xQueueSendFromISR(cpuRunTimerQueue, &value, &high_task_awoken);
-//   z80Runner(NULL);
-//   xQueueSendFromISR(frameRenderTimerQueue, &value, &high_task_awoken);
-//   if (high_task_awoken == pdTRUE)
-//   {
-//     portYIELD_FROM_ISR();
-//   }
-
-//   // return high_task_awoken == pdTRUE; // return whether we need to yield at the end of ISR
-// }
 
 void setup(void)
 {
@@ -243,6 +246,27 @@ void setup(void)
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
   #endif
+#ifdef USE_DAC_AUDIO
+  audioOutput = new DACOutput(I2S_NUM_0);
+#endif
+#ifdef BUZZER_GPIO_NUM
+  pinMode(BUZZER_GPIO_NUM, OUTPUT);
+#endif
+#ifdef PDM_GPIO_NUM
+  // i2s speaker pins
+  i2s_pin_config_t i2s_speaker_pins = {
+      .bck_io_num = I2S_PIN_NO_CHANGE,
+      .ws_io_num = GPIO_NUM_0,
+      .data_out_num = PDM_GPIO_NUM,
+      .data_in_num = I2S_PIN_NO_CHANGE};
+  audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
+#endif
+#ifdef I2S_SPEAKER_SERIAL_CLOCK
+#ifdef SPK_MODE
+  pinMode(SPK_MODE, OUTPUT);
+  digitalWrite(SPK_MODE, HIGH);
+#endif
+  // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
       .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
@@ -250,11 +274,10 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
 
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
+#endif
+  #ifndef BUZZER_GPIO_NUM
   audioOutput->start(20000);
-  int8_t dummyAudio[256] = {0};
-  for(int i = 0; i<10; i++){
-    audioOutput->write(dummyAudio, 256);
-  }
+  #endif
 
   keypad_i2c_init();
   // Initialize SPIFFS
@@ -273,7 +296,9 @@ void setup(void)
 
   tft.begin();
   // DMA - should work with ESP32, STM32F2xx/F4xx/F7xx processors  >>>>>> DMA IS FOR SPI DISPLAYS ONLY <<<<<<
+  #ifdef USE_DMA
   tft.initDMA(); // Initialise the DMA engine
+  #endif
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
   AS_printf("Total heap: ");
@@ -327,9 +352,8 @@ void setup(void)
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, NULL, 1, NULL, 1);
-  // turns out we can rn the z80 in the timer interrupt
-  // xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
-  // create a timer that will fire at the frame (50/s) rate
+  #ifdef BUZZER_GPIO_NUM
+  // create a timer that will fire at the sample rate of 20KHz
   timer_config_t timer_config = {
       .alarm_en = TIMER_ALARM_EN,
       .counter_en = TIMER_PAUSE,
@@ -339,10 +363,14 @@ void setup(void)
       .divider = 80};
   ESP_ERROR_CHECK(timer_init(TIMER_GROUP_0, TIMER_0, &timer_config));
   ESP_ERROR_CHECK(timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0));
-  ESP_ERROR_CHECK(timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 50));
+  ESP_ERROR_CHECK(timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, 1000000 / 20000));
   ESP_ERROR_CHECK(timer_enable_intr(TIMER_GROUP_0, TIMER_0));
   ESP_ERROR_CHECK(timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, onTimerCallback, NULL, 0));
   ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
+  #else
+  // use the I2S output to control the frame rate
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, NULL, 5, NULL, 0);
+  #endif
 }
 
 void loop(void)

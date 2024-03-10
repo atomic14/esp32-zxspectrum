@@ -14,8 +14,8 @@ void DACOutput::start(uint32_t sample_rate)
         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_MSB,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-        .dma_buf_count = 4,
-        .dma_buf_len = 1024,
+        .dma_buf_count = 2,
+        .dma_buf_len = 400,
         .use_apll = true,
         .tx_desc_auto_clear = true,
         .fixed_mclk = 0};
