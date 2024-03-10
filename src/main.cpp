@@ -59,6 +59,7 @@ uint32_t c = 0;
 void drawDisplay(void *pvParameters)
 {
   uint32_t frames = 0;
+  uint16_t flashTimer = 0;
   int32_t frame_millis = 0;
   uint16_t lastBorderColor = 0;
   tft.startWrite();
@@ -79,7 +80,6 @@ void drawDisplay(void *pvParameters)
       #endif
       // do the border
       uint8_t borderColor = hwopt.BorderColor & B00000111;
-      // TODO - can the border color be bright?
       uint16_t tftColor = specpal565[borderColor];
       if (tftColor != lastBorderColor)
       {
@@ -106,6 +106,13 @@ void drawDisplay(void *pvParameters)
           {
             inkColor = inkColor + 8;
             paperColor = paperColor + 8;
+          }
+          // if we are flashing and the flash timer is less than 16 then swap ink and paper
+          if ((attr & B10000000) != 0 && flashTimer < 16)
+          {
+            uint8_t temp = inkColor;
+            inkColor = paperColor;
+            paperColor = temp;
           }
           uint16_t tftInkColor = specpal565[inkColor];
           uint16_t tftPaperColor = specpal565[paperColor];
@@ -152,6 +159,10 @@ void drawDisplay(void *pvParameters)
       }
       tft.endWrite();
       frames++;
+      flashTimer++;
+      if(flashTimer == 32) {
+        flashTimer = 0;
+      }
       if (millis() - frame_millis > 1000)
       {
         Serial.printf("Executed at %.2FMHz cycles, frame rate=%d\n", c/1000000.0, frames);
@@ -212,18 +223,18 @@ void setup(void)
     delay(1000);
     Serial.printf("Waiting %i\n", i);
   }
-  Serial.printf("OpenVega+ Boot!\n");
+  Serial.printf("Boot!\n");
   #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
   #endif
-#ifdef USE_DAC_AUDIO
+  #ifdef USE_DAC_AUDIO
   audioOutput = new DACOutput(I2S_NUM_0);
-#endif
-#ifdef BUZZER_GPIO_NUM
+  #endif
+  #ifdef BUZZER_GPIO_NUM
   audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
-#endif
-#ifdef PDM_GPIO_NUM
+  #endif
+  #ifdef PDM_GPIO_NUM
   // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_PIN_NO_CHANGE,
@@ -232,11 +243,11 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
 #endif
-#ifdef I2S_SPEAKER_SERIAL_CLOCK
-#ifdef SPK_MODE
+  #ifdef I2S_SPEAKER_SERIAL_CLOCK
+  #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
-#endif
+  #endif
   // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
@@ -245,7 +256,7 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
 
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
-#endif
+  #endif
   audioOutput->start(20000);
 
   keypad_i2c_init();
