@@ -147,14 +147,10 @@ typedef struct {
 void     Z80Reset (register Z80Regs * regs);
 void     Z80Interrupt (register Z80Regs *, register uint16_t);
 uint16_t Z80Run (register Z80Regs *, int);
-byte     Z80InPort (register Z80Regs * regs, register uint16_t);
-void     Z80OutPort (register Z80Regs * regs, register uint16_t, register byte);
 void     Z80Patch (register Z80Regs *);
 byte     Z80Debug (register Z80Regs *);
-uint16_t Z80Hardware (register Z80Regs *);
 void     Z80FlagTables (void);
 uint16_t ParseOpcode (char *, char *, char *, uint16_t, Z80Regs *);
 uint16_t Z80Dissasembler (Z80Regs *, char *, char *);
-void Z80WriteMem (uint16_t where, uint16_t A, Z80Regs * regs);
 
 #endif  // #ifdef Z80_H

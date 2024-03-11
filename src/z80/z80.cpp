@@ -22,21 +22,11 @@
 #include "z80.h"
 
 #define Z80ReadMem(where) (((ZXSpectrum *)regs->userInfo)->z80_peek(where))
+#define Z80WriteMem(where, A, regs) (((ZXSpectrum *)regs->userInfo)->z80_poke(where, A))
+#define Z80InPort(regs, port) (((ZXSpectrum *)regs->userInfo)->z80_in(port))
+#define Z80OutPort(regs, port, value) (((ZXSpectrum *)regs->userInfo)->z80_out(port, value))
 
 #include "macros.h"
-
-/* RAM variable, debug toggle variable, pressed key and
-   row variables for keyboard emulation                   */
-//extern byte *RAM;
-//extern int debug, main_tecla, scanl;
-//extern char *msg_log;
-//extern int fila[5][5];
-//extern char *tapfile;
-//extern FILE *tapfile;
-//extern char *tfont;
-//#include "macros.c"           // now in aspec.h
-//extern int TSTATES_PER_LINE, TOP_BORDER_LINES, BOTTOM_BORDER_LINES, SCANLINES;
-// previously in macros.c
 
 /* Whether a half carry occured or not can be determined by looking at
    the 3rd bit of the two arguments and the result; these are hashed
@@ -86,7 +76,6 @@ void Z80Reset (Z80Regs * regs) {
   regs->IRequest = INT_NOINT;
   regs->we_are_on_ddfd = regs->dobreak = 0;
   regs->cycles = 0;
-  //regs->BorderColor = 0;
 }
 
 /*====================================================================
@@ -209,18 +198,6 @@ void Z80Interrupt (Z80Regs * regs, uint16_t ivec){
     }
 }
 
-
-/*====================================================================
-  word  Z80Hardware(register Z80Regs *regs)
-
-  Do here your emulated machine hardware emulation. Read Z80Execute()
-  to know about how to quit emulation and generate interrupts.
- ===================================================================*/
-uint16_t Z80Hardware (register Z80Regs * regs){
-  return (INT_IRQ);
-}
-
-
 /*====================================================================
   void Z80Patch( register Z80Regs *regs )
 
@@ -248,36 +225,6 @@ Z80Patch (register Z80Regs * regs)
     }
 */
 }
-
-
-/*--- Memory Write on the A address on no bank machines -------------*/
-void Z80WriteMem (uint16_t where, uint16_t A, Z80Regs * regs){
-  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
-  speccy->z80_poke(where, (byte)A);
-}
-
-/*====================================================================
-  byte Z80InPort(register Z80Regs *regs, eregister word port )
-
-  This function reads from the given I/O port. It is not inlined,
-  and it's written for debugging purposes.
- ===================================================================*/
-byte Z80InPort (register Z80Regs * regs, register uint16_t port) {
-  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
-  return (speccy->z80_in(port));
-}
-
-/*====================================================================
-  void Z80OutPort( register word port, register byte value )
-
-  This function outs a value to a given I/O port. It is not inlined,
-  and it's written for debugging purposes.
- ===================================================================*/
-void Z80OutPort (register Z80Regs * regs, register uint16_t port, register byte value) {
-  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
-  speccy->z80_out(port,value);
-}
-
 
 /*====================================================================
    static void Z80FlagTables ( void );

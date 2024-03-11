@@ -191,18 +191,12 @@ void drawDisplay(void *pvParameters)
             machine->updatekey(JOYK_UP, 0);
             machine->updatekey(JOYK_DOWN, 0);
           }
-          if (state.z)
-          { // button z pressed
+          if (state.z || state.c)
+          {
             machine->updatekey(JOYK_FIRE, 1);
           }
           else
           {
-            machine->updatekey(JOYK_FIRE, 0);
-          }
-          if (state.c) {
-            machine->updatekey(JOYK_FIRE, 1);
-            Serial.printf("enter\n");
-          } else {
             machine->updatekey(JOYK_FIRE, 0);
           }
         }
