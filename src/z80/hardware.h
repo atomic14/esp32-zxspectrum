@@ -1,9 +1,9 @@
 #ifndef HARDWARE_H
 #define HARDWARE_H
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+// #ifdef __cplusplus
+// extern "C"
+// {
+// #endif
 
 #include <stdint.h>
 #include "spectrum.h"
@@ -87,7 +87,7 @@ extern "C"
 
   void updatekey(uint8_t key, uint8_t state);
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
 #endif // #ifdef HARDWARE_H

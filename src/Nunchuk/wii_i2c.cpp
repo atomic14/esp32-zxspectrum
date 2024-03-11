@@ -26,11 +26,14 @@ static esp_err_t wii_i2c_setup_i2c(i2c_port_t i2c_port_num, int sda_pin, int scl
   i2c_config_t conf = {
     .mode = I2C_MODE_MASTER,
     .sda_io_num    = sda_pin,
-    .sda_pullup_en = GPIO_PULLUP_ENABLE,
     .scl_io_num    = scl_pin,
+    .sda_pullup_en = GPIO_PULLUP_ENABLE,
     .scl_pullup_en = GPIO_PULLUP_ENABLE,
-    .master.clk_speed = 100000,  // 100KHz
+    .master {
+      .clk_speed = 100000,  // 100KHz
+    }
   };
+
   i2c_param_config(wii_i2c_port_num, &conf);
   return i2c_driver_install(wii_i2c_port_num, conf.mode, 0, 0, 0);
 }

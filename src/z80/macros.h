@@ -185,7 +185,7 @@
   ( (reg)&0x0f ? 0 : FLAG_H ) | ( (reg) ? 0 : FLAG_Z ) |    \
    sz53_table[(reg)]
 
-#define DEC(reg)                                                  \
+#define ZX_DEC(reg)                                                  \
    r_F = ( r_F & FLAG_C ) | ( (reg)&0x0f ? 0 : FLAG_H ) | FLAG_N; \
    (reg)--;                                                       \
    r_F |= ( (reg)==0x7f ? FLAG_V : 0 ) | sz53_table[(reg)]

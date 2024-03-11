@@ -38,9 +38,6 @@
  ======================================================================*/  
 #ifndef Z80_H
 #define Z80_H
-#ifdef __cplusplus
-  extern "C" {
-#endif
   
 //#define DEBUG
 //#define _DEV_DEBUG_                         /* development debugging */
@@ -163,7 +160,4 @@ uint16_t ParseOpcode (char *, char *, char *, uint16_t, Z80Regs *);
 uint16_t Z80Dissasembler (Z80Regs *, char *, char *);
 void Z80WriteMem (uint16_t where, uint16_t A, Z80Regs * regs);
 
-#ifdef __cplusplus
-  }
-#endif
 #endif  // #ifdef Z80_H

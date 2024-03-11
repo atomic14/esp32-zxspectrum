@@ -1,8 +1,6 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
-#ifdef __cplusplus
-  extern "C" {
-#endif
+
 #include "z80.h"
 
 enum models_enum { SPECMDL_16K=1, SPECMDL_48K, SPECMDL_INVES, SPECMDL_128K, SPECMDL_PLUS2, 
@@ -96,7 +94,4 @@ int load_48krom(const char *);
 int load_128krom(const char *);
 int load_p3rom(const char *);
 
-#ifdef __cplusplus
-  }
-#endif
 #endif  // #ifdef SPECTRUM_H

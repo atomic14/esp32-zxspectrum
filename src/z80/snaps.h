@@ -20,9 +20,7 @@
  ======================================================================*/
 #ifndef SNAPS_H
 #define SNAPS_H
-#ifdef __cplusplus
-  extern "C" {
-#endif  
+
 #ifndef DOSSEP
 #define DOSSEP '/'
 #endif
@@ -70,7 +68,4 @@ uint8_t TZX_rewind();
 uint8_t TZX_genindex(FILE *fp);
 
 
-#ifdef __cplusplus
-  }
-#endif
 #endif  // #ifdef SNAPS_H

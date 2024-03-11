@@ -163,7 +163,7 @@ switch (opcode)
     r_mem = REG + (offset) Z80ReadMem (r_PC);
     r_PC++;
     tmpreg.B.l = Z80ReadMem (r_mem);
-    DEC (tmpreg.B.l);
+    ZX_DEC (tmpreg.B.l);
     Z80WriteMem (r_mem, tmpreg.B.l, regs);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3 + 3 + 1);
     break;
@@ -425,11 +425,11 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case DEC_IXYh:
-    DEC (REGH);
+    ZX_DEC (REGH);
     AddCycles (4 + 4);
     break;
   case DEC_IXYl:
-    DEC (REGL);
+    ZX_DEC (REGL);
     AddCycles (4 + 4);
     break;
 

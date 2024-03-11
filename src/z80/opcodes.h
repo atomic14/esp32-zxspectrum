@@ -56,7 +56,7 @@ INC (r_B);
 AddCycles (4);
 break;
 case DEC_B:
-DEC (r_B);
+ZX_DEC (r_B);
 AddCycles (4);
 break;
 
@@ -86,7 +86,7 @@ AddCycles (4);
 break;
 
 case DEC_C:
-DEC (r_C);
+ZX_DEC (r_C);
 AddCycles (4);
 break;
 
@@ -116,7 +116,7 @@ AddCycles (4);
 break;
 
 case DEC_D:
-DEC (r_D);
+ZX_DEC (r_D);
 AddCycles (4);
 break;
 
@@ -158,7 +158,7 @@ AddCycles (4);
 break;
 
 case DEC_E:
-DEC (r_E);
+ZX_DEC (r_E);
 AddCycles (4);
 break;
 
@@ -188,7 +188,7 @@ AddCycles (4);
 break;
 
 case DEC_H:
-DEC (r_H);
+ZX_DEC (r_H);
 AddCycles (4);
 break;
 
@@ -213,7 +213,7 @@ AddCycles (4);
 break;
 
 case DEC_L:
-DEC (r_L);
+ZX_DEC (r_L);
 AddCycles (4);
 break;
 
@@ -260,7 +260,7 @@ AddCycles (4);
 break;
 
 case DEC_A:
-DEC (r_A);
+ZX_DEC (r_A);
 AddCycles (4);
 break;
 
@@ -1185,7 +1185,7 @@ break;
 
 case DEC_xHL:
 r_meml = Z80ReadMem (r_HL);
-DEC (r_meml);
+ZX_DEC (r_meml);
 Z80WriteMem (r_HL, r_meml, regs);
 AddCycles (4 + 3 + 3 + 1);
 break;

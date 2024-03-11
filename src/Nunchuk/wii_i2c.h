@@ -7,10 +7,6 @@
 #define WII_I2C_IDENT_NUNCHUK  0xa4200000
 #define WII_I2C_IDENT_CLASSIC  0xa4200101
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct wii_i2c_nunchuk_state {
   // accelerometer
   short int acc_x;
@@ -77,9 +73,5 @@ const unsigned char *wii_i2c_read_state(void);
 int wii_i2c_start_read_task(int cpu_num, int delay);
 const unsigned char *wii_i2c_read_data_from_task(void);
 #endif /* WII_I2C_ENABLE_MULTI_CORE */
-  
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* WII_I2C_H_FILE */
