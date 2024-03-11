@@ -130,22 +130,40 @@ public:
   Z80Regs *z80Regs;
   tipo_mem mem;
   tipo_hwopt hwopt;
-  uint8_t kempston_port=0x0;
-  uint8_t ulaport_FF=0xFF;
+  uint8_t kempston_port = 0x0;
+  uint8_t ulaport_FF = 0xFF;
 
   ZXSpectrum();
   void reset();
 
   void updatekey(uint8_t key, uint8_t state);
 
-  uint8_t z80_peek(uint16_t dir);
-  void z80_poke(uint16_t dir, uint8_t dato);
-  uint8_t readvmem(uint16_t offset, int page);
-  void pagein(int size, int bloq, int page, int ro, int issystem);
-  void pageout(int size, int bloq, int page);
+  inline uint8_t z80_peek(uint16_t dir)
+  {
+    int page;
+    uint8_t dato;
+    page = (dir & mem.mp) >> mem.mr;
+    dato = *(mem.p + mem.ro[page] + (dir & mem.md));
+    return dato;
+  }
+
+  inline void z80_poke(uint16_t dir, uint8_t dato)
+  {
+    int page;
+    page = (dir & mem.mp) >> mem.mr;
+    *(mem.p + mem.wo[page] + (dir & mem.md)) = dato;
+  }
+
+  inline uint8_t readvmem(uint16_t offset, int page)
+  {
+    return *(mem.p + mem.vo[page] + offset);
+  }
 
   uint8_t z80_in(uint16_t dir);
   void z80_out(uint16_t dir, uint8_t dato);
+
+  void pagein(int size, int bloq, int page, int ro, int issystem);
+  void pageout(int size, int bloq, int page);
 
   int init_spectrum(int model, const char *romfile);
   int end_spectrum(void);

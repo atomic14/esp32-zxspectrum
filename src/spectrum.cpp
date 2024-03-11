@@ -20,29 +20,27 @@
 #include "spectrum.h"
 
 // Con estas variables se controla el mapeado de los botones  hardware reales a los virtuales del spectrum
-uint8_t mappingkey[4][12]={  
-{SPECKEY_Z, SPECKEY_M,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_Q, SPECKEY_A, SPECKEY_O, SPECKEY_P,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
-{SPECKEY_P, JOYK_FIRE,SPECKEY_SPACE, SPECKEY_ENTER, JOYK_UP,   JOYK_DOWN, JOYK_LEFT, JOYK_RIGHT, VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
-{SPECKEY_P, SPECKEY_0,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_9, SPECKEY_8, SPECKEY_6, SPECKEY_7,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
-{SPECKEY_5, SPECKEY_M,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_P, SPECKEY_L, SPECKEY_Z, SPECKEY_X,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
+uint8_t mappingkey[4][12] = {
+    {SPECKEY_Z, SPECKEY_M, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_Q, SPECKEY_A, SPECKEY_O, SPECKEY_P, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
+    {SPECKEY_P, JOYK_FIRE, SPECKEY_SPACE, SPECKEY_ENTER, JOYK_UP, JOYK_DOWN, JOYK_LEFT, JOYK_RIGHT, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
+    {SPECKEY_P, SPECKEY_0, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_9, SPECKEY_8, SPECKEY_6, SPECKEY_7, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
+    {SPECKEY_5, SPECKEY_M, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_P, SPECKEY_L, SPECKEY_Z, SPECKEY_X, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
 };
-
 
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
-const int key2specy[2][41]={
-  { 0, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
-       2, 2, 2, 2, 2, 5, 5, 5, 5, 5,
-       1, 1, 1, 1, 1, 6, 6, 6, 6, 6,
-       0, 0, 0, 0, 0, 7, 7, 7, 7, 7 },
-  { 0, 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
-       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
-       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
-       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE }
-};
-uint8_t speckey[8]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+const int key2specy[2][41] = {
+    {0, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
+     2, 2, 2, 2, 2, 5, 5, 5, 5, 5,
+     1, 1, 1, 1, 1, 6, 6, 6, 6, 6,
+     0, 0, 0, 0, 0, 7, 7, 7, 7, 7},
+    {0, 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+     0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+     0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+     0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE}};
+uint8_t speckey[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-int keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int oldkeys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int keys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int oldkeys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 ZXSpectrum::ZXSpectrum()
 {
@@ -56,59 +54,54 @@ void ZXSpectrum::reset()
   Z80FlagTables();
 }
 
-void ZXSpectrum::updatekey(uint8_t key, uint8_t state){
+void ZXSpectrum::updatekey(uint8_t key, uint8_t state)
+{
   uint8_t n;
   // Bit pattern: XXXFULDR
-  switch (key) {
-    case JOYK_RIGHT:
-      if (state==1) kempston_port |= B00000001;
-      else       kempston_port &= B11111110;
-      break;
-    case JOYK_LEFT:
-      if (state==1) kempston_port |= B00000010;
-      else       kempston_port &= B11111101;
-      break;
-    case JOYK_DOWN:
-      if (state==1) kempston_port |= B00000100;
-      else       kempston_port &= B11111011;
-      break;
-    case JOYK_UP:
-      if (state==1) kempston_port |= B00001000;
-      else       kempston_port &= B11110111;
-      break;
-    case JOYK_FIRE:
-      if (state==1) kempston_port |= B00010000;
-      else       kempston_port &= B11101111;
-      break;
-    default:
-      if (state==1) n=  key2specy[1][key] ;
-      else          n= (key2specy[1][key])^0xFF ;
+  switch (key)
+  {
+  case JOYK_RIGHT:
+    if (state == 1)
+      kempston_port |= B00000001;
+    else
+      kempston_port &= B11111110;
+    break;
+  case JOYK_LEFT:
+    if (state == 1)
+      kempston_port |= B00000010;
+    else
+      kempston_port &= B11111101;
+    break;
+  case JOYK_DOWN:
+    if (state == 1)
+      kempston_port |= B00000100;
+    else
+      kempston_port &= B11111011;
+    break;
+  case JOYK_UP:
+    if (state == 1)
+      kempston_port |= B00001000;
+    else
+      kempston_port &= B11110111;
+    break;
+  case JOYK_FIRE:
+    if (state == 1)
+      kempston_port |= B00010000;
+    else
+      kempston_port &= B11101111;
+    break;
+  default:
+    if (state == 1)
+      n = key2specy[1][key];
+    else
+      n = (key2specy[1][key]) ^ 0xFF;
 
-      if (state==1) speckey[ key2specy[0][key] ] &=  key2specy[1][key] ;
-      else          speckey[ key2specy[0][key] ] |= ((key2specy[1][key])^0xFF) ;
-      break;
+    if (state == 1)
+      speckey[key2specy[0][key]] &= key2specy[1][key];
+    else
+      speckey[key2specy[0][key]] |= ((key2specy[1][key]) ^ 0xFF);
+    break;
   }
-}
-
-uint8_t ZXSpectrum::z80_peek(uint16_t dir)
-{
-  int page;
-  uint8_t dato;
-  page = (dir & mem.mp) >> mem.mr;
-  dato = *(mem.p + mem.ro[page] + (dir & mem.md));
-  return dato;
-}
-
-void ZXSpectrum::z80_poke(uint16_t dir, uint8_t dato)
-{
-  int page;
-  page = (dir & mem.mp) >> mem.mr;
-  *(mem.p + mem.wo[page] + (dir & mem.md)) = dato;
-}
-
-uint8_t ZXSpectrum::readvmem(uint16_t offset, int page)
-{
-  return *(mem.p + mem.vo[page] + offset);
 }
 
 uint8_t ZXSpectrum::z80_in(uint16_t port)
@@ -136,7 +129,8 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
     return data;
   }
   // kempston joystick
-  if ((port & 0x01F) == 0x1F) {
+  if ((port & 0x01F) == 0x1F)
+  {
     return kempston_port;
   }
 
