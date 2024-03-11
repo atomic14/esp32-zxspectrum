@@ -17,7 +17,6 @@
 #include <esp_err.h>
 #include "SPIFFS.h"
 #include "SPI.h"
-#include "gui.h"
 #include "driver/timer.h"
 #include "AudioOutput/I2SOutput.h"
 #include "AudioOutput/PDMOutput.h"
@@ -77,9 +76,9 @@ void drawDisplay(void *pvParameters)
         frame_millis = millis();
       }
       tft.startWrite();
-      #ifdef USE_DMA
+#ifdef USE_DMA
       tft.dmaWait();
-      #endif
+#endif
       // do the border
       uint8_t borderColor = hwopt.BorderColor & B00000111;
       uint16_t tftColor = specpal565[borderColor];
@@ -148,26 +147,85 @@ void drawDisplay(void *pvParameters)
         }
         if (dirty)
         {
-          // push out this block of pixels 256 * 8
-          #ifdef USE_DMA
+// push out this block of pixels 256 * 8
+#ifdef USE_DMA
           tft.dmaWait();
           tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
           tft.pushPixelsDMA(frameBuffer + attrY * 8 * 256, 256 * 8);
-          #else
+#else
           tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
           tft.pushPixels(frameBuffer + attrY * 8 * 256, 256 * 8);
-          #endif
+#endif
         }
       }
       tft.endWrite();
       frames++;
       flashTimer++;
-      if(flashTimer == 32) {
+      if (flashTimer == 32)
+      {
         flashTimer = 0;
+      }
+      const unsigned char *data = wii_i2c_read_state();
+      wii_i2c_request_state();
+      if (data)
+      {
+        switch (controller_type)
+        {
+        case WII_I2C_IDENT_NUNCHUK:
+        {
+          wii_i2c_nunchuk_state state;
+          wii_i2c_decode_nunchuk(data, &state);
+          if (state.x > 50)
+          { // going right
+            updatekey(JOYK_RIGHT, 1);
+          }
+          else if (state.x < -50)
+          { // going left
+            updatekey(JOYK_LEFT, 1);
+          }
+          else
+          {
+            updatekey(JOYK_LEFT, 0);
+            updatekey(JOYK_RIGHT, 0);
+          }
+          if (state.y > 50)
+          { // going up
+            updatekey(JOYK_UP, 1);
+          }
+          else if (state.y < -50)
+          { // going down
+            updatekey(JOYK_DOWN, 1);
+          }
+          else
+          {
+            updatekey(JOYK_UP, 0);
+            updatekey(JOYK_DOWN, 0);
+          }
+          if (state.z)
+          { // button z pressed
+            updatekey(JOYK_FIRE, 1);
+          }
+          else
+          {
+            updatekey(JOYK_FIRE, 0);
+          }
+          if (state.c) {
+            updatekey(JOYK_FIRE, 1);
+            Serial.printf("enter\n");
+          } else {
+            updatekey(JOYK_FIRE, 0);
+          }
+        }
+        break;
+        }
+      }
+      else
+      {
+        Serial.printf("no data :(\n");
       }
       if (millis() - frame_millis > 1000)
       {
-        Serial.printf("Executed at %.2FMHz cycles, frame rate=%d\n", c/1000000.0, frames);
+        Serial.printf("Executed at %.2FMHz cycles, frame rate=%d\n", c / 1000000.0, frames);
         frames = 0;
         frame_millis = millis();
         c = 0;
@@ -186,11 +244,29 @@ void z80Runner(void *pvParameter)
 {
   int8_t audioBuffer[400];
   // int lastMillis = 0;
+  uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
   while (1)
   {
     size_t bytes_written = 0;
     // run for 1/50th of a second - (400*175)/3.5E6MHz
-    for(int i = 0; i<400; i++) {
+    for (int i = 0; i < 400; i++)
+    {
+      // handle port FF for the border and flyback
+      if (i < 48 || i > 192 + 48 + 48)
+      {
+        hwopt.portFF = 0xFF;
+      }
+      else
+      {
+        // otherwise we need to populate it with the correct attribute color
+        uint8_t attr = *(attrBase + 32 * (i - 48) / 8);
+        hwopt.portFF = attr;
+      }
+      // when we have finished the screen then trigger an interrupt
+      if (i == 192 + 48 + 48)
+      {
+        Z80Interrupt(&spectrumZ80, 0x38);
+      }
       // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
       z80RunForCycles(175);
       if (hwopt.SoundBits != 0)
@@ -202,7 +278,6 @@ void z80Runner(void *pvParameter)
         audioBuffer[i] = 0;
       }
     }
-    Z80Interrupt(&spectrumZ80, 0x38);
     // draw a frame
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
@@ -227,17 +302,17 @@ void setup(void)
     Serial.printf("Waiting %i\n", i);
   }
   Serial.printf("Boot!\n");
-  #ifdef SPK_MODE
+#ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
-  #endif
-  #ifdef USE_DAC_AUDIO
+#endif
+#ifdef USE_DAC_AUDIO
   audioOutput = new DACOutput(I2S_NUM_0);
-  #endif
-  #ifdef BUZZER_GPIO_NUM
+#endif
+#ifdef BUZZER_GPIO_NUM
   audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
-  #endif
-  #ifdef PDM_GPIO_NUM
+#endif
+#ifdef PDM_GPIO_NUM
   // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_PIN_NO_CHANGE,
@@ -246,11 +321,11 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
 #endif
-  #ifdef I2S_SPEAKER_SERIAL_CLOCK
-  #ifdef SPK_MODE
+#ifdef I2S_SPEAKER_SERIAL_CLOCK
+#ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
-  #endif
+#endif
   // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
@@ -259,10 +334,8 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
 
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
-  #endif
+#endif
   audioOutput->start(20000);
-
-  keypad_i2c_init();
   // Initialize SPIFFS
   if (!SPIFFS.begin(true))
   {
@@ -273,29 +346,41 @@ void setup(void)
   Serial.println("Border Width: " + String(borderWidth));
   Serial.println("Border Height: " + String(borderHeight));
 
-  #ifdef NUNCHUK_CLOCK
-  if (wii_i2c_init(0, NUNCHUK_DATA, NUNCHUK_CLOCK) != 0) {
+#ifdef NUNCHUK_CLOCK
+  if (wii_i2c_init(0, NUNCHUK_DATA, NUNCHUK_CLOCK) != 0)
+  {
     Serial.printf("ERROR initializing wii i2c controller\n");
-  } else {
+  }
+  else
+  {
     const unsigned char *ident = wii_i2c_read_ident();
-    if (! ident) {
+    if (!ident)
+    {
       Serial.printf("no ident :(\n");
-    } else {
+    }
+    else
+    {
       controller_type = wii_i2c_decode_ident(ident);
-      switch (controller_type) {
-        case WII_I2C_IDENT_NUNCHUK: Serial.printf("-> nunchuk detected\n"); break;
-        case WII_I2C_IDENT_CLASSIC: Serial.printf("-> classic controller detected\n"); break;
-        default:                    Serial.printf("-> unknown controller detected: 0x%06x\n", controller_type); break;
+      switch (controller_type)
+      {
+      case WII_I2C_IDENT_NUNCHUK:
+        Serial.printf("-> nunchuk detected\n");
+        break;
+      case WII_I2C_IDENT_CLASSIC:
+        Serial.printf("-> classic controller detected\n");
+        break;
+      default:
+        Serial.printf("-> unknown controller detected: 0x%06x\n", controller_type);
+        break;
       }
     }
   }
-  #endif
-  
+#endif
+
   tft.begin();
-  // DMA - should work with ESP32, STM32F2xx/F4xx/F7xx processors  >>>>>> DMA IS FOR SPI DISPLAYS ONLY <<<<<<
-  #ifdef USE_DMA
+#ifdef USE_DMA
   tft.initDMA(); // Initialise the DMA engine
-  #endif
+#endif
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
   Serial.printf("Total heap: ");
@@ -356,7 +441,7 @@ void show_nunchuk(const unsigned char *data)
 {
   wii_i2c_nunchuk_state state;
   wii_i2c_decode_nunchuk(data, &state);
-        
+
   Serial.printf("a = (%5d,%5d,%5d)\n", state.acc_x, state.acc_y, state.acc_z);
   Serial.printf("d = (%5d,%5d)\n", state.x, state.y);
   Serial.printf("c=%d, z=%d\n", state.c, state.z);
@@ -377,58 +462,30 @@ void show_classic(const unsigned char *data)
   Serial.printf("zl, zr = (%d,%d)\n", state.zl, state.zr);
 }
 
+int elapsedTime = 0;
 void loop(void)
 {
-  const unsigned char *data = wii_i2c_read_state();
-  wii_i2c_request_state();
-  if (data) {
-    switch (controller_type) {
-    case WII_I2C_IDENT_NUNCHUK: {
-      wii_i2c_nunchuk_state state;
-      wii_i2c_decode_nunchuk(data, &state);
-      if (state.x > 50) { // going right
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_1, 1);
-        Serial.printf("right\n");
-      } else if (state.x < -50) { // going left
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_Q, 1);
-        Serial.printf("left\n");
-      } else {
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_1, 0);
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_Q, 0);
-      }
-      // if (state.y > 50) { // going up
-      //   updatekey(tft, emuopt, spectrumZ80, JOYK_UP, 1);
-      //   Serial.printf("up\n");
-      // } else if (state.y < -50) { // going down
-      //   updatekey(tft, emuopt, spectrumZ80, JOYK_DOWN, 1);
-      //   Serial.printf("down\n");
-      // } else {
-      //   updatekey(tft, emuopt, spectrumZ80, JOYK_UP, 0);
-      //   updatekey(tft, emuopt, spectrumZ80, JOYK_DOWN, 0);
-      // }
-      if (state.z) { // button z pressed
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_N, 1);
-        Serial.printf("fire\n");
-      } else {
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_N, 0);
-      }
-      if (state.c) {
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_SPACE, 1);
-        Serial.printf("enter\n");
-      } else {
-        updatekey(tft, emuopt, spectrumZ80, SPECKEY_SPACE, 0);
-      
-      }
-    }
-    break;
-    case WII_I2C_IDENT_CLASSIC: show_classic(data); break;
-    default:
-      // Serial.printf("data: %02x %02x %02x %02x %02x %02x\n",
-      //               data[0], data[1], data[2], data[3], data[4], data[5]);
-      break;
-    }
-  } else {
-    Serial.printf("no data :(\n");
-  }
   vTaskDelay(10);
+  elapsedTime += 10;
+  if (elapsedTime == 1000)
+  {
+    Serial.println("Sending N");
+    updatekey(SPECKEY_N, 1);
+    vTaskDelay(200);
+    updatekey(SPECKEY_N, 0);
+  }
+  if (elapsedTime == 2000)
+  {
+    Serial.println("Sending SPACE");
+    updatekey(SPECKEY_SPACE, 1);
+    vTaskDelay(200);
+    updatekey(SPECKEY_SPACE, 0);
+  }
+  if (elapsedTime == 3000)
+  {
+    Serial.println("Sending 1");
+    updatekey(SPECKEY_1, 1);
+    vTaskDelay(200);
+    updatekey(SPECKEY_1, 0);
+  }
 }
