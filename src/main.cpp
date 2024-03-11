@@ -22,26 +22,16 @@
 #include "AudioOutput/PDMOutput.h"
 #include "AudioOutput/DACOutput.h"
 #include "AudioOutput/BuzzerOutput.h"
-#include "z80/hardware.h"
 #include "z80/snaps.h"
-#include "z80/spectrum.h"
-#include "z80/z80.h"
+#include "spectrum.h"
 #include "Nunchuk/wii_i2c.h"
 
 TFT_eSPI tft = TFT_eSPI();
 AudioOutput *audioOutput = NULL;
+ZXSpectrum *machine = NULL;
+
 unsigned int controller_type = 0;
 
-/* Definimos unos objetos
- *  spectrumZ80 es el procesador en si
- *  mem es la memoria ROM/RAM del ordenador
- *  hwopt es la configuracion de la maquina a emular esto se guarda en los snapshots
- *  emuopt es la configuracion del emulador en si, no se guarda con el snapshot
- */
-Z80Regs spectrumZ80;
-tipo_mem mem;
-tipo_hwopt hwopt;
-tipo_emuopt emuopt;
 uint16_t *frameBuffer = NULL;
 
 xQueueHandle cpuRunTimerQueue;
@@ -80,7 +70,7 @@ void drawDisplay(void *pvParameters)
       tft.dmaWait();
 #endif
       // do the border
-      uint8_t borderColor = hwopt.BorderColor & B00000111;
+      uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
       uint16_t tftColor = specpal565[borderColor];
       if (tftColor != lastBorderColor)
       {
@@ -92,8 +82,8 @@ void drawDisplay(void *pvParameters)
         lastBorderColor = tftColor;
       }
       // do the pixels
-      uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
-      uint8_t *pixelBase = mem.p + mem.vo[hwopt.videopage];
+      uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
+      uint8_t *pixelBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage];
       for (int attrY = 0; attrY < 192 / 8; attrY++)
       {
         bool dirty = false;
@@ -177,43 +167,43 @@ void drawDisplay(void *pvParameters)
           wii_i2c_decode_nunchuk(data, &state);
           if (state.x > 50)
           { // going right
-            updatekey(JOYK_RIGHT, 1);
+            machine->updatekey(JOYK_RIGHT, 1);
           }
           else if (state.x < -50)
           { // going left
-            updatekey(JOYK_LEFT, 1);
+            machine->updatekey(JOYK_LEFT, 1);
           }
           else
           {
-            updatekey(JOYK_LEFT, 0);
-            updatekey(JOYK_RIGHT, 0);
+            machine->updatekey(JOYK_LEFT, 0);
+            machine->updatekey(JOYK_RIGHT, 0);
           }
           if (state.y > 50)
           { // going up
-            updatekey(JOYK_UP, 1);
+            machine->updatekey(JOYK_UP, 1);
           }
           else if (state.y < -50)
           { // going down
-            updatekey(JOYK_DOWN, 1);
+            machine->updatekey(JOYK_DOWN, 1);
           }
           else
           {
-            updatekey(JOYK_UP, 0);
-            updatekey(JOYK_DOWN, 0);
+            machine->updatekey(JOYK_UP, 0);
+            machine->updatekey(JOYK_DOWN, 0);
           }
           if (state.z)
           { // button z pressed
-            updatekey(JOYK_FIRE, 1);
+            machine->updatekey(JOYK_FIRE, 1);
           }
           else
           {
-            updatekey(JOYK_FIRE, 0);
+            machine->updatekey(JOYK_FIRE, 0);
           }
           if (state.c) {
-            updatekey(JOYK_FIRE, 1);
+            machine->updatekey(JOYK_FIRE, 1);
             Serial.printf("enter\n");
           } else {
-            updatekey(JOYK_FIRE, 0);
+            machine->updatekey(JOYK_FIRE, 0);
           }
         }
         break;
@@ -237,14 +227,14 @@ void drawDisplay(void *pvParameters)
 void z80RunForCycles(uint32_t cycles)
 {
   c += cycles;
-  Z80Run(&spectrumZ80, cycles);
+  Z80Run(machine->z80Regs, cycles);
 }
 
 void z80Runner(void *pvParameter)
 {
   int8_t audioBuffer[400];
   // int lastMillis = 0;
-  uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
+  uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
   while (1)
   {
     size_t bytes_written = 0;
@@ -254,22 +244,22 @@ void z80Runner(void *pvParameter)
       // handle port FF for the border and flyback
       if (i < 48 || i > 192 + 48 + 48)
       {
-        hwopt.portFF = 0xFF;
+        machine->hwopt.portFF = 0xFF;
       }
       else
       {
         // otherwise we need to populate it with the correct attribute color
         uint8_t attr = *(attrBase + 32 * (i - 48) / 8);
-        hwopt.portFF = attr;
+        machine->hwopt.portFF = attr;
       }
       // when we have finished the screen then trigger an interrupt
       if (i == 192 + 48 + 48)
       {
-        Z80Interrupt(&spectrumZ80, 0x38);
+        Z80Interrupt(machine->z80Regs, 0x38);
       }
       // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
       z80RunForCycles(175);
-      if (hwopt.SoundBits != 0)
+      if (machine->hwopt.SoundBits != 0)
       {
         audioBuffer[i] = 20;
       }
@@ -418,16 +408,15 @@ void setup(void)
   Serial.println(ESP.getFreePsram());
   Serial.printf("\n");
 
-  // FIXME porque 69888?? ¿quiza un frame, para que pinte la pantalla una vez?
-  Z80Reset(&spectrumZ80);
-  Z80FlagTables();
+  machine = new ZXSpectrum();
+  machine->reset();
   Serial.printf("Z80 Initialization completed\n");
 
-  init_spectrum(SPECMDL_48K, "/48.rom");
-  reset_spectrum(&spectrumZ80);
-  // Load_SNA(&spectrumZ80, "/manic.sna");
-  //  Load_SNA(&spectrumZ80,"/t1.sna");
-  Load_SNA(&spectrumZ80, "/elite.sna");
+  machine->init_spectrum(SPECMDL_48K, "/48.rom");
+  machine->reset_spectrum(machine->z80Regs);
+  // Load_SNA(&z80Regs, "/manic.sna");
+  //  Load_SNA(&z80Regs,"/t1.sna");
+  Load_SNA(machine, "/elite.sna");
   Serial.printf("Entrando en el loop\n");
   // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
@@ -470,22 +459,22 @@ void loop(void)
   if (elapsedTime == 1000)
   {
     Serial.println("Sending N");
-    updatekey(SPECKEY_N, 1);
+    machine->updatekey(SPECKEY_N, 1);
     vTaskDelay(200);
-    updatekey(SPECKEY_N, 0);
+    machine->updatekey(SPECKEY_N, 0);
   }
   if (elapsedTime == 2000)
   {
     Serial.println("Sending SPACE");
-    updatekey(SPECKEY_SPACE, 1);
+    machine->updatekey(SPECKEY_SPACE, 1);
     vTaskDelay(200);
-    updatekey(SPECKEY_SPACE, 0);
+    machine->updatekey(SPECKEY_SPACE, 0);
   }
   if (elapsedTime == 3000)
   {
     Serial.println("Sending 1");
-    updatekey(SPECKEY_1, 1);
+    machine->updatekey(SPECKEY_1, 1);
     vTaskDelay(200);
-    updatekey(SPECKEY_1, 0);
+    machine->updatekey(SPECKEY_1, 0);
   }
 }

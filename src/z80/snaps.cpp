@@ -22,6 +22,7 @@
  Copyright (c) 2000 Santiago Romero Iglesias.
  Email: sromero@escomposlinux.org
  ======================================================================*/
+#include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,12 +30,13 @@
 #include "z80.h"
 #include "spectrum.h"
 #include "snaps.h"
-#include "hardware.h"
 
 extern FILE *tapfile;
 
+void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp);
+
 // Generic routines based on the filename extension:
-uint8_t LoadSnapshot (Z80Regs * regs, const char *fname, tipo_mem &mem) {
+uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *fname, tipo_mem &mem) {
   FILE *snafp;
   File snapfile;
   uint8_t ret;
@@ -46,23 +48,23 @@ uint8_t LoadSnapshot (Z80Regs * regs, const char *fname, tipo_mem &mem) {
   }
   switch (typeoffile (fname)) {
   case TYPE_SP:
-    LoadSP (regs, snafp, mem);
+    LoadSP (speccy, snafp, mem);
     snapfile.close();
     return (1);
     break;
   case TYPE_SNA:
 //    LoadSNA (regs, snafp);
-    Load_SNA (regs, fname);
+    Load_SNA (speccy, fname);
     snapfile.close();
     return (1);
     break;
   case TYPE_Z80:
-    LoadZ80 (regs, snafp);
+    LoadZ80 (speccy, snafp);
     snapfile.close();
     return (1);
     break;
   case TYPE_SCR:
-    LoadSCR (regs, snafp);
+    LoadSCR (speccy, snafp);
     snapfile.close();
     return (1);
     break;
@@ -75,7 +77,7 @@ uint8_t LoadSnapshot (Z80Regs * regs, const char *fname, tipo_mem &mem) {
 }
 
 
-uint8_t SaveSnapshot (Z80Regs * regs, const char *fname)
+uint8_t SaveSnapshot (ZXSpectrum *speccy, const char *fname)
 {
   File snapfile;
   FILE *snafp;
@@ -85,22 +87,22 @@ uint8_t SaveSnapshot (Z80Regs * regs, const char *fname)
 
   switch (typeoffile (fname)) {
   case TYPE_SP:
-    SaveSP (regs, snafp);
+    SaveSP (speccy, snafp);
     snapfile.close();
     return (1);
     break;
   case TYPE_SNA:
-    SaveSNA (regs, snafp);
+    SaveSNA (speccy, snafp);
     snapfile.close();
     return (1);
     break;
   case TYPE_SCR:		// deberiamos quitar la opcion de guardar .scr del menu ??
-    SaveSCR (regs, snafp);
+    SaveSCR (speccy, snafp);
     snapfile.close();
     return (1);
     break;
   case TYPE_Z80:
-    SaveZ80 (regs, snafp);
+    SaveZ80 (speccy, snafp);
     snapfile.close();
     return (1);
     break;
@@ -114,13 +116,13 @@ uint8_t SaveSnapshot (Z80Regs * regs, const char *fname)
 }
 
 
-uint8_t SaveScreenshot (Z80Regs * regs, const char *fname)
+uint8_t SaveScreenshot (ZXSpectrum *speccy, const char *fname)
 {
   File snapfile;
   FILE *snafp;
   snapfile = SPIFFS.open(fname, "wb");
   if (snapfile) {
-    SaveSCR (regs, snafp);
+    SaveSCR (speccy, snafp);
 //    fclose (snafp);
     snapfile.close();
     return (1);
@@ -145,7 +147,7 @@ uint8_t SaveScreenshot (Z80Regs * regs, const char *fname)
 #define Z80BL_V2UNCOMP 3
 #define Z80BL_V2COMPRE 4
 
-void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
+void UncompressZ80 (int tipo, int pc, ZXSpectrum *speccy, FILE *fp){
   byte c, last, last2, dato;
   int cont, num, limit;
   extern tipo_mem mem;
@@ -153,11 +155,11 @@ void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
   switch (tipo) {
       case Z80BL_V1UNCOMP:
 		Serial.printf (" Uncompressed V1.\n");
-		fread (mem.p + pc, 0xC000, 1, fp);
+		fread (speccy->mem.p + pc, 0xC000, 1, fp);
 	      break;
       case Z80BL_V2UNCOMP:
 	      	Serial.printf (" Uncompressed V2.\n");
-		fread (mem.p + pc, 0x4000, 1,fp);
+		fread (speccy->mem.p + pc, 0x4000, 1,fp);
 	      break;
        default:
 	  
@@ -166,9 +168,9 @@ void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
   if ((tipo == Z80BL_V1UNCOMP) || (tipo == Z80BL_V2UNCOMP)) {
       Serial.printf (" Block uncompres.\n");
     for (cont = pc; cont < limit; cont++)
-//      regs->RAM[cont] = fgetc (fp);
+//      speccy->z80Regs->RAM[cont] = fgetc (fp);
 //      writemem (cont, fgetc (fp));
-        *(mem.p+cont)=fgetc(fp);
+        *(speccy->mem.p+cont)=fgetc(fp);
 	    Serial.printf("pc=%x\n",cont);
   } else {
 */   
@@ -188,30 +190,29 @@ void UncompressZ80 (int tipo, int pc, Z80Regs * regs, FILE *fp){
 	    if ((tipo == Z80BL_V1COMPRE) && (last2 == 0x00) && (num == 0x00))  break;
 	    dato = fgetc (fp);
 	    for (cont = 0; cont < num; cont++)
-      *(mem.p+pc++)=dato;
+      *(speccy->mem.p+pc++)=dato;
 	    c = 0;			/* avoid that ED ED xx yy ED zz uu shows zz uu as compressed */
 	    continue;
       } else {
 	     /* we found an 0xED but not the compression flag */
 	  if ((last == 0xED) && (c != 0xED))
-//         regs->RAM[pc++] = last;
+//         speccy->z80Regs->RAM[pc++] = last;
 //	       writemem (pc++, last);
-           *(mem.p+pc++)=last;
+           *(speccy->mem.p+pc++)=last;
 	         /* If it's ED wait for the next or else to memory */
 	  if (c != 0xED)
-//              regs->RAM[pc++] = c;
+//              speccy->z80Regs->RAM[pc++] = c;
 //	            writemem (pc++, c);
-              *(mem.p+pc++)=c;
+              *(speccy->mem.p+pc++)=c;
       }
 //    Serial.printf("pc=%i\ limit=%i\n",pc,limit);
     } while (pc < limit);
   }
 }
 
-uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
+uint8_t LoadZ80 (ZXSpectrum *speccy, FILE *fp)
 {
   int f, tam, ini, sig, pag, ver = 0, hwmodel=SPECMDL_48K, np=0;
-  extern tipo_hwopt hwopt;
   uint8_t buffer[87];
   fread (buffer, 87, 1, fp);
   if (buffer[12]==255) buffer[12]=1; /*as told in CSS FAQ / .z80 section */
@@ -364,9 +365,9 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
 		return (-1);
 	}
 */	
-    if (hwopt.hw_model != hwmodel ) { // cambiamos de arquitectura si no es correcta.
-      end_spectrum ();
-      if (init_spectrum (hwmodel, "")==1) return (1); // si falla la arquitectura no sigo
+    if (speccy->hwopt.hw_model != hwmodel ) { // cambiamos de arquitectura si no es correcta.
+      speccy->end_spectrum ();
+      if (speccy->init_spectrum (hwmodel, "")==1) return (1); // si falla la arquitectura no sigo
     }
 	
 	if (np==0) Serial.printf("YEPA te has colado np=0\n");
@@ -454,18 +455,18 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
 			 }
 			 break;
 	 }
-    UncompressZ80 ((tam == 0xffff ? Z80BL_V2UNCOMP : Z80BL_V2COMPRE),ini, regs, fp);
+    UncompressZ80 ((tam == 0xffff ? Z80BL_V2UNCOMP : Z80BL_V2COMPRE),ini, speccy, fp);
     }
-    regs->PC.B.l = buffer[32];
-    regs->PC.B.h = buffer[33];
+    speccy->z80Regs->PC.B.l = buffer[32];
+    speccy->z80Regs->PC.B.h = buffer[33];
     if ((hwmodel==SPECMDL_128K) || (hwmodel==SPECMDL_PLUS2)) {
-	      hwopt.BANKM=0x00; /* need to clear lock latch or next dont work. */
-        outbankm_128k(buffer[35]);
+	      speccy->hwopt.BANKM=0x00; /* need to clear lock latch or next dont work. */
+        speccy->outbankm_128k(buffer[35]);
     }
     if (hwmodel==SPECMDL_PLUS3) {
-	      hwopt.BANKM=0x00; /* need to clear lock latch or next dont work. */
-        outbankm_p37(buffer[35]);
-        outbankm_p31(buffer[86]);
+	      speccy->hwopt.BANKM=0x00; /* need to clear lock latch or next dont work. */
+        speccy->outbankm_p37(buffer[35]);
+        speccy->outbankm_p31(buffer[86]);
     }
     
     // aki abria que a�adir lo del sonido claro.
@@ -473,53 +474,53 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
   } else {
     Serial.printf ("Fichero Z80: Version 1.0\n");
 
-    if ( hwopt.hw_model != SPECMDL_48K ) { // V1 es siempre 48K camb. arquit. si no es correcta.
-        end_spectrum ();
-        init_spectrum (SPECMDL_48K, "");
+    if ( speccy->hwopt.hw_model != SPECMDL_48K ) { // V1 es siempre 48K camb. arquit. si no es correcta.
+        speccy->end_spectrum ();
+        speccy->init_spectrum (SPECMDL_48K, "");
     }
     
     if (buffer[12] & 0x20) {
       Serial.printf ("Fichero Z80: Comprimido\n");
       fseek (fp, 30, SEEK_SET);
-      UncompressZ80 (Z80BL_V1COMPRE, 0x4000, regs, fp);
+      UncompressZ80 (Z80BL_V1COMPRE, 0x4000, speccy, fp);
     } else {
       Serial.printf ("Fichero Z80: Sin comprimir\n");
       fseek (fp, 30, SEEK_SET);
-      UncompressZ80 (Z80BL_V1UNCOMP, 0x4000, regs, fp);
+      UncompressZ80 (Z80BL_V1UNCOMP, 0x4000, speccy, fp);
     }
-    regs->PC.B.l = buffer[6];
-    regs->PC.B.h = buffer[7];
+    speccy->z80Regs->PC.B.l = buffer[6];
+    speccy->z80Regs->PC.B.h = buffer[7];
   }
 
-  regs->AF.B.h = buffer[0];
-  regs->AF.B.l = buffer[1];
-  regs->BC.B.l = buffer[2];
-  regs->BC.B.h = buffer[3];
-  regs->HL.B.l = buffer[4];
-  regs->HL.B.h = buffer[5];
-  regs->SP.B.l = buffer[8];
-  regs->SP.B.h = buffer[9];
-  regs->I = buffer[10];
-  regs->R.B.l = buffer[11];
-  regs->R.B.h = 0;
-  hwopt.BorderColor = ((buffer[12] & 0x0E) >> 1);
-  regs->DE.B.l = buffer[13];
-  regs->DE.B.h = buffer[14];
-  regs->BCs.B.l = buffer[15];
-  regs->BCs.B.h = buffer[16];
-  regs->DEs.B.l = buffer[17];
-  regs->DEs.B.h = buffer[18];
-  regs->HLs.B.l = buffer[19];
-  regs->HLs.B.h = buffer[20];
-  regs->AFs.B.h = buffer[21];
-  regs->AFs.B.l = buffer[22];
-  regs->IY.B.l = buffer[23];
-  regs->IY.B.h = buffer[24];
-  regs->IX.B.l = buffer[25];
-  regs->IX.B.h = buffer[26];
-  regs->IFF1 = buffer[27] & 0x01;
-  regs->IFF2 = buffer[28] & 0x01;
-  regs->IM = buffer[29] & 0x03;
+  speccy->z80Regs->AF.B.h = buffer[0];
+  speccy->z80Regs->AF.B.l = buffer[1];
+  speccy->z80Regs->BC.B.l = buffer[2];
+  speccy->z80Regs->BC.B.h = buffer[3];
+  speccy->z80Regs->HL.B.l = buffer[4];
+  speccy->z80Regs->HL.B.h = buffer[5];
+  speccy->z80Regs->SP.B.l = buffer[8];
+  speccy->z80Regs->SP.B.h = buffer[9];
+  speccy->z80Regs->I = buffer[10];
+  speccy->z80Regs->R.B.l = buffer[11];
+  speccy->z80Regs->R.B.h = 0;
+  speccy->hwopt.BorderColor = ((buffer[12] & 0x0E) >> 1);
+  speccy->z80Regs->DE.B.l = buffer[13];
+  speccy->z80Regs->DE.B.h = buffer[14];
+  speccy->z80Regs->BCs.B.l = buffer[15];
+  speccy->z80Regs->BCs.B.h = buffer[16];
+  speccy->z80Regs->DEs.B.l = buffer[17];
+  speccy->z80Regs->DEs.B.h = buffer[18];
+  speccy->z80Regs->HLs.B.l = buffer[19];
+  speccy->z80Regs->HLs.B.h = buffer[20];
+  speccy->z80Regs->AFs.B.h = buffer[21];
+  speccy->z80Regs->AFs.B.l = buffer[22];
+  speccy->z80Regs->IY.B.l = buffer[23];
+  speccy->z80Regs->IY.B.h = buffer[24];
+  speccy->z80Regs->IX.B.l = buffer[25];
+  speccy->z80Regs->IX.B.h = buffer[26];
+  speccy->z80Regs->IFF1 = buffer[27] & 0x01;
+  speccy->z80Regs->IFF2 = buffer[28] & 0x01;
+  speccy->z80Regs->IM = buffer[29] & 0x03;
 
   return (0);
 }
@@ -528,8 +529,7 @@ uint8_t LoadZ80 (Z80Regs * regs, FILE *fp)
  char LoadSP( Z80Regs *regs, FILE *fp );
  This loads a .SP file from disk to the Z80 registers/memory.
 ------------------------------------------------------------------*/
-uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
-  extern tipo_hwopt hwopt;
+uint8_t LoadSP (ZXSpectrum *speccy, FILE *fp, tipo_mem &mem){
   unsigned short length, start, sword;
   int f;
   uint8_t buffer[80];		// �por que 80 si leemos 38?
@@ -538,52 +538,52 @@ uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
   /* load the .SP header: */
   length = (buffer[3] << 8) + buffer[2];
   start = (buffer[5] << 8) + buffer[4];
-  regs->BC.B.l = buffer[6];
-  regs->BC.B.h = buffer[7];
-  regs->DE.B.l = buffer[8];
-  regs->DE.B.h = buffer[9];
-  regs->HL.B.l = buffer[10];
-  regs->HL.B.h = buffer[11];
-  regs->AF.B.l = buffer[12];
-  regs->AF.B.h = buffer[13];
-  regs->IX.B.l = buffer[14];
-  regs->IX.B.h = buffer[15];
-  regs->IY.B.l = buffer[16];
-  regs->IY.B.h = buffer[17];
-  regs->BCs.B.l = buffer[18];
-  regs->BCs.B.h = buffer[19];
-  regs->DEs.B.l = buffer[20];
-  regs->DEs.B.h = buffer[21];
-  regs->HLs.B.l = buffer[22];
-  regs->HLs.B.h = buffer[23];
-  regs->AFs.B.l = buffer[24];
-  regs->AFs.B.h = buffer[25];
-  regs->R.W = 0;
-  regs->R.B.l = buffer[26];
-  regs->I = buffer[27];
-  regs->SP.B.l = buffer[28];
-  regs->SP.B.h = buffer[29];
-  regs->PC.B.l = buffer[30];
-  regs->PC.B.h = buffer[31];
-  hwopt.BorderColor = buffer[34];
+  speccy->z80Regs->BC.B.l = buffer[6];
+  speccy->z80Regs->BC.B.h = buffer[7];
+  speccy->z80Regs->DE.B.l = buffer[8];
+  speccy->z80Regs->DE.B.h = buffer[9];
+  speccy->z80Regs->HL.B.l = buffer[10];
+  speccy->z80Regs->HL.B.h = buffer[11];
+  speccy->z80Regs->AF.B.l = buffer[12];
+  speccy->z80Regs->AF.B.h = buffer[13];
+  speccy->z80Regs->IX.B.l = buffer[14];
+  speccy->z80Regs->IX.B.h = buffer[15];
+  speccy->z80Regs->IY.B.l = buffer[16];
+  speccy->z80Regs->IY.B.h = buffer[17];
+  speccy->z80Regs->BCs.B.l = buffer[18];
+  speccy->z80Regs->BCs.B.h = buffer[19];
+  speccy->z80Regs->DEs.B.l = buffer[20];
+  speccy->z80Regs->DEs.B.h = buffer[21];
+  speccy->z80Regs->HLs.B.l = buffer[22];
+  speccy->z80Regs->HLs.B.h = buffer[23];
+  speccy->z80Regs->AFs.B.l = buffer[24];
+  speccy->z80Regs->AFs.B.h = buffer[25];
+  speccy->z80Regs->R.W = 0;
+  speccy->z80Regs->R.B.l = buffer[26];
+  speccy->z80Regs->I = buffer[27];
+  speccy->z80Regs->SP.B.l = buffer[28];
+  speccy->z80Regs->SP.B.h = buffer[29];
+  speccy->z80Regs->PC.B.l = buffer[30];
+  speccy->z80Regs->PC.B.h = buffer[31];
+  speccy->hwopt.BorderColor = buffer[34];
   sword = (buffer[37] << 8) | buffer[36];
-  Serial.printf ("\nSP_PC = %04X, SP_START =  %d,  SP_LENGTH = %d\n", regs->PC,
+  Serial.printf ("\nSP_PC = %04X, SP_START =  %d,  SP_LENGTH = %d\n", speccy->z80Regs->PC,
 	    start, length);
 
   /* interrupt mode */
-  regs->IFF1 = regs->IFF2 = 0;
+  speccy->z80Regs->IFF1 = speccy->z80Regs->IFF2 = 0;
   if (sword & 0x4)
-    regs->IFF2 = 1;
+    speccy->z80Regs->IFF2 = 1;
   if (sword & 0x8)
-    regs->IM = 0;
+    speccy->z80Regs->IM = 0;
   else {
     if (sword & 0x2)
-      regs->IM = 2;
+      speccy->z80Regs->IM = 2;
     else
-      regs->IM = 1;
+      speccy->z80Regs->IM = 1;
   }
   if (sword & 0x1)
-    regs->IFF1 = 1;
+    speccy->z80Regs->IFF1 = 1;
 
 
   if (sword & 0x16) {
@@ -595,9 +595,9 @@ uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
 //FIXME leer todo a la vez.
   for (f = 0; f <= length; f++)
     if (start + f < 65536)
-//      regs->RAM[start + f] = fgetc (fp);
+//      speccy->z80Regs->RAM[start + f] = fgetc (fp);
 //      writemem (start + f, fgetc (fp));
-      *(mem.p+start + f)=fgetc (fp);
+      *(speccy->mem.p+start + f)=fgetc (fp);
 
   return (0);
 }
@@ -607,15 +607,12 @@ uint8_t LoadSP (Z80Regs * regs, FILE *fp, tipo_mem &mem){
  char LoadSNA( Z80Regs *regs, char *filename );
  This loads a .SNA file from disk to the Z80 registers/memory.
 ------------------------------------------------------------------*/
-int Load_SNA (Z80Regs * regs, const char *filename){
+int Load_SNA (ZXSpectrum *speccy, const char *filename){
   File f;
   uint8_t page;
   uint8_t buffer[27];
   uint8_t unbyte;
   int model;
-  //FIXIT no extern
-  extern tipo_hwopt hwopt;
-  extern tipo_mem mem;
   Serial.println("Cargamos un SNA (by filename)\n");
   f=SPIFFS.open(filename,FILE_READ);
   if (!f) {
@@ -626,78 +623,78 @@ int Load_SNA (Z80Regs * regs, const char *filename){
   else if (f.size() == 16411) model = SPECMDL_16K ; //16Kb UNSUPPORTED!!
   else model = SPECMDL_128K ;
 
-  if (hwopt.hw_model != model) {  // comprobamos si es el modelo correcto.
-      end_spectrum ();
-      init_spectrum (model, "");
+  if (speccy->hwopt.hw_model != model) {  // comprobamos si es el modelo correcto.
+      speccy->end_spectrum ();
+      speccy->init_spectrum (model, "");
   }
   
   f.seek (0, SeekSet);
   f.read (buffer, 27);
-  regs->I = buffer[0];
-  regs->HLs.B.l = buffer[1];
-  regs->HLs.B.h = buffer[2];
-  regs->DEs.B.l = buffer[3];
-  regs->DEs.B.h = buffer[4];
-  regs->BCs.B.l = buffer[5];
-  regs->BCs.B.h = buffer[6];
-  regs->AFs.B.l = buffer[7];
-  regs->AFs.B.h = buffer[8];
-  regs->HL.B.l = buffer[9];
-  regs->HL.B.h = buffer[10];
-  regs->DE.B.l = buffer[11];
-  regs->DE.B.h = buffer[12];
-  regs->BC.B.l = buffer[13];
-  regs->BC.B.h = buffer[14];
-  regs->IY.B.l = buffer[15];
-  regs->IY.B.h = buffer[16];
-  regs->IX.B.l = buffer[17];
-  regs->IX.B.h = buffer[18];
-  regs->IFF1 = regs->IFF2 = (buffer[19] & 0x04) >> 2;
-  regs->R.W = buffer[20];
-  regs->AF.B.l = buffer[21];
-  regs->AF.B.h = buffer[22];
-  regs->SP.B.l = buffer[23];
-  regs->SP.B.h = buffer[24];
-  regs->IM = buffer[25];
-  hwopt.BorderColor = buffer[26];
+  speccy->z80Regs->I = buffer[0];
+  speccy->z80Regs->HLs.B.l = buffer[1];
+  speccy->z80Regs->HLs.B.h = buffer[2];
+  speccy->z80Regs->DEs.B.l = buffer[3];
+  speccy->z80Regs->DEs.B.h = buffer[4];
+  speccy->z80Regs->BCs.B.l = buffer[5];
+  speccy->z80Regs->BCs.B.h = buffer[6];
+  speccy->z80Regs->AFs.B.l = buffer[7];
+  speccy->z80Regs->AFs.B.h = buffer[8];
+  speccy->z80Regs->HL.B.l = buffer[9];
+  speccy->z80Regs->HL.B.h = buffer[10];
+  speccy->z80Regs->DE.B.l = buffer[11];
+  speccy->z80Regs->DE.B.h = buffer[12];
+  speccy->z80Regs->BC.B.l = buffer[13];
+  speccy->z80Regs->BC.B.h = buffer[14];
+  speccy->z80Regs->IY.B.l = buffer[15];
+  speccy->z80Regs->IY.B.h = buffer[16];
+  speccy->z80Regs->IX.B.l = buffer[17];
+  speccy->z80Regs->IX.B.h = buffer[18];
+  speccy->z80Regs->IFF1 = speccy->z80Regs->IFF2 = (buffer[19] & 0x04) >> 2;
+  speccy->z80Regs->R.W = buffer[20];
+  speccy->z80Regs->AF.B.l = buffer[21];
+  speccy->z80Regs->AF.B.h = buffer[22];
+  speccy->z80Regs->SP.B.l = buffer[23];
+  speccy->z80Regs->SP.B.h = buffer[24];
+  speccy->z80Regs->IM = buffer[25];
+  speccy->hwopt.BorderColor = buffer[26];
 
   if (model=SPECMDL_48K) {  // es un 48Kb
-    f.read (mem.p + 16384, 0x4000 * 3);
-    regs->PC.B.l = z80_peek(regs->SP.W);
-    regs->SP.W++;
-    regs->PC.B.h = z80_peek(regs->SP.W);
-    regs->SP.W++;
+    f.read (speccy->mem.p + 16384, 0x4000 * 3);
+    speccy->z80Regs->PC.B.l = speccy->z80_peek(speccy->z80Regs->SP.W);
+    speccy->z80Regs->SP.W++;
+    speccy->z80Regs->PC.B.h = speccy->z80_peek(speccy->z80Regs->SP.W);
+    speccy->z80Regs->SP.W++;
 
   } else if (model=SPECMDL_16K) {  // es un 16Kb UNSUPPORTED
-    f.read (mem.p + 16384, 0x4000 * 1);
-    regs->PC.B.l = z80_peek(regs->SP.W);
-    regs->SP.W++;
-    regs->PC.B.h = z80_peek(regs->SP.W);
-    regs->SP.W++;
+    f.read (speccy->mem.p + 16384, 0x4000 * 1);
+    speccy->z80Regs->PC.B.l = speccy->z80_peek(speccy->z80Regs->SP.W);
+    speccy->z80Regs->SP.W++;
+    speccy->z80Regs->PC.B.h = speccy->z80_peek(speccy->z80Regs->SP.W);
+    speccy->z80Regs->SP.W++;
 
   } else {      // es un 128Kb FIXME hay SNA de 16Kb
     f.seek (49179, SeekSet);
     f.read(&unbyte,1); //FIXME seguro que hay formas mejores
-    regs->PC.B.l = unbyte;
+    speccy->z80Regs->PC.B.l = unbyte;
     f.read(&unbyte,1);
-    regs->PC.B.h = unbyte;
+    speccy->z80Regs->PC.B.h = unbyte;
     f.read(&page,1);
-    hwopt.BANKM = 0x00;   /* unlock 128K pagging */
-    outbankm_128k (page);
+    speccy->hwopt.BANKM = 0x00;   /* unlock 128K pagging */
+    speccy->outbankm_128k (page);
     page &= 0x07;
     // ahora empezamos a rellenar ram. 
     f.seek (27, SeekSet); 
-    f.read (mem.p + (5 * 0x4000)   , 0x4000);
-    f.read (mem.p + (2 * 0x4000)   , 0x4000);
-    f.read (mem.p + (page * 0x4000), 0x4000);
+    f.read (speccy->mem.p + (5 * 0x4000)   , 0x4000);
+    f.read (speccy->mem.p + (2 * 0x4000)   , 0x4000);
+    f.read (speccy->mem.p + (page * 0x4000), 0x4000);
     //resto de paginas.
     f.seek (49183, SeekSet);
-    if (page != 0) f.read (mem.p + (0 * 0x4000), 0x4000);
-    if (page != 1) f.read (mem.p + (1 * 0x4000), 0x4000);
-    if (page != 3) f.read (mem.p + (3 * 0x4000), 0x4000);
-    if (page != 4) f.read (mem.p + (4 * 0x4000), 0x4000);
-    if (page != 6) f.read (mem.p + (6 * 0x4000), 0x4000);
-    if (page != 7) f.read (mem.p + (7 * 0x4000), 0x4000);
+    if (page != 0) f.read (speccy->mem.p + (0 * 0x4000), 0x4000);
+    if (page != 1) f.read (speccy->mem.p + (1 * 0x4000), 0x4000);
+    if (page != 3) f.read (speccy->mem.p + (3 * 0x4000), 0x4000);
+    if (page != 4) f.read (speccy->mem.p + (4 * 0x4000), 0x4000);
+    if (page != 6) f.read (speccy->mem.p + (6 * 0x4000), 0x4000);
+    if (page != 7) f.read (speccy->mem.p + (7 * 0x4000), 0x4000);
   }
   f.close();
   return (0);
@@ -708,15 +705,13 @@ int Load_SNA (Z80Regs * regs, const char *filename){
  char SaveSNA( Z80Regs *regs, FILE *fp );
  This saves a .SNA file from the Z80 registers/memory to disk.
 ------------------------------------------------------------------*/
-uint8_t SaveSNA (Z80Regs * regs, FILE * fp){
-  extern tipo_hwopt hwopt;
-  extern tipo_mem mem;
+uint8_t SaveSNA (ZXSpectrum *speccy, FILE * fp){
   unsigned char sptmpl, sptmph;
 //  int c;
 
 // SNA solo esta soportado en 48K, 128K y +2
 
-  if ((hwopt.hw_model != SPECMDL_48K) && (hwopt.hw_model != SPECMDL_128K)) {
+  if ((speccy->hwopt.hw_model != SPECMDL_48K) && (speccy->hwopt.hw_model != SPECMDL_128K)) {
     Serial.println ("El modelo de Spectrum utilizado");
     Serial.println ("No permite grabar el snapshot en formato SNA");
 	  Serial.println ("Utilize otro tipo de archivo (extension)");
@@ -724,125 +719,123 @@ uint8_t SaveSNA (Z80Regs * regs, FILE * fp){
   }
 
   /* save the .SNA header */
-  fputc (regs->I, fp);
-  fputc (regs->HLs.B.l, fp);
-  fputc (regs->HLs.B.h, fp);
-  fputc (regs->DEs.B.l, fp);
-  fputc (regs->DEs.B.h, fp);
-  fputc (regs->BCs.B.l, fp);
-  fputc (regs->BCs.B.h, fp);
-  fputc (regs->AFs.B.l, fp);
-  fputc (regs->AFs.B.h, fp);
-  fputc (regs->HL.B.l, fp);
-  fputc (regs->HL.B.h, fp);
-  fputc (regs->DE.B.l, fp);
-  fputc (regs->DE.B.h, fp);
-  fputc (regs->BC.B.l, fp);
-  fputc (regs->BC.B.h, fp);
-  fputc (regs->IY.B.l, fp);
-  fputc (regs->IY.B.h, fp);
-  fputc (regs->IX.B.l, fp);
-  fputc (regs->IX.B.h, fp);
-  fputc (regs->IFF1 << 2, fp);
-  fputc (regs->R.W & 0xFF, fp);
-  fputc (regs->AF.B.l, fp);
-  fputc (regs->AF.B.h, fp);
+  fputc (speccy->z80Regs->I, fp);
+  fputc (speccy->z80Regs->HLs.B.l, fp);
+  fputc (speccy->z80Regs->HLs.B.h, fp);
+  fputc (speccy->z80Regs->DEs.B.l, fp);
+  fputc (speccy->z80Regs->DEs.B.h, fp);
+  fputc (speccy->z80Regs->BCs.B.l, fp);
+  fputc (speccy->z80Regs->BCs.B.h, fp);
+  fputc (speccy->z80Regs->AFs.B.l, fp);
+  fputc (speccy->z80Regs->AFs.B.h, fp);
+  fputc (speccy->z80Regs->HL.B.l, fp);
+  fputc (speccy->z80Regs->HL.B.h, fp);
+  fputc (speccy->z80Regs->DE.B.l, fp);
+  fputc (speccy->z80Regs->DE.B.h, fp);
+  fputc (speccy->z80Regs->BC.B.l, fp);
+  fputc (speccy->z80Regs->BC.B.h, fp);
+  fputc (speccy->z80Regs->IY.B.l, fp);
+  fputc (speccy->z80Regs->IY.B.h, fp);
+  fputc (speccy->z80Regs->IX.B.l, fp);
+  fputc (speccy->z80Regs->IX.B.h, fp);
+  fputc (speccy->z80Regs->IFF1 << 2, fp);
+  fputc (speccy->z80Regs->R.W & 0xFF, fp);
+  fputc (speccy->z80Regs->AF.B.l, fp);
+  fputc (speccy->z80Regs->AF.B.h, fp);
 
-//  sptmpl = Z80MemRead (regs->SP.W - 1, regs);
-//  sptmph = Z80MemRead (regs->SP.W - 2, regs);
-  sptmpl = z80_peek (regs->SP.W - 1);
-  sptmph = z80_peek (regs->SP.W - 2);
+//  sptmpl = Z80MemRead (speccy->z80Regs->SP.W - 1, speccy->z80Regs);
+//  sptmph = Z80MemRead (speccy->z80Regs->SP.W - 2, speccy->z80Regs);
+  sptmpl = speccy->z80_peek (speccy->z80Regs->SP.W - 1);
+  sptmph = speccy->z80_peek (speccy->z80Regs->SP.W - 2);
 
-  if (hwopt.hw_model == SPECMDL_48K) {	// code for the 48K version.
+  if (speccy->hwopt.hw_model == SPECMDL_48K) {	// code for the 48K version.
     Serial.printf("Guardando SNA 48K\n");
 	 /* save PC on the stack */
-//    Z80MemWrite (--(regs->SP.W), regs->PC.B.h, regs);
-//    Z80MemWrite (--(regs->SP.W), regs->PC.B.l, regs);
-    z80_poke (--(regs->SP.W), regs->PC.B.h);
-    z80_poke (--(regs->SP.W), regs->PC.B.l);
+//    Z80MemWrite (--(speccy->z80Regs->SP.W), speccy->z80Regs->PC.B.h, speccy->z80Regs);
+//    Z80MemWrite (--(speccy->z80Regs->SP.W), speccy->z80Regs->PC.B.l, speccy->z80Regs);
+    speccy->z80_poke (--(speccy->z80Regs->SP.W), speccy->z80Regs->PC.B.h);
+    speccy->z80_poke (--(speccy->z80Regs->SP.W), speccy->z80Regs->PC.B.l);
 
-    fputc (regs->SP.B.l, fp);
-    fputc (regs->SP.B.h, fp);
-    fputc (regs->IM, fp);
-    fputc (hwopt.BorderColor, fp);
+    fputc (speccy->z80Regs->SP.B.l, fp);
+    fputc (speccy->z80Regs->SP.B.h, fp);
+    fputc (speccy->z80Regs->IM, fp);
+    fputc (speccy->hwopt.BorderColor, fp);
 
     /* save the RAM contents */
-//  fwrite (regs->RAM + 16384, 48 * 1024, 1, fp);
-    fwrite (mem.p + 16384, 0x4000 * 3, 1, fp);
+//  fwrite (speccy->z80Regs->RAM + 16384, 48 * 1024, 1, fp);
+    fwrite (speccy->mem.p + 16384, 0x4000 * 3, 1, fp);
 
     /* restore the stack and the SP value */
-    regs->SP.W += 2;
-//    Z80MemWrite (regs->SP.W - 1, sptmpl, regs);
-//    Z80MemWrite (regs->SP.W - 2, sptmph, regs);
-    z80_poke (regs->SP.W - 1, sptmpl);
-    z80_poke (regs->SP.W - 2, sptmph);
+    speccy->z80Regs->SP.W += 2;
+//    Z80MemWrite (speccy->z80Regs->SP.W - 1, sptmpl, speccy->z80Regs);
+//    Z80MemWrite (speccy->z80Regs->SP.W - 2, sptmph, speccy->z80Regs);
+    speccy->z80_poke (speccy->z80Regs->SP.W - 1, sptmpl);
+    speccy->z80_poke (speccy->z80Regs->SP.W - 2, sptmph);
 
   } else {			// code for the 128K version
     Serial.printf("Guardando SNA 128K\n");
-    fputc (regs->SP.B.l, fp);
-    fputc (regs->SP.B.h, fp);
-    fputc (regs->IM, fp);
-    fputc (hwopt.BorderColor, fp);
+    fputc (speccy->z80Regs->SP.B.l, fp);
+    fputc (speccy->z80Regs->SP.B.h, fp);
+    fputc (speccy->z80Regs->IM, fp);
+    fputc (speccy->hwopt.BorderColor, fp);
 
     // volcar la ram  
 //  Volcar 5
-//  for (c=mem.ro[1];(c<mem.ro[1]+0x4000);c++) fputc (mem.p[c],fp);
-    fwrite (mem.p + mem.ro[1], 0x4000, 1, fp);
+//  for (c=mem.ro[1];(c<mem.ro[1]+0x4000);c++) fputc (speccy->mem.p[c],fp);
+    fwrite (speccy->mem.p + speccy->mem.ro[1], 0x4000, 1, fp);
 
 // Volcar 2
-//  for (c=mem.ro[2];(c<mem.ro[2]+0x4000);c++) fputc (mem.p[c],fp);
-    fwrite (mem.p + mem.ro[2], 0x4000, 1, fp);
+//  for (c=mem.ro[2];(c<mem.ro[2]+0x4000);c++) fputc (speccy->mem.p[c],fp);
+    fwrite (speccy->mem.p + speccy->mem.ro[2], 0x4000, 1, fp);
 
 // volcar N
-//  for (c=mem.ro[3];(c<mem.ro[3]+0x4000);c++) fputc (mem.p[c],fp);
-    fwrite (mem.p + mem.ro[3], 0x4000, 1, fp);
+//  for (c=mem.ro[3];(c<mem.ro[3]+0x4000);c++) fputc (speccy->mem.p[c],fp);
+    fwrite (speccy->mem.p + speccy->mem.ro[3], 0x4000, 1, fp);
 
 
 // resto de cosas
-    fputc (regs->PC.B.l, fp);
-    fputc (regs->PC.B.h, fp);
-    fputc (hwopt.BANKM, fp);
+    fputc (speccy->z80Regs->PC.B.l, fp);
+    fputc (speccy->z80Regs->PC.B.h, fp);
+    fputc (speccy->hwopt.BANKM, fp);
     fputc (0, fp);		// TR-DOS rom paged (1) or not (0)
 
     // volcar el resto de ram.
 
 //  Volcar 0 si no en (4)  
-    if (mem.ro[3] != (0 * mem.sp))
-//    for (c=0*mem.sp;c<((0*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (0 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (0 * speccy->mem.sp))
+//    for (c=0*mem.sp;c<((0*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (0 * speccy->mem.sp), 0x4000, 1, fp);
 
 //  Volcar 1 si no en (4)  
-    if (mem.ro[3] != (1 * mem.sp))
-//    for (c=1*mem.sp;c<((1*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (1 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (1 * speccy->mem.sp))
+//    for (c=1*mem.sp;c<((1*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (1 * speccy->mem.sp), 0x4000, 1, fp);
 
 //  Volcar 3 si no en (4)  
-    if (mem.ro[3] != (3 * mem.sp))
-//    for (c=3*mem.sp;c<((3*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (3 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (3 * speccy->mem.sp))
+//    for (c=3*mem.sp;c<((3*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (3 * speccy->mem.sp), 0x4000, 1, fp);
 
 //  Volcar 4 si no en (4)  
-    if (mem.ro[3] != (4 * mem.sp))
-//    for (c=4*mem.sp;c<((4*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (4 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (4 * speccy->mem.sp))
+//    for (c=4*mem.sp;c<((4*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (4 * speccy->mem.sp), 0x4000, 1, fp);
 
 //  Volcar 6 si no en (4)  
-    if (mem.ro[3] != (6 * mem.sp))
-//    for (c=6*mem.sp;c<((6*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (6 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (6 * speccy->mem.sp))
+//    for (c=6*mem.sp;c<((6*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (6 * speccy->mem.sp), 0x4000, 1, fp);
 
 //  Volcar 7 si no en (4)  
-    if (mem.ro[3] != (7 * mem.sp))
-//    for (c=7*mem.sp;c<((7*mem.sp)+0x4000);c++) fputc (mem.p[c],fp);
-      fwrite (mem.p + (7 * mem.sp), 0x4000, 1, fp);
+    if (speccy->mem.ro[3] != (7 * speccy->mem.sp))
+//    for (c=7*mem.sp;c<((7*mem.sp)+0x4000);c++) fputc (speccy->mem.p[c],fp);
+      fwrite (speccy->mem.p + (7 * speccy->mem.sp), 0x4000, 1, fp);
 
   }
   return (0);
 }
 
-uint8_t SaveSP (Z80Regs * regs, FILE * fp){
-  extern tipo_mem mem;
-  extern tipo_hwopt hwopt;
+uint8_t SaveSP (ZXSpectrum *speccy, FILE * fp){
   // save the .SP header 
   fputc ('S', fp);
   fputc ('P', fp);
@@ -851,112 +844,110 @@ uint8_t SaveSP (Z80Regs * regs, FILE * fp){
   fputc (00, fp);
   fputc (0x40, fp);		//16384
   // save the state
-  fputc (regs->BC.B.l, fp);
-  fputc (regs->BC.B.h, fp);
-  fputc (regs->DE.B.l, fp);
-  fputc (regs->DE.B.h, fp);
-  fputc (regs->HL.B.l, fp);
-  fputc (regs->HL.B.h, fp);
-  fputc (regs->AF.B.l, fp);
-  fputc (regs->AF.B.h, fp);
-  fputc (regs->IX.B.l, fp);
-  fputc (regs->IX.B.h, fp);
-  fputc (regs->IY.B.l, fp);
-  fputc (regs->IY.B.h, fp);
-  fputc (regs->BCs.B.l, fp);
-  fputc (regs->BCs.B.h, fp);
-  fputc (regs->DEs.B.l, fp);
-  fputc (regs->DEs.B.h, fp);
-  fputc (regs->HLs.B.l, fp);
-  fputc (regs->HLs.B.h, fp);
-  fputc (regs->AFs.B.l, fp);
-  fputc (regs->AFs.B.h, fp);
-  fputc (regs->R.B.l, fp);
-  fputc (regs->I, fp);
-  fputc (regs->SP.B.l, fp);
-  fputc (regs->SP.B.h, fp);
-  fputc (regs->PC.B.l, fp);
-  fputc (regs->PC.B.h, fp);
+  fputc (speccy->z80Regs->BC.B.l, fp);
+  fputc (speccy->z80Regs->BC.B.h, fp);
+  fputc (speccy->z80Regs->DE.B.l, fp);
+  fputc (speccy->z80Regs->DE.B.h, fp);
+  fputc (speccy->z80Regs->HL.B.l, fp);
+  fputc (speccy->z80Regs->HL.B.h, fp);
+  fputc (speccy->z80Regs->AF.B.l, fp);
+  fputc (speccy->z80Regs->AF.B.h, fp);
+  fputc (speccy->z80Regs->IX.B.l, fp);
+  fputc (speccy->z80Regs->IX.B.h, fp);
+  fputc (speccy->z80Regs->IY.B.l, fp);
+  fputc (speccy->z80Regs->IY.B.h, fp);
+  fputc (speccy->z80Regs->BCs.B.l, fp);
+  fputc (speccy->z80Regs->BCs.B.h, fp);
+  fputc (speccy->z80Regs->DEs.B.l, fp);
+  fputc (speccy->z80Regs->DEs.B.h, fp);
+  fputc (speccy->z80Regs->HLs.B.l, fp);
+  fputc (speccy->z80Regs->HLs.B.h, fp);
+  fputc (speccy->z80Regs->AFs.B.l, fp);
+  fputc (speccy->z80Regs->AFs.B.h, fp);
+  fputc (speccy->z80Regs->R.B.l, fp);
+  fputc (speccy->z80Regs->I, fp);
+  fputc (speccy->z80Regs->SP.B.l, fp);
+  fputc (speccy->z80Regs->SP.B.h, fp);
+  fputc (speccy->z80Regs->PC.B.l, fp);
+  fputc (speccy->z80Regs->PC.B.h, fp);
   fputc (0, fp);
   fputc (0, fp);
-  fputc (hwopt.BorderColor, fp);
+  fputc (speccy->hwopt.BorderColor, fp);
   fputc (0, fp);
   // Estado, pendiente por poner:  Si hay una int pendiente (bit 4), valor de flash (bit 5).
   fputc (0, fp);
-  fputc ((((regs->IFF2) << 2) + ((regs->IM) == 2 ? 0x02 : 0x00) + regs->IFF1),
+  fputc ((((speccy->z80Regs->IFF2) << 2) + ((speccy->z80Regs->IM) == 2 ? 0x02 : 0x00) + speccy->z80Regs->IFF1),
 	 fp);
   // Save the ram
-//  fwrite (regs->RAM + 16384, 48 * 1024, 1, fp);
-  fwrite (mem.p + 16384, 0x4000 * 3, 1, fp);
+//  fwrite (speccy->z80Regs->RAM + 16384, 48 * 1024, 1, fp);
+  fwrite (speccy->mem.p + 16384, 0x4000 * 3, 1, fp);
 
   return (0);
 }
 
-void writeZ80block(int block, int offset, FILE *fp)
+void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp)
 {
 	extern tipo_mem mem;
 	fputc(0xff,fp); fputc(0xff,fp);
 	fputc((byte)block,fp);
-  fwrite (mem.p + offset, 0x4000 , 1, fp);
+  fwrite (speccy->mem.p + offset, 0x4000 , 1, fp);
 }
 
-uint8_t SaveZ80 (Z80Regs * regs, FILE * fp){
-  extern tipo_mem mem;
-  extern tipo_hwopt hwopt;
+uint8_t SaveZ80 (ZXSpectrum *speccy, FILE * fp){
   int c;
 
 	// 48K  .z80 are saved as ver 1.45 
   Serial.printf ("Guardando Z80...\n");
-  fputc (regs->AF.B.h, fp);
-  fputc (regs->AF.B.l, fp);
-  fputc (regs->BC.B.l, fp);
-  fputc (regs->BC.B.h, fp);
-  fputc (regs->HL.B.l, fp);
-  fputc (regs->HL.B.h, fp);
+  fputc (speccy->z80Regs->AF.B.h, fp);
+  fputc (speccy->z80Regs->AF.B.l, fp);
+  fputc (speccy->z80Regs->BC.B.l, fp);
+  fputc (speccy->z80Regs->BC.B.h, fp);
+  fputc (speccy->z80Regs->HL.B.l, fp);
+  fputc (speccy->z80Regs->HL.B.h, fp);
 
-if (hwopt.hw_model==SPECMDL_48K) {  // si no es 48K entonces V 3.0
+if (speccy->hwopt.hw_model==SPECMDL_48K) {  // si no es 48K entonces V 3.0
   Serial.printf ("...de 48K\n");
-  	fputc (regs->PC.B.l, fp);
-  	fputc (regs->PC.B.h, fp);
+  	fputc (speccy->z80Regs->PC.B.l, fp);
+  	fputc (speccy->z80Regs->PC.B.h, fp);
 } else {
    Serial.printf ("...de NO 48K\n");
 	fputc(0,fp);
 	fputc(0,fp);
 }
 
-  fputc (regs->SP.B.l, fp);
-  fputc (regs->SP.B.h, fp);
-  fputc (regs->I, fp);
-  fputc ((regs->R.B.l & 0x7F), fp);
-  fputc ((((regs->R.B.l & 0x80) >> 7) | ((hwopt.BorderColor & 0x07) << 1)),
+  fputc (speccy->z80Regs->SP.B.l, fp);
+  fputc (speccy->z80Regs->SP.B.h, fp);
+  fputc (speccy->z80Regs->I, fp);
+  fputc ((speccy->z80Regs->R.B.l & 0x7F), fp);
+  fputc ((((speccy->z80Regs->R.B.l & 0x80) >> 7) | ((speccy->hwopt.BorderColor & 0x07) << 1)),
 	 fp); //Datos sin comprimir por defecto.
-  fputc (regs->DE.B.l, fp);
-  fputc (regs->DE.B.h, fp);
-  fputc (regs->BCs.B.l, fp);
-  fputc (regs->BCs.B.h, fp);
-  fputc (regs->DEs.B.l, fp);
-  fputc (regs->DEs.B.h, fp);
-  fputc (regs->HLs.B.l, fp);
-  fputc (regs->HLs.B.h, fp);
-  fputc (regs->AFs.B.h, fp);
-  fputc (regs->AFs.B.l, fp);
-  fputc (regs->IY.B.l, fp);
-  fputc (regs->IY.B.h, fp);
-  fputc (regs->IX.B.l, fp);
-  fputc (regs->IX.B.h, fp);
-  fputc (regs->IFF1, fp);
-  fputc (regs->IFF2, fp);
-  fputc ((regs->IM & 0x7), fp); // issue 2 and joystick cfg not saved.
+  fputc (speccy->z80Regs->DE.B.l, fp);
+  fputc (speccy->z80Regs->DE.B.h, fp);
+  fputc (speccy->z80Regs->BCs.B.l, fp);
+  fputc (speccy->z80Regs->BCs.B.h, fp);
+  fputc (speccy->z80Regs->DEs.B.l, fp);
+  fputc (speccy->z80Regs->DEs.B.h, fp);
+  fputc (speccy->z80Regs->HLs.B.l, fp);
+  fputc (speccy->z80Regs->HLs.B.h, fp);
+  fputc (speccy->z80Regs->AFs.B.h, fp);
+  fputc (speccy->z80Regs->AFs.B.l, fp);
+  fputc (speccy->z80Regs->IY.B.l, fp);
+  fputc (speccy->z80Regs->IY.B.h, fp);
+  fputc (speccy->z80Regs->IX.B.l, fp);
+  fputc (speccy->z80Regs->IX.B.h, fp);
+  fputc (speccy->z80Regs->IFF1, fp);
+  fputc (speccy->z80Regs->IFF2, fp);
+  fputc ((speccy->z80Regs->IM & 0x7), fp); // issue 2 and joystick cfg not saved.
 
-if (hwopt.hw_model==SPECMDL_48K) {
-	//  fwrite (regs->RAM + 16384, 48 * 1024, 1, fp);
-   fwrite (mem.p + 16384, 0x4000 * 3, 1, fp);
+if (speccy->hwopt.hw_model==SPECMDL_48K) {
+	//  fwrite (speccy->z80Regs->RAM + 16384, 48 * 1024, 1, fp);
+   fwrite (speccy->mem.p + 16384, 0x4000 * 3, 1, fp);
 } else { // aki viene la parte de los 128K y demas
-	fputc( (hwopt.hw_model==SPECMDL_PLUS3 ? 55:54 ),fp);
+	fputc( (speccy->hwopt.hw_model==SPECMDL_PLUS3 ? 55:54 ),fp);
 	fputc(0,fp);
-  	fputc (regs->PC.B.l, fp);
-  	fputc (regs->PC.B.h, fp);
-	switch (hwopt.hw_model) {
+  	fputc (speccy->z80Regs->PC.B.l, fp);
+  	fputc (speccy->z80Regs->PC.B.h, fp);
+	switch (speccy->hwopt.hw_model) {
 		case SPECMDL_16K:
             		fputc(0,fp);
 			fputc(0,fp);
@@ -967,15 +958,15 @@ if (hwopt.hw_model==SPECMDL_48K) {
 			break;
 		case SPECMDL_128K:
 			fputc(4,fp);
-                  	fputc(hwopt.BANKM,fp);
+                  	fputc(speccy->hwopt.BANKM,fp);
     			break;
 		case SPECMDL_PLUS2:
 			fputc(12,fp);
-            		fputc(hwopt.BANKM,fp);
+            		fputc(speccy->hwopt.BANKM,fp);
      			break;
 		case SPECMDL_PLUS3: // as there is no disk emuation, alwais save as +2A
 			fputc(13,fp);
-			fputc(hwopt.BANKM,fp);
+			fputc(speccy->hwopt.BANKM,fp);
 		default:
 			Serial.printf("ERROR: HW Type Desconocido, nunca deberias ver esto.\n");
 			fputc(0,fp);
@@ -984,45 +975,45 @@ if (hwopt.hw_model==SPECMDL_48K) {
 								 
 	}
     fputc(0,fp); // if1 not paged.
-    if (hwopt.hw_model==SPECMDL_16K) fputc(0x81,fp); 
+    if (speccy->hwopt.hw_model==SPECMDL_16K) fputc(0x81,fp); 
     else fputc(1,fp); //siempre emulamos el registro R (al menos que yo sepa)
 		    
     for (c=0;c<(1+16+3+1+4+20+3);c++) fputc(0,fp);
    
-    if (hwopt.hw_model==SPECMDL_PLUS3) fputc(hwopt.BANK678,fp);
+    if (speccy->hwopt.hw_model==SPECMDL_PLUS3) fputc(speccy->hwopt.BANK678,fp);
     
-    switch (hwopt.hw_model) {
+    switch (speccy->hwopt.hw_model) {
 		case SPECMDL_16K:
-            writeZ80block(8,0x4000,fp);
+            writeZ80block(speccy, 8,0x4000,fp);
     		break;
 		case SPECMDL_INVES:
-            writeZ80block(8,0x4000,fp);
-            writeZ80block(4,0x8000,fp);
-            writeZ80block(5,0xC000,fp);
-            writeZ80block(0,0x10000,fp);
+            writeZ80block(speccy, 8,0x4000,fp);
+            writeZ80block(speccy, 4,0x8000,fp);
+            writeZ80block(speccy, 5,0xC000,fp);
+            writeZ80block(speccy, 0,0x10000,fp);
 			break;
 		case SPECMDL_128K:
 		case SPECMDL_PLUS2:
-            writeZ80block(3,  0x0000,fp);
-            writeZ80block(4,  0x4000,fp);
-            writeZ80block(5,  0x8000,fp);
-            writeZ80block(6,  0xC000,fp);
-            writeZ80block(7,  0x10000,fp);
-            writeZ80block(8,  0x14000,fp);
-            writeZ80block(9,  0x18000,fp);
-            writeZ80block(10,0x1C000,fp);
+            writeZ80block(speccy, 3,  0x0000,fp);
+            writeZ80block(speccy, 4,  0x4000,fp);
+            writeZ80block(speccy, 5,  0x8000,fp);
+            writeZ80block(speccy, 6,  0xC000,fp);
+            writeZ80block(speccy, 7,  0x10000,fp);
+            writeZ80block(speccy, 8,  0x14000,fp);
+            writeZ80block(speccy, 9,  0x18000,fp);
+            writeZ80block(speccy, 10,0x1C000,fp);
      		break;
 	}
 }
 return (0);
 }
 
-uint8_t LoadSCR (Z80Regs * regs, FILE * fp){
+uint8_t LoadSCR (ZXSpectrum *speccy, FILE * fp){
   int i;
   // FIX use fwrite
   // FIX2 must be the actual video page
   for (i = 0; i < 6912; i++)
-    z80_poke (16384 + i, fgetc (fp));
+    speccy->z80_poke (16384 + i, fgetc (fp));
   return 0;
 }
 
@@ -1032,14 +1023,13 @@ uint8_t LoadSCR (Z80Regs * regs, FILE * fp){
  char SaveSCR( Z80Regs *regs, FILE *fp );
  This saves a .SCR file from the Spectrum videomemory.
 ------------------------------------------------------------------*/
-uint8_t SaveSCR (Z80Regs * regs, FILE * fp){
+uint8_t SaveSCR (ZXSpectrum *speccy, FILE * fp){
   int i;
-  extern tipo_hwopt hwopt;
   /* Save the contents of VideoRAM to file: write the 6192 bytes
    * starting on the memory address 16384 */
   //FIXME: user  fwrite in the actual videopage
   for (i = 0; i < 6912; i++)
-    fputc (readvmem (i, hwopt.videopage), fp);
+    fputc (speccy->readvmem (i, speccy->hwopt.videopage), fp);
 //    fputc (Z80MemRead (16384 + i, regs), fp);
 
   return (0);
@@ -1119,15 +1109,15 @@ int typeoffile (const char *name){
 
     WARNING: EXPERIMENTAL X'DDDDDD
 ------------------------------------------------------------------*/
-uint8_t LoadTAP (Z80Regs * regs, FILE * fp){
+uint8_t LoadTAP (ZXSpectrum *speccy, FILE * fp){
   // Serial.printf("Llamada LoadTAP generica\n");
   // Serial.printf("LoadTap:%x\n",fp);
   switch (TZX_type) {
   case TYPE_TAP:
-    return TAP_loadblock (regs, fp);
+    return TAP_loadblock (speccy, fp);
     break;
   case TYPE_TZX:
-    return TZX_loadblock (regs, fp);
+    return TZX_loadblock (speccy, fp);
     break;
   default:
     Serial.printf ("Cargando algo que ni es TAP ni TZX, ���QUE CHUNGO!!!\n");
@@ -1136,7 +1126,7 @@ uint8_t LoadTAP (Z80Regs * regs, FILE * fp){
   return 0;
 }
 
-uint8_t RewindTAP (Z80Regs * regs, FILE * fp){
+uint8_t RewindTAP (ZXSpectrum *speccy, FILE * fp){
   Serial.printf ("Llamada RewindTAP generica\n");
   //              Serial.printf("LoadTap:%x\n",fp);
   switch (TZX_type) {
@@ -1153,12 +1143,12 @@ uint8_t RewindTAP (Z80Regs * regs, FILE * fp){
   return 0;
 }
 
-uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
+uint8_t TAP_loadblock(ZXSpectrum *speccy, FILE * fp){
   int blow, bhi, bytes, f, howmany,load;
   unsigned int where;
   Serial.printf ("Llamada TAP_loadblock\n");
-  Serial.printf ("\n--- Trying to load from tape: reached %04Xh ---\n", regs->PC.W);
-  Serial.printf ("On enter:  A=%d, IX=%d, DE=%d\n", regs->AF.B.h, regs->IX.W, regs->DE.W);
+  Serial.printf ("\n--- Trying to load from tape: reached %04Xh ---\n", speccy->z80Regs->PC.W);
+  Serial.printf ("On enter:  A=%d, IX=%d, DE=%d\n", speccy->z80Regs->AF.B.h, speccy->z80Regs->IX.W, speccy->z80Regs->DE.W);
 /*
   // auto tape-rewind function on end-of-file
   if( feof(fp) )
@@ -1171,36 +1161,36 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   blow = fgetc (fp);
   bhi = fgetc (fp);
   bytes = (bhi << 8) | blow;
-  Serial.printf ("%d bytes to read on file, DE=%d requested.\n", bytes - 2, regs->DE.W);
-  where = regs->IX.W;
-  load=   (regs->AF.B.l) & C_FLAG ;
+  Serial.printf ("%d bytes to read on file, DE=%d requested.\n", bytes - 2, speccy->z80Regs->DE.W);
+  where = speccy->z80Regs->IX.W;
+  load=   (speccy->z80Regs->AF.B.l) & C_FLAG ;
   fgetc (fp);			/* read flag type and ignore it */
 	/* FIXME No deberiamos ignorarlo �saltar al siguiente? */
   /* determine how many bytes to read. If there are less bytes in
      the tap block than the requested DE bytes, generate the read
      error by setting the C_FLAG on F... */
-  howmany = regs->DE.W;
+  howmany = speccy->z80Regs->DE.W;
   if (bytes - 2 < howmany) {
     howmany = bytes - 2;
-    (regs->AF.B.l &= ~(C_FLAG));
+    (speccy->z80Regs->AF.B.l &= ~(C_FLAG));
     Serial.printf ("Generating a tape load error (tapbytes < DE)...\n");
-    regs->IX.W += bytes - 2;
+    speccy->z80Regs->IX.W += bytes - 2;
   } else  /* FIXME Deberia cambiarse la memoria hasta el momento en que se genera el error */
-    regs->IX.W += regs->DE.W;
+    speccy->z80Regs->IX.W += speccy->z80Regs->DE.W;
 
   for (f = 0; f < howmany; f++) {
     switch (load)
     {
 	    case 0x00: // verificando, si en algun momento no coincide, flag arriba.
-		    if (fgetc(fp)!= z80_peek(where+f))
-			    (regs->AF.B.l &= ~(C_FLAG));
+		    if (fgetc(fp)!= speccy->z80_peek(where+f))
+			    (speccy->z80Regs->AF.B.l &= ~(C_FLAG));
 		    break;
 	    case C_FLAG : // cargando
-		    z80_poke (where + f, fgetc (fp));
+		    speccy->z80_poke (where + f, fgetc (fp));
 		    break;
     }
     if (howmany == 17 && f <= 10)
-      putchar (z80_peek (where + f));
+      putchar (speccy->z80_peek (where + f));
   }
 
   if (howmany == 17) {
@@ -1209,13 +1199,13 @@ uint8_t TAP_loadblock (Z80Regs * regs, FILE * fp){
   fgetc (fp);			/* read checksum (and ignore it :-) */
 
   /* if load was successful, reset C_FLAG */
-  if (howmany == regs->DE.W)
-    (regs->AF.B.l |= (C_FLAG));
+  if (howmany == speccy->z80Regs->DE.W)
+    (speccy->z80Regs->AF.B.l |= (C_FLAG));
 
-  regs->DE.W = 0;
+  speccy->z80Regs->DE.W = 0;
   Serial.printf ("On exit:  A=%d, IX=%d, DE=%d, F=%02Xh, PC=%04Xh\n",
-	    regs->AF.B.h, regs->IX.W, regs->DE.W, regs->AF.B.l,
-	    (z80_peek (regs->SP.W + 1) << 8) | z80_peek (regs->SP.W));
+	    speccy->z80Regs->AF.B.h, speccy->z80Regs->IX.W, speccy->z80Regs->DE.W, speccy->z80Regs->AF.B.l,
+	    (speccy->z80_peek (speccy->z80Regs->SP.W + 1) << 8) | speccy->z80_peek (speccy->z80Regs->SP.W));
   return (0);
 }
 
@@ -1277,7 +1267,7 @@ uint8_t TZX_init (FILE * fp){
 }
 
 /* carga un bloque desde un .TZX */
-uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
+uint8_t TZX_loadblock (ZXSpectrum *speccy, FILE * fp){
   int where, flags, howmany, bytes, f;
   int enviado = FALSE;
 
@@ -1301,27 +1291,27 @@ uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
       bytes = fgetc (fp);
       bytes += fgetc (fp) * 0x100;
       Serial.printf ("Cargando...  pedido 0x%04x, proporcionado 0x%04x\n",
-		regs->DE.W, bytes - 2);
+		  speccy->z80Regs->DE.W, bytes - 2);
 
-      where = regs->IX.W;
+      where = speccy->z80Regs->IX.W;
       flags = fgetc (fp);	/* read flag type and ignore it */
-      howmany = regs->DE.W;
+      howmany = speccy->z80Regs->DE.W;
       if (howmany == 17) {
 	Serial.printf ("   Cabecera, NAME:");
       }
 
       if (bytes - 2 < howmany) {
 	howmany = bytes - 2;
-	(regs->AF.B.l &= ~(C_FLAG));
+	(speccy->z80Regs->AF.B.l &= ~(C_FLAG));
 	Serial.printf ("Generating a tape load error (tapbytes < DE)...\n");
-	regs->IX.W += bytes - 2;
+	speccy->z80Regs->IX.W += bytes - 2;
       } else
-	regs->IX.W += regs->DE.W;
+	speccy->z80Regs->IX.W += speccy->z80Regs->DE.W;
 
       for (f = 0; f < howmany; f++) {
-	      z80_poke(where + f, fgetc (fp));
+	      speccy->z80_poke(where + f, fgetc (fp));
 	      if (howmany == 17 && f <= 10)
-	        putchar (z80_peek(where + f));
+	        putchar (speccy->z80_peek(where + f));
         }
       if (howmany == 17) {
 	        Serial.printf ("\n");
@@ -1330,10 +1320,10 @@ uint8_t TZX_loadblock (Z80Regs * regs, FILE * fp){
       fgetc (fp);		/* read checksum (and ignore it :-) */
 
       /* if load was successful, reset C_FLAG */
-      if (howmany == regs->DE.W)
-	       regs->AF.B.l |= (C_FLAG);
+      if (howmany == speccy->z80Regs->DE.W)
+	       speccy->z80Regs->AF.B.l |= (C_FLAG);
 
-      regs->DE.W = 0;
+      speccy->z80Regs->DE.W = 0;
       enviado = TRUE;
       TZX_actualblock++;	// as I exit of the loop I need to use this.
       break;

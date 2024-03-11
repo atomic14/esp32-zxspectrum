@@ -41,7 +41,7 @@
 #define REGL REGISTER.B.l
 #define REGH REGISTER.B.h
 
-opcode = Z80ReadMem (r_PC);
+opcode = Z80ReadMem(r_PC);
 r_PC++;
 
 switch (opcode)
@@ -90,8 +90,8 @@ switch (opcode)
     break;
 
   case EX_IXY_xSP:
-    r_meml = Z80ReadMem (r_SP);
-    r_memh = Z80ReadMem (r_SP + 1);
+    r_meml = Z80ReadMem(r_SP);
+    r_memh = Z80ReadMem(r_SP + 1);
     Z80WriteMem (r_SP, REGL, regs);
     Z80WriteMem (r_SP + 1, REGH, regs);
     REGL = r_meml;
@@ -100,136 +100,136 @@ switch (opcode)
     break;
 
   case LD_A_xIXY:
-    r_A = Z80ReadMem (REG + ((offset) Z80ReadMem (r_PC)));
+    r_A = Z80ReadMem(REG + ((offset) Z80ReadMem(r_PC)));
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_B_xIXY:
-    r_B = Z80ReadMem (REG + ((offset) Z80ReadMem (r_PC)));
+    r_B = Z80ReadMem(REG + ((offset) Z80ReadMem(r_PC)));
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_C_xIXY:
-    r_C = Z80ReadMem (REG + ((offset) Z80ReadMem (r_PC)));
+    r_C = Z80ReadMem(REG + ((offset) Z80ReadMem(r_PC)));
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_D_xIXY:
-    r_D = Z80ReadMem (REG + ((offset) Z80ReadMem (r_PC)));
+    r_D = Z80ReadMem(REG + ((offset) Z80ReadMem(r_PC)));
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_E_xIXY:
-    r_E = Z80ReadMem (REG + ((offset) Z80ReadMem (r_PC)));
+    r_E = Z80ReadMem(REG + ((offset) Z80ReadMem(r_PC)));
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
 
   case LD_xIXY_A:
-    Z80WriteMem (REG + (offset) Z80ReadMem (r_PC), r_A, regs);
+    Z80WriteMem (REG + (offset) Z80ReadMem(r_PC), r_A, regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_xIXY_B:
-    Z80WriteMem (REG + (offset) Z80ReadMem (r_PC), r_B, regs);
+    Z80WriteMem (REG + (offset) Z80ReadMem(r_PC), r_B, regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_xIXY_C:
-    Z80WriteMem (REG + (offset) Z80ReadMem (r_PC), r_C, regs);
+    Z80WriteMem (REG + (offset) Z80ReadMem(r_PC), r_C, regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_xIXY_D:
-    Z80WriteMem (REG + (offset) Z80ReadMem (r_PC), r_D, regs);
+    Z80WriteMem (REG + (offset) Z80ReadMem(r_PC), r_D, regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_xIXY_E:
-    Z80WriteMem (REG + (offset) Z80ReadMem (r_PC), r_E, regs);
+    Z80WriteMem (REG + (offset) Z80ReadMem(r_PC), r_E, regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
 
   case INC_xIXY:
-    r_mem = REG + (offset) Z80ReadMem (r_PC);
+    r_mem = REG + (offset) Z80ReadMem(r_PC);
     r_PC++;
-    tmpreg.B.l = Z80ReadMem (r_mem);
+    tmpreg.B.l = Z80ReadMem(r_mem);
     INC (tmpreg.B.l);
     Z80WriteMem (r_mem, tmpreg.B.l, regs);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3 + 3 + 1);
     break;
   case DEC_xIXY:
-    r_mem = REG + (offset) Z80ReadMem (r_PC);
+    r_mem = REG + (offset) Z80ReadMem(r_PC);
     r_PC++;
-    tmpreg.B.l = Z80ReadMem (r_mem);
+    tmpreg.B.l = Z80ReadMem(r_mem);
     ZX_DEC (tmpreg.B.l);
     Z80WriteMem (r_mem, tmpreg.B.l, regs);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3 + 3 + 1);
     break;
 
   case ADC_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     ADC (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case SBC_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     SBC (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case ADD_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     ADD (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case SUB_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     SUB (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case AND_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     AND (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case OR_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     OR (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case XOR_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     XOR (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
 
   case CP_xIXY:
-    r_meml = Z80ReadMem (REG + (offset) Z80ReadMem (r_PC));
+    r_meml = Z80ReadMem(REG + (offset) Z80ReadMem(r_PC));
     r_PC++;
     CP (r_meml);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
 
   case LD_IXY_NN:
-    REGL = Z80ReadMem (r_PC);
+    REGL = Z80ReadMem(r_PC);
     r_PC++;
-    REGH = Z80ReadMem (r_PC);
+    REGH = Z80ReadMem(r_PC);
     r_PC++;
     AddCycles (4 + 1 + 3 + 3 + 3);
     break;
 
   case LD_xIXY_N:
-    r_mem = REG + (offset) Z80ReadMem (r_PC);
+    r_mem = REG + (offset) Z80ReadMem(r_PC);
     r_PC++;
-    Z80WriteMem (r_mem, Z80ReadMem (r_PC), regs);
+    Z80WriteMem (r_mem, Z80ReadMem(r_PC), regs);
     r_PC++;
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
@@ -341,12 +341,12 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case LD_IXYh_N:
-    REGH = Z80ReadMem (r_PC);
+    REGH = Z80ReadMem(r_PC);
     r_PC++;
     AddCycles (4 + 4 + 3);
     break;
   case LD_IXYl_N:
-    REGL = Z80ReadMem (r_PC);
+    REGL = Z80ReadMem(r_PC);
     r_PC++;
     AddCycles (4 + 4 + 3);
     break;
@@ -434,27 +434,27 @@ switch (opcode)
     break;
 
   case LD_xIXY_H:
-    r_meml = Z80ReadMem (r_PC);
+    r_meml = Z80ReadMem(r_PC);
     r_PC++;
     Z80WriteMem (REG + (offset) (r_meml), r_H, regs);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_xIXY_L:
-    r_meml = Z80ReadMem (r_PC);
+    r_meml = Z80ReadMem(r_PC);
     r_PC++;
     Z80WriteMem (REG + (offset) (r_meml), r_L, regs);
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_H_xIXY:
-    r_meml = Z80ReadMem (r_PC);
+    r_meml = Z80ReadMem(r_PC);
     r_PC++;
-    r_H = Z80ReadMem (REG + (offset) (r_meml));
+    r_H = Z80ReadMem(REG + (offset) (r_meml));
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
   case LD_L_xIXY:
-    r_meml = Z80ReadMem (r_PC);
+    r_meml = Z80ReadMem(r_PC);
     r_PC++;
-    r_L = Z80ReadMem (REG + (offset) (r_meml));
+    r_L = Z80ReadMem(REG + (offset) (r_meml));
     AddCycles (4 + 3 + 3 + 3 + 3 + 3);
     break;
 

@@ -94,13 +94,6 @@
 #endif // ifndef _DISASM_
 
 
-/*--- Memory Read from the A address on no bank machines -------------*/
-//#define Z80ReadMem(A)   ((regs->RAM[(A)]))
-//#define Z80ReadMem(A) readmem(A)
-
-//  return( regs->RAM[A] );
-
-
 /* macros to change the cycles register */
 #define AddCycles(n) regs->cycles-=(n)
 
@@ -279,11 +272,11 @@
 
 #define JR_n()   r_PC += (offset) (Z80ReadMem(r_PC)); r_PC++
 
-#define RET_nn()   r_PCl = Z80ReadMem (r_SP); r_SP++; \
-                   r_PCh = Z80ReadMem (r_SP);  r_SP++;
+#define RET_nn()   r_PCl = Z80ReadMem(r_SP); r_SP++; \
+                   r_PCh = Z80ReadMem(r_SP);  r_SP++;
 
-#define CALL_nn()  r_opl = Z80ReadMem (r_PC); r_PC++; \
-                   r_oph = Z80ReadMem (r_PC); r_PC++; \
+#define CALL_nn()  r_opl = Z80ReadMem(r_PC); r_PC++; \
+                   r_oph = Z80ReadMem(r_PC); r_PC++; \
                    Z80WriteMem( --(r_SP), r_PCh, regs ); \
                    Z80WriteMem( --(r_SP), r_PCl, regs ); \
                    r_PC = r_op

@@ -18,12 +18,79 @@
 #include <stdlib.h>
 #include <SPIFFS.h>
 #include "spectrum.h"
-#include "hardware.h"
 
-extern tipo_mem mem;
-extern tipo_hwopt hwopt;
+// Con estas variables se controla el mapeado de los botones  hardware reales a los virtuales del spectrum
+uint8_t mappingkey[4][12]={  
+{SPECKEY_Z, SPECKEY_M,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_Q, SPECKEY_A, SPECKEY_O, SPECKEY_P,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
+{SPECKEY_P, JOYK_FIRE,SPECKEY_SPACE, SPECKEY_ENTER, JOYK_UP,   JOYK_DOWN, JOYK_LEFT, JOYK_RIGHT, VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
+{SPECKEY_P, SPECKEY_0,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_9, SPECKEY_8, SPECKEY_6, SPECKEY_7,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
+{SPECKEY_5, SPECKEY_M,SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_P, SPECKEY_L, SPECKEY_Z, SPECKEY_X,  VEGAKEY_MENU,SPECKEY_SHIFT,SPECKEY_J,SPECKEY_H},
+};
 
-uint8_t z80_peek(uint16_t dir)
+
+// Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
+const int key2specy[2][41]={
+  { 0, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
+       2, 2, 2, 2, 2, 5, 5, 5, 5, 5,
+       1, 1, 1, 1, 1, 6, 6, 6, 6, 6,
+       0, 0, 0, 0, 0, 7, 7, 7, 7, 7 },
+  { 0, 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE,
+       0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE }
+};
+uint8_t speckey[8]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+
+int keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int oldkeys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+ZXSpectrum::ZXSpectrum()
+{
+  z80Regs = (Z80Regs *)malloc(sizeof(Z80Regs));
+  z80Regs->userInfo = this;
+}
+
+void ZXSpectrum::reset()
+{
+  Z80Reset(z80Regs);
+  Z80FlagTables();
+}
+
+void ZXSpectrum::updatekey(uint8_t key, uint8_t state){
+  uint8_t n;
+  // Bit pattern: XXXFULDR
+  switch (key) {
+    case JOYK_RIGHT:
+      if (state==1) kempston_port |= B00000001;
+      else       kempston_port &= B11111110;
+      break;
+    case JOYK_LEFT:
+      if (state==1) kempston_port |= B00000010;
+      else       kempston_port &= B11111101;
+      break;
+    case JOYK_DOWN:
+      if (state==1) kempston_port |= B00000100;
+      else       kempston_port &= B11111011;
+      break;
+    case JOYK_UP:
+      if (state==1) kempston_port |= B00001000;
+      else       kempston_port &= B11110111;
+      break;
+    case JOYK_FIRE:
+      if (state==1) kempston_port |= B00010000;
+      else       kempston_port &= B11101111;
+      break;
+    default:
+      if (state==1) n=  key2specy[1][key] ;
+      else          n= (key2specy[1][key])^0xFF ;
+
+      if (state==1) speckey[ key2specy[0][key] ] &=  key2specy[1][key] ;
+      else          speckey[ key2specy[0][key] ] |= ((key2specy[1][key])^0xFF) ;
+      break;
+  }
+}
+
+uint8_t ZXSpectrum::z80_peek(uint16_t dir)
 {
   int page;
   uint8_t dato;
@@ -32,19 +99,19 @@ uint8_t z80_peek(uint16_t dir)
   return dato;
 }
 
-void z80_poke(uint16_t dir, uint8_t dato)
+void ZXSpectrum::z80_poke(uint16_t dir, uint8_t dato)
 {
   int page;
   page = (dir & mem.mp) >> mem.mr;
   *(mem.p + mem.wo[page] + (dir & mem.md)) = dato;
 }
 
-uint8_t readvmem(uint16_t offset, int page)
+uint8_t ZXSpectrum::readvmem(uint16_t offset, int page)
 {
   return *(mem.p + mem.vo[page] + offset);
 }
 
-uint8_t z80_in(uint16_t port)
+uint8_t ZXSpectrum::z80_in(uint16_t port)
 {
   // Read from the ULA - basically keyboard
   if ((port & 0x01) == 0)
@@ -86,7 +153,7 @@ uint8_t z80_in(uint16_t port)
   return 0xFF;
 }
 
-void z80_out(uint16_t port, uint8_t dato)
+void ZXSpectrum::z80_out(uint16_t port, uint8_t dato)
 {
   if (!(port & 0x01))
   {
@@ -102,7 +169,7 @@ void z80_out(uint16_t port, uint8_t dato)
  * ya que esta rutina tiene en cuenta el tamaño de pagina con el que trabajamos y hace los
  * ajustes necesarios
  */
-void pagein(int size, int block, int page, int ro, int issystem)
+void ZXSpectrum::pagein(int size, int block, int page, int ro, int issystem)
 {
   int npag, cf, c, d;
   npag = size / mem.sp;
@@ -140,7 +207,7 @@ void pagein(int size, int block, int page, int ro, int issystem)
     }
 }
 
-void pageout(int size, int bloq, int page)
+void ZXSpectrum::pageout(int size, int bloq, int page)
 {
   int npag, c;
   npag = size / mem.sp;
@@ -149,7 +216,7 @@ void pageout(int size, int bloq, int page)
   mem.wo[c] = mem.swo[c];
 }
 
-int load_48krom(const char *filename)
+int ZXSpectrum::load_48krom(const char *filename)
 {
   File f;
   f = SPIFFS.open(filename, FILE_READ);
@@ -164,7 +231,7 @@ int load_48krom(const char *filename)
   return 0;
 }
 
-int load_128krom(const char *filename)
+int ZXSpectrum::load_128krom(const char *filename)
 {
   File f;
   f = SPIFFS.open(filename, FILE_READ);
@@ -180,7 +247,7 @@ int load_128krom(const char *filename)
   return 0;
 }
 
-int load_p3rom(const char *filename)
+int ZXSpectrum::load_p3rom(const char *filename)
 {
   File f;
   f = SPIFFS.open(filename, FILE_READ);
@@ -196,7 +263,7 @@ int load_p3rom(const char *filename)
   return 0;
 }
 
-int init_spectrum(int model, const char *romfile)
+int ZXSpectrum::init_spectrum(int model, const char *romfile)
 {
   int ret;
   switch (model)
@@ -231,10 +298,8 @@ int init_spectrum(int model, const char *romfile)
   return ret;
 }
 
-extern tipo_hwopt hwopt;
-
 /* This do aditional stuff for reset, like mute sound chip, o reset bank switch */
-int reset_spectrum(Z80Regs *regs)
+int ZXSpectrum::reset_spectrum(Z80Regs *regs)
 {
   int ret = 0;
   switch (hwopt.hw_model)
@@ -252,13 +317,13 @@ int reset_spectrum(Z80Regs *regs)
   return ret;
 }
 
-int end_spectrum(void)
+int ZXSpectrum::end_spectrum(void)
 {
   free(mem.p); /* free RAM */
   return 0;
 }
 
-int init_48k(const char *romfile)
+int ZXSpectrum::init_48k(const char *romfile)
 {
   int i;
   printf(__FILE__ ": Init 48K hardware.\n");
@@ -314,7 +379,7 @@ int init_48k(const char *romfile)
  * 16K RAM maped at 0x0000 as writeonly that modify INs function.
  * Custom ROM.
  */
-int init_inves(const char *romfile)
+int ZXSpectrum::init_inves(const char *romfile)
 {
   //  FILE *fp;
   int i;
@@ -367,7 +432,7 @@ int init_inves(const char *romfile)
   return load_48krom("/inves.rom");
 }
 
-int init_16k(const char *romfile)
+int ZXSpectrum::init_16k(const char *romfile)
 {
   //  FILE *fp;
   int i;
@@ -419,7 +484,7 @@ int init_16k(const char *romfile)
   return load_48krom("/48.rom");
 }
 
-int init_128k(void)
+int ZXSpectrum::init_128k(void)
 {
   //  FILE *fp;
   int i;
@@ -469,14 +534,14 @@ int init_128k(void)
   ;
 }
 
-int reset_128k(void)
+int ZXSpectrum::reset_128k(void)
 {
   hwopt.BANKM = 0x00; /* need to clear lock latch or next dont work. */
   outbankm_128k(0x00);
   return 0;
 }
 
-void outbankm_128k(uint8_t dato)
+void ZXSpectrum::outbankm_128k(uint8_t dato)
 {
 
   if ((hwopt.BANKM | 0xDF) == 0xFF)
@@ -492,7 +557,7 @@ void outbankm_128k(uint8_t dato)
   //  pagein(0x4000,3,dato & 0x07,RW_PAGE,SYSTEM_PAGE);
 }
 
-int init_plus2(void)
+int ZXSpectrum::init_plus2(void)
 {
   init_128k();
   Serial.printf(__FILE__ ": Init +2 hardware.\n");
@@ -500,7 +565,7 @@ int init_plus2(void)
   return load_128krom("/p2.rom");
 }
 
-int init_plus3(void)
+int ZXSpectrum::init_plus3(void)
 {
   //  FILE *fp;
   int i;
@@ -549,7 +614,7 @@ int init_plus3(void)
   ;
 }
 
-void outbankm_p31(uint8_t dato)
+void ZXSpectrum::outbankm_p31(uint8_t dato)
 { // the 0x1FFD latch
   int roms;
   hwopt.BANK678 = dato;
@@ -602,7 +667,7 @@ void outbankm_p31(uint8_t dato)
   }
 }
 
-void outbankm_p37(uint8_t dato)
+void ZXSpectrum::outbankm_p37(uint8_t dato)
 { // the 0x7FFD latch
   int roms;
   //   printf("Paging in BANKM=%x ",dato);
@@ -622,7 +687,7 @@ void outbankm_p37(uint8_t dato)
   //  pagein(0x4000,3,dato & 0x07,RW_PAGE,SYSTEM_PAGE);
 }
 
-int reset_plus3(void)
+int ZXSpectrum::reset_plus3(void)
 {
   hwopt.BANKM = 0x00; // clear lock latch or outbankm_p31 don't work
   outbankm_p31(0x00);

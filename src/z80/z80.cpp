@@ -15,12 +15,14 @@
  *
  *======================================================================
  */
-#include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "spectrum.h"
 #include "tables.h"
 #include "z80.h"
+
+#define Z80ReadMem(where) (((ZXSpectrum *)regs->userInfo)->z80_peek(where))
+
 #include "macros.h"
 
 /* RAM variable, debug toggle variable, pressed key and
@@ -134,7 +136,7 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
        AddCycles (4);
       }
       /* read the opcode from memory (pointed by PC) */
-      opcode = Z80ReadMem (regs->PC.W);
+      opcode = Z80ReadMem(regs->PC.W);
       regs->PC.W++;
       /* increment the R register and decode the instruction */
       AddR (1);
@@ -199,8 +201,8 @@ void Z80Interrupt (Z80Regs * regs, uint16_t ivec){
         break;
        case 2:
         intaddress = (((regs->I & 0xFF) << 8) | 0xFF);
-        regs->PC.B.l = Z80ReadMem (intaddress);
-        regs->PC.B.h = Z80ReadMem (intaddress + 1);
+        regs->PC.B.l = Z80ReadMem(intaddress);
+        regs->PC.B.h = Z80ReadMem(intaddress + 1);
         AddCycles (19);
         break;
        }
@@ -248,38 +250,10 @@ Z80Patch (register Z80Regs * regs)
 }
 
 
-
-
-
-/*====================================================================
-  byte Z80MemRead( register word address )
-
-  This function reads from the given memory address. It is not inlined,
-  and it's written for debugging purposes.
- ===================================================================*/
-byte
-Z80MemRead (register uint16_t address, Z80Regs * regs)
-{
-  return (z80_peek(address));
-}
-
-/*====================================================================
-  void Z80MemWrite( register word address, register byte value )
-
-  This function writes on memory the given value. It is not inlined,
-  ands it's written for debugging purposes.
- ===================================================================*/
-void Z80MemWrite (register uint16_t address, register byte value, Z80Regs * regs) {
-  z80_poke(address,value);
-}
-
 /*--- Memory Write on the A address on no bank machines -------------*/
 void Z80WriteMem (uint16_t where, uint16_t A, Z80Regs * regs){
-  z80_poke(where, (byte)A);
-}
-
-byte Z80ReadMem (uint16_t where){
-  return (z80_peek(where));
+  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
+  speccy->z80_poke(where, (byte)A);
 }
 
 /*====================================================================
@@ -289,7 +263,8 @@ byte Z80ReadMem (uint16_t where){
   and it's written for debugging purposes.
  ===================================================================*/
 byte Z80InPort (register Z80Regs * regs, register uint16_t port) {
-  return (z80_in(port));
+  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
+  return (speccy->z80_in(port));
 }
 
 /*====================================================================
@@ -299,7 +274,8 @@ byte Z80InPort (register Z80Regs * regs, register uint16_t port) {
   and it's written for debugging purposes.
  ===================================================================*/
 void Z80OutPort (register Z80Regs * regs, register uint16_t port, register byte value) {
- z80_out(port,value);
+  ZXSpectrum *speccy = (ZXSpectrum *)regs->userInfo;
+  speccy->z80_out(port,value);
 }
 
 

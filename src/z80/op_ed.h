@@ -27,7 +27,7 @@
 
 /* 8 clock cycles minimum = ED opcode = 4 + 4 */
 
-opcode = Z80ReadMem (r_PC);
+opcode = Z80ReadMem(r_PC);
 r_PC++;
 
 switch (opcode)
@@ -243,7 +243,7 @@ switch (opcode)
     break;
 
   case RRD:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     Z80WriteMem (r_HL, (r_A << 4) | (r_meml >> 4), regs);
     r_A = (r_A & 0xf0) | (r_meml & 0x0f);
     r_F = (r_F & FLAG_C) | sz53p_table[r_A];
@@ -251,7 +251,7 @@ switch (opcode)
     break;
 
   case RLD:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     Z80WriteMem (r_HL, (r_meml << 4) | (r_A & 0x0f), regs);
     r_A = (r_A & 0xf0) | (r_meml >> 4);
     r_F = (r_F & FLAG_C) | sz53p_table[r_A];
@@ -259,7 +259,7 @@ switch (opcode)
     break;
 
   case LDI:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_HL++;
     Z80WriteMem (r_DE, r_meml, regs);
     r_DE++;
@@ -272,7 +272,7 @@ switch (opcode)
     break;
 
   case LDIR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_HL++;
     Z80WriteMem (r_DE, r_meml, regs);
     r_DE++;
@@ -289,7 +289,7 @@ switch (opcode)
       }
     break;
   case LDD:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_HL--;
     Z80WriteMem (r_DE, r_meml, regs);
     r_DE--;
@@ -303,7 +303,7 @@ switch (opcode)
 
 
   case LDDR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     Z80WriteMem (r_DE, r_meml, regs);
     r_HL--;
     r_DE--;
@@ -324,7 +324,7 @@ switch (opcode)
     // Thanks a lot to Philip Kendall for letting me to take a look to his
     // fuse emulator and allowing me to use their flag routines :-)
   case CPI:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = r_A - r_meml;
     r_opl = ((r_A & 0x08) >> 3) |
       (((r_meml) & 0x08) >> 2) | ((r_meml & 0x08) >> 1);
@@ -340,7 +340,7 @@ switch (opcode)
     break;
 
   case CPIR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = r_A - r_meml;
     r_opl = ((r_A & 0x08) >> 3) |
       (((r_meml) & 0x08) >> 2) | ((r_meml & 0x08) >> 1);
@@ -361,7 +361,7 @@ switch (opcode)
     break;
 
   case CPD:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = r_A - r_meml;
     r_opl = ((r_A & 0x08) >> 3) |
       (((r_meml) & 0x08) >> 2) | ((r_memh & 0x08) >> 1);
@@ -377,7 +377,7 @@ switch (opcode)
     break;
 
   case CPDR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = r_A - r_meml;
     r_opl = ((r_A & 0x08) >> 3) |
       (((r_meml) & 0x08) >> 2) | ((r_memh & 0x08) >> 1);
@@ -494,7 +494,7 @@ switch (opcode)
     break;
 
   case OUTI:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = 0;
     r_F = (r_F & FLAG_C) | ((r_B) & 0x0f ? 0 : FLAG_H) | FLAG_N;
     (r_B)--;
@@ -515,7 +515,7 @@ switch (opcode)
     break;
 
   case OTIR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = 0;
     r_F = (r_F & FLAG_C) | ((r_B) & 0x0f ? 0 : FLAG_H) | FLAG_N;
     (r_B)--;
@@ -542,7 +542,7 @@ switch (opcode)
 
 
   case OUTD:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = 0;
     r_F = (r_F & FLAG_C) | ((r_B) & 0x0f ? 0 : FLAG_H) | FLAG_N;
     (r_B)--;
@@ -563,7 +563,7 @@ switch (opcode)
     break;
 
   case OTDR:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     r_memh = 0;
     r_F = (r_F & FLAG_C) | ((r_B) & 0x0f ? 0 : FLAG_H) | FLAG_N;
     (r_B)--;
@@ -600,6 +600,6 @@ switch (opcode)
     AddCycles (4 + 4);		/* Just a NOP */
     if (regs->DecodingErrors)
       printf ("z80 core: Unknown instruction: ED %02Xh at PC=%04Xh.\n",
-	      Z80ReadMem (r_PC - 1), r_PC - 2);
+	      Z80ReadMem(r_PC - 1), r_PC - 2);
     break;
   }

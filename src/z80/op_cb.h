@@ -28,7 +28,7 @@
 
 /* 8 clock cycles minimum = CB opcode = 4+4 */
 
-opcode = Z80ReadMem (r_PC);
+opcode = Z80ReadMem(r_PC);
 r_PC++;
 
 switch (opcode)
@@ -59,7 +59,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case RLC_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     RLC (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -94,7 +94,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case RRC_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     RRC (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -129,7 +129,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case RL_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     RL (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -164,7 +164,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case RR_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     RR (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -199,7 +199,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case SLA_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     SLA (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -234,7 +234,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case SRA_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     SRA (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -269,7 +269,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case SLL_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     SLL (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -304,7 +304,7 @@ switch (opcode)
     AddCycles (4 + 4);
     break;
   case SRL_xHL:
-    r_meml = Z80ReadMem (r_HL);
+    r_meml = Z80ReadMem(r_HL);
     SRL (r_meml);
     Z80WriteMem (r_HL, r_meml, regs);
     AddCycles (4 + 4 + 3 + 3 + 1);
@@ -1110,6 +1110,6 @@ switch (opcode)
 //    exit(1);
     if (regs->DecodingErrors)
       printf ("z80 core: Unknown instruction: CB %02Xh at PC=%04Xh.\n",
-	      Z80ReadMem (r_PC - 1), r_PC - 2);
+	      Z80ReadMem(r_PC - 1), r_PC - 2);
     break;
   }

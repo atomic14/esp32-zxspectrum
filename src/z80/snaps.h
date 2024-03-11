@@ -34,36 +34,36 @@ enum tipos_archivo { TYPE_NULL=0, TYPE_TZX ,TYPE_TAP, TYPE_Z80, TYPE_SNA,
 int typeoffile(const char *);
 
 
-uint8_t LoadSnapshot (Z80Regs *, const char *filename, tipo_mem &mem);
-uint8_t LoadSP  (Z80Regs *, FILE *, tipo_mem &mem);
-//uint8_t LoadSNA (Z80Regs *, FILE *);
-uint8_t LoadZ80 (Z80Regs *, FILE *);
-uint8_t LoadSCR (Z80Regs *, FILE *);
+uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
+uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
+//uint8_t LoadSNA (ZXSpectrum *speccy, FILE *);
+uint8_t LoadZ80 (ZXSpectrum *speccy, FILE *);
+uint8_t LoadSCR (ZXSpectrum *speccy, FILE *);
 
-int Load_SNA (Z80Regs *, const char *filename);
-int Load_SCR (Z80Regs *, const char *filename);
+int Load_SNA (ZXSpectrum *speccy, const char *filename);
+int Load_SCR (ZXSpectrum *speccy, const char *filename);
 
-uint8_t SaveSnapshot   (Z80Regs * regs, const char *filename);
-uint8_t SaveScreenshot (Z80Regs * regs, const char *filename);
-uint8_t SaveSP  (Z80Regs *, FILE *);
-uint8_t SaveSNA (Z80Regs *, FILE *);
-uint8_t SaveZ80 (Z80Regs *, FILE *);
-uint8_t SaveSCR (Z80Regs *, FILE *);
+uint8_t SaveSnapshot   (ZXSpectrum *speccy, const char *filename);
+uint8_t SaveScreenshot (ZXSpectrum *speccy, const char *filename);
+uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
+uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
+uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);
+uint8_t SaveSCR (ZXSpectrum *speccy, FILE *);
 
 
 
 /* RUTINAS DE CINTA: GENERICAS */
 FILE *InitTape(FILE *fp);
-uint8_t LoadTAP (Z80Regs *, FILE *);
-uint8_t RewindTAP (Z80Regs *, FILE *);
+uint8_t LoadTAP (ZXSpectrum *speccy, FILE *);
+uint8_t RewindTAP (ZXSpectrum *speccy, FILE *);
 
 /* RUTINAS DE CINTA: ESPECIFICAS */
 uint8_t TAP_init(FILE *fp);
-uint8_t TAP_loadblock(Z80Regs * regs, FILE * fp);
+uint8_t TAP_loadblock(ZXSpectrum *speccy, FILE * fp);
 uint8_t TAP_rewind(FILE *fp);
 
 uint8_t TZX_init(FILE *fp);
-uint8_t TZX_loadblock(Z80Regs * regs, FILE * fp);
+uint8_t TZX_loadblock(ZXSpectrum *speccy, FILE * fp);
 uint8_t TZX_rewind();
 uint8_t TZX_genindex(FILE *fp);
 

@@ -43,10 +43,10 @@
 
 /* 15 clock cycles minimum = FD/DD CB xx opcode = 4 + 4 + 3 + 4 */
 
-tmpreg.W = REGISTER.W + (offset) Z80ReadMem (r_PC);
+tmpreg.W = REGISTER.W + (offset) Z80ReadMem(r_PC);
 r_PC++;
-r_meml = Z80ReadMem (tmpreg.W);
-opcode = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(tmpreg.W);
+opcode = Z80ReadMem(r_PC);
 r_PC++;
 
 switch (opcode)
@@ -269,7 +269,7 @@ switch (opcode)
 	else
 	  printf ("FD");
 	printf ("CB %02Xh %02Xh at PC=%04Xh.\n",
-		Z80ReadMem (r_PC - 2), Z80ReadMem (r_PC - 1), r_PC - 4);
+		Z80ReadMem(r_PC - 2), Z80ReadMem(r_PC - 1), r_PC - 4);
       }
     break;
   }

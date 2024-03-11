@@ -117,8 +117,8 @@ typedef union {
   
 /*=== Now we define the Z80 registers using the previous definition =*/ 
 typedef struct {
-//  char machine_type;
-//  byte * RAM;
+  // use this to stash a pointer to our own data
+  void *userInfo;
   /* general and shadow z80 registers */ 
   eword AF,  BC,  DE,  HL, IX, IY, PC, SP, R; 
   eword AFs, BCs, DEs, HLs;
@@ -147,9 +147,6 @@ typedef struct {
 void     Z80Reset (register Z80Regs * regs);
 void     Z80Interrupt (register Z80Regs *, register uint16_t);
 uint16_t Z80Run (register Z80Regs *, int);
-byte     Z80MemRead (register uint16_t, Z80Regs *);
-byte     Z80ReadMem (uint16_t);
-void     Z80MemWrite (register uint16_t, register byte, Z80Regs *);
 byte     Z80InPort (register Z80Regs * regs, register uint16_t);
 void     Z80OutPort (register Z80Regs * regs, register uint16_t, register byte);
 void     Z80Patch (register Z80Regs *);

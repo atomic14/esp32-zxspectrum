@@ -238,7 +238,7 @@ AddCycles (6);
 break;
 
 case LD_xHL_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 STORE_r (r_HL, r_meml);
 AddCycles (10);
@@ -613,7 +613,7 @@ ADD (r_L);
 AddCycles (4);
 break;
 case ADD_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 ADD (r_meml);
 AddCycles (4 + 3);
 break;
@@ -646,7 +646,7 @@ ADC (r_L);
 AddCycles (4);
 break;
 case ADC_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 ADC (r_meml);
 AddCycles (4 + 3);
 break;
@@ -655,7 +655,7 @@ ADC (r_A);
 AddCycles (4);
 break;
 case ADC_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 ADC (r_meml);
 AddCycles (4 + 3);
@@ -690,12 +690,12 @@ SUB (r_L);
 AddCycles (4);
 break;
 case SUB_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 SUB (r_meml);
 AddCycles (4 + 3);
 break;
 case SUB_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 SUB (r_meml);
 AddCycles (4 + 3);
@@ -730,12 +730,12 @@ SBC (r_L);
 AddCycles (4);
 break;
 case SBC_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 SBC (r_meml);
 AddCycles (4 + 3);
 break;
 case SBC_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 SBC (r_meml);
 AddCycles (4);
@@ -866,12 +866,12 @@ CP (r_L);
 AddCycles (4);
 break;
 case CP_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 CP (r_meml);
 AddCycles (4 + 3);
 break;
 case CP_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 CP (r_meml);
 AddCycles (4 + 3);
@@ -987,7 +987,7 @@ else
 break;
 
 case ADD_N:
-r_meml = Z80ReadMem (r_PC);
+r_meml = Z80ReadMem(r_PC);
 r_PC++;
 ADD (r_meml);
 AddCycles (4 + 3);
@@ -1177,14 +1177,14 @@ AddCycles (4);
 break;
 
 case INC_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 INC (r_meml);
 Z80WriteMem (r_HL, r_meml, regs);
 AddCycles (4 + 3 + 3 + 1);
 break;
 
 case DEC_xHL:
-r_meml = Z80ReadMem (r_HL);
+r_meml = Z80ReadMem(r_HL);
 ZX_DEC (r_meml);
 Z80WriteMem (r_HL, r_meml, regs);
 AddCycles (4 + 3 + 3 + 1);
@@ -1312,20 +1312,20 @@ AddCycles (4);
 break;
 
 case OUT_N_A:
-Z80OutPort (regs, Z80ReadMem (r_PC), r_A);
+Z80OutPort (regs, Z80ReadMem(r_PC), r_A);
 r_PC++;
 AddCycles (11);
 break;
 
 case IN_A_N:
-r_A = Z80InPort (regs, Z80ReadMem (r_PC) + (r_A << 8));
+r_A = Z80InPort (regs, Z80ReadMem(r_PC) + (r_A << 8));
 r_PC++;
 AddCycles (11);
 break;
 
 case EX_HL_xSP:
-r_meml = Z80ReadMem (r_SP);
-r_memh = Z80ReadMem (r_SP + 1);
+r_meml = Z80ReadMem(r_SP);
+r_memh = Z80ReadMem(r_SP + 1);
 Z80WriteMem (r_SP, r_L, regs);
 Z80WriteMem (r_SP + 1, r_H, regs);
 r_L = r_meml;
@@ -1538,5 +1538,5 @@ default:
 //    exit(1);
 if (regs->DecodingErrors)
   printf ("z80 core: Unknown instruction: %02Xh at PC=%04Xh.\n",
-	  Z80ReadMem (r_PC - 1), r_PC - 1);
+	  Z80ReadMem(r_PC - 1), r_PC - 1);
 break;
