@@ -220,22 +220,17 @@ void drawDisplay(void *pvParameters)
 
 void z80Runner(void *pvParameter)
 {
-  int8_t audioBuffer[400];
+  int8_t audioBuffer[312];
   // int lastMillis = 0;
   uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
   while (1)
   {
-    // this is not an accurate simulation of the spectrum - but it seems to work...
-    // Each line should actually be 224 tstates long...
+    // Each line should be 224 tstates long...
     // And a complete frame is (64+192+56)*224=69888 tstates long
-
-    // We're doing 175 tstates per line and 400 lines per frame to match our 20KHz audio output
-    // That gives us 70,000 tstates per frame - which is close enough
-    // but any games that rely on very accurate timing will not work
-    for (int i = 0; i < 400; i++)
+    for (int i = 0; i < 312; i++)
     {
-      // handle port FF for the border and flyback(?)
-      if (i < 64 || i >= 400 - (192 + 64))
+      // handle port FF for the border
+      if (i < 64 || i >= 192 + 64)
       {
         machine->hwopt.portFF = 0xFF;
       }
@@ -245,14 +240,9 @@ void z80Runner(void *pvParameter)
         uint8_t attr = *(attrBase + 32 * (i - 64) / 8);
         machine->hwopt.portFF = attr;
       }
-      // when we have finished the screen then trigger an interrupt - is this the correct place?
-      if (i == 400 - (192 + 64))
-      {
-        machine->interrupt();
-      }
-      // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
-      c+=175;
-      machine->runForCycles(175);
+      // run for 224 cycles
+      c+=224;
+      machine->runForCycles(224);
       if (machine->hwopt.SoundBits != 0)
       {
         audioBuffer[i] = 20;
@@ -262,11 +252,12 @@ void z80Runner(void *pvParameter)
         audioBuffer[i] = 0;
       }
     }
+    machine->interrupt();
     // draw a frame
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
-    // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 400/20KHz = 1/50th of a second
-    audioOutput->write(audioBuffer, 400);
+    // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
+    audioOutput->write(audioBuffer, 312);
   }
 }
 
@@ -319,7 +310,7 @@ void setup(void)
 
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
-  audioOutput->start(20000);
+  audioOutput->start(15600);
   // Initialize SPIFFS
   if (!SPIFFS.begin(true))
   {
@@ -408,7 +399,7 @@ void setup(void)
 
   machine->init_spectrum(SPECMDL_48K, "/48.rom");
   machine->reset_spectrum(machine->z80Regs);
-  // Load_SNA(&z80Regs, "/manic.sna");
+  // Load_SNA(machine, "/manic.sna");
   //  Load_SNA(&z80Regs,"/t1.sna");
   Load_SNA(machine, "/elite.sna");
   Serial.printf("Entrando en el loop\n");

@@ -18,7 +18,7 @@ void PDMOutput::start(uint32_t sample_rate)
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
         .dma_buf_count = 2,
         .dma_buf_len = 400,
-        .use_apll = false,
+        .use_apll = true,
         .tx_desc_auto_clear = true,
         .fixed_mclk = 0};
     //install and start i2s driver

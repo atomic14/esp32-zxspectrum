@@ -17,9 +17,10 @@ void I2SOutput::start(uint32_t sample_rate)
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2,
         .dma_buf_count = 2,
         .dma_buf_len = 400,
-        .use_apll = false,
+        .use_apll = true,
         .tx_desc_auto_clear = true,
-        .fixed_mclk = 0};
+        .fixed_mclk = 0,
+    };
     //install and start i2s driver
     i2s_driver_install(m_i2s_port, &i2s_config, 0, NULL);
     // set up the i2s pins
