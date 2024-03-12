@@ -225,22 +225,28 @@ void z80Runner(void *pvParameter)
   uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
   while (1)
   {
-    // run for 1/50th of a second - (400*175)/3.5E6MHz
+    // this is not an accurate simulation of the spectrum - but it seems to work...
+    // Each line should actually be 224 tstates long...
+    // And a complete frame is (64+192+56)*224=69888 tstates long
+
+    // We're doing 175 tstates per line and 400 lines per frame to match our 20KHz audio output
+    // That gives us 70,000 tstates per frame - which is close enough
+    // but any games that rely on very accurate timing will not work
     for (int i = 0; i < 400; i++)
     {
-      // handle port FF for the border and flyback
-      if (i < 48 || i > 192 + 48 + 48)
+      // handle port FF for the border and flyback(?)
+      if (i < 64 || i >= 400 - (192 + 64))
       {
         machine->hwopt.portFF = 0xFF;
       }
       else
       {
         // otherwise we need to populate it with the correct attribute color
-        uint8_t attr = *(attrBase + 32 * (i - 48) / 8);
+        uint8_t attr = *(attrBase + 32 * (i - 64) / 8);
         machine->hwopt.portFF = attr;
       }
-      // when we have finished the screen then trigger an interrupt
-      if (i == 192 + 48 + 48)
+      // when we have finished the screen then trigger an interrupt - is this the correct place?
+      if (i == 400 - (192 + 64))
       {
         machine->interrupt();
       }
