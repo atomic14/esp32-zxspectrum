@@ -218,12 +218,6 @@ void drawDisplay(void *pvParameters)
   }
 }
 
-void z80RunForCycles(uint32_t cycles)
-{
-  c += cycles;
-  Z80Run(machine->z80Regs, cycles);
-}
-
 void z80Runner(void *pvParameter)
 {
   int8_t audioBuffer[400];
@@ -231,7 +225,6 @@ void z80Runner(void *pvParameter)
   uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
   while (1)
   {
-    size_t bytes_written = 0;
     // run for 1/50th of a second - (400*175)/3.5E6MHz
     for (int i = 0; i < 400; i++)
     {
@@ -249,10 +242,11 @@ void z80Runner(void *pvParameter)
       // when we have finished the screen then trigger an interrupt
       if (i == 192 + 48 + 48)
       {
-        Z80Interrupt(machine->z80Regs, 0x38);
+        machine->interrupt();
       }
       // run for 175 cucles - this matches our audio output rate of 20KHz (175/3.5E6MHz = 1/20KHz)
-      z80RunForCycles(175);
+      c+=175;
+      machine->runForCycles(175);
       if (machine->hwopt.SoundBits != 0)
       {
         audioBuffer[i] = 20;

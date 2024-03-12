@@ -135,7 +135,8 @@ public:
 
   ZXSpectrum();
   void reset();
-
+  void runForCycles(int cycles);
+  void interrupt();
   void updatekey(uint8_t key, uint8_t state);
 
   inline uint8_t z80_peek(uint16_t dir)

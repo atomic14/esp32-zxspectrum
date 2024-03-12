@@ -54,6 +54,15 @@ void ZXSpectrum::reset()
   Z80FlagTables();
 }
 
+void ZXSpectrum::runForCycles(int cycles) {
+  Z80Run(z80Regs, cycles);
+}
+
+void ZXSpectrum::interrupt() {
+  // TODO - what should the 0x38 actually be?
+  Z80Interrupt(z80Regs, 0x38);
+}
+
 void ZXSpectrum::updatekey(uint8_t key, uint8_t state)
 {
   uint8_t n;
