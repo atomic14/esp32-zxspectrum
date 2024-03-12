@@ -33,7 +33,6 @@ enum tipos_archivo { TYPE_NULL=0, TYPE_TZX ,TYPE_TAP, TYPE_Z80, TYPE_SNA,
 			TYPE_SP, TYPE_SCR }; 
 int typeoffile(const char *);
 
-
 uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
 uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
 //uint8_t LoadSNA (ZXSpectrum *speccy, FILE *);
@@ -49,23 +48,5 @@ uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
 uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
 uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);
 uint8_t SaveSCR (ZXSpectrum *speccy, FILE *);
-
-
-
-/* RUTINAS DE CINTA: GENERICAS */
-FILE *InitTape(FILE *fp);
-uint8_t LoadTAP (ZXSpectrum *speccy, FILE *);
-uint8_t RewindTAP (ZXSpectrum *speccy, FILE *);
-
-/* RUTINAS DE CINTA: ESPECIFICAS */
-uint8_t TAP_init(FILE *fp);
-uint8_t TAP_loadblock(ZXSpectrum *speccy, FILE * fp);
-uint8_t TAP_rewind(FILE *fp);
-
-uint8_t TZX_init(FILE *fp);
-uint8_t TZX_loadblock(ZXSpectrum *speccy, FILE * fp);
-uint8_t TZX_rewind();
-uint8_t TZX_genindex(FILE *fp);
-
 
 #endif  // #ifdef SNAPS_H

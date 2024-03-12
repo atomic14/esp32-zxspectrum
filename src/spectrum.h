@@ -183,7 +183,6 @@ public:
   void outbankm_p31(uint8_t dato);
   void outbankm_p37(uint8_t dato);
 
-  // esto esta en main.ino
   int load_48krom(const char *);
   int load_128krom(const char *);
   int load_p3rom(const char *);
