@@ -29,7 +29,7 @@
 #include "z80.h"
 #include "spectrum.h"
 
-enum tipos_archivo { TYPE_NULL=0, TYPE_TZX ,TYPE_TAP, TYPE_Z80, TYPE_SNA,
+enum tipos_archivo { TYPE_NULL=0, TYPE_Z80, TYPE_SNA,
 			TYPE_SP, TYPE_SCR }; 
 int typeoffile(const char *);
 
