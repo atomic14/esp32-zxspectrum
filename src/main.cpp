@@ -220,44 +220,13 @@ void drawDisplay(void *pvParameters)
 
 void z80Runner(void *pvParameter)
 {
-  int8_t audioBuffer[312];
-  // int lastMillis = 0;
-  uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
   while (1)
   {
-    // Each line should be 224 tstates long...
-    // And a complete frame is (64+192+56)*224=69888 tstates long
-    for (int i = 0; i < 312; i++)
-    {
-      // handle port FF for the border
-      if (i < 64 || i >= 192 + 64)
-      {
-        machine->hwopt.portFF = 0xFF;
-      }
-      else
-      {
-        // otherwise we need to populate it with the correct attribute color
-        uint8_t attr = *(attrBase + 32 * (i - 64) / 8);
-        machine->hwopt.portFF = attr;
-      }
-      // run for 224 cycles
-      c+=224;
-      machine->runForCycles(224);
-      if (machine->hwopt.SoundBits != 0)
-      {
-        audioBuffer[i] = 20;
-      }
-      else
-      {
-        audioBuffer[i] = 0;
-      }
-    }
-    machine->interrupt();
+    c+=machine->runForFrame(audioOutput);
     // draw a frame
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
-    // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
-    audioOutput->write(audioBuffer, 312);
+
   }
 }
 

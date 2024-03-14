@@ -124,6 +124,7 @@ typedef struct
   int sp;      // size of pages (hFFFF / mp)
 } tipo_mem;
 
+class AudioOutput;
 class ZXSpectrum
 {
 public:
@@ -135,6 +136,7 @@ public:
 
   ZXSpectrum();
   void reset();
+  int runForFrame(AudioOutput *audioOutput);
   void runForCycles(int cycles);
   void interrupt();
   void updatekey(uint8_t key, uint8_t state);

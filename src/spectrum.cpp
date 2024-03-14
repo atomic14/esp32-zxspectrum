@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <SPIFFS.h>
 #include "spectrum.h"
+#include "AudioOutput/AudioOutput.h"
 
 // Con estas variables se controla el mapeado de los botones  hardware reales a los virtuales del spectrum
 uint8_t mappingkey[4][12] = {
@@ -54,11 +55,51 @@ void ZXSpectrum::reset()
   Z80FlagTables();
 }
 
-void ZXSpectrum::runForCycles(int cycles) {
+void ZXSpectrum::runForCycles(int cycles)
+{
   Z80Run(z80Regs, cycles);
 }
 
-void ZXSpectrum::interrupt() {
+int ZXSpectrum::runForFrame(AudioOutput *audioOutput)
+{
+  int8_t audioBuffer[312];
+  uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
+  int c = 0;
+  // Each line should be 224 tstates long...
+  // And a complete frame is (64+192+56)*224=69888 tstates long
+  for (int i = 0; i < 312; i++)
+  {
+    // handle port FF for the border
+    if (i < 64 || i >= 192 + 64)
+    {
+      hwopt.portFF = 0xFF;
+    }
+    else
+    {
+      // otherwise we need to populate it with the correct attribute color
+      uint8_t attr = *(attrBase + 32 * (i - 64) / 8);
+      hwopt.portFF = attr;
+    }
+    // run for 224 cycles
+    c += 224;
+    runForCycles(224);
+    if (hwopt.SoundBits != 0)
+    {
+      audioBuffer[i] = 20;
+    }
+    else
+    {
+      audioBuffer[i] = 0;
+    }
+  }
+  interrupt();
+  // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
+  audioOutput->write(audioBuffer, 312);
+  return c;
+}
+
+void ZXSpectrum::interrupt()
+{
   // TODO - what should the 0x38 actually be?
   Z80Interrupt(z80Regs, 0x38);
 }
