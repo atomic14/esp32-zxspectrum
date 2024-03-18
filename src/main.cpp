@@ -12,23 +12,24 @@
  * Compile as ESP32 Wrover Module
  *======================================================================
  */
-#include <WiFi.h>
 #include <TFT_eSPI.h>
 #include <esp_err.h>
-#include "SPIFFS.h"
 #include "SPI.h"
 #include "driver/timer.h"
 #include "AudioOutput/I2SOutput.h"
 #include "AudioOutput/PDMOutput.h"
 #include "AudioOutput/DACOutput.h"
 #include "AudioOutput/BuzzerOutput.h"
-#include "z80/snaps.h"
-#include "spectrum.h"
+#include "Emulator/snaps.h"
+#include "Emulator/spectrum.h"
+#include "Files/Flash.h"
+#include "Files/SDCard.h"
 #include "Nunchuk/wii_i2c.h"
 
 TFT_eSPI tft = TFT_eSPI();
 AudioOutput *audioOutput = NULL;
 ZXSpectrum *machine = NULL;
+Files *files = NULL;
 
 unsigned int controller_type = 0;
 
@@ -222,11 +223,10 @@ void z80Runner(void *pvParameter)
 {
   while (1)
   {
-    c+=machine->runForFrame(audioOutput);
+    c += machine->runForFrame(audioOutput);
     // draw a frame
     uint32_t evt = 0;
     xQueueSend(frameRenderTimerQueue, &evt, portMAX_DELAY);
-
   }
 }
 
@@ -246,6 +246,7 @@ void setup(void)
     Serial.printf("Waiting %i\n", i);
   }
   Serial.printf("Boot!\n");
+
 #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
@@ -280,12 +281,6 @@ void setup(void)
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
   audioOutput->start(15600);
-  // Initialize SPIFFS
-  if (!SPIFFS.begin(true))
-  {
-    Serial.printf("An Error has occurred while mounting SPIFFS\n");
-    return;
-  }
 
   Serial.println("Border Width: " + String(borderWidth));
   Serial.println("Border Height: " + String(borderHeight));
@@ -368,9 +363,22 @@ void setup(void)
 
   machine->init_spectrum(SPECMDL_48K, "/48.rom");
   machine->reset_spectrum(machine->z80Regs);
-  // Load_SNA(machine, "/manic.sna");
+  #ifdef SD_CARD_PWR
+  if (SD_CARD_PWR != GPIO_NUM_NC) {
+    pinMode(SD_CARD_PWR, OUTPUT);
+    digitalWrite(SD_CARD_PWR, SD_CARD_PWR_ON);
+  }
+  #endif
+  #ifdef USE_SDIO
+  SDCard *card = new SDCard(SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
+  #else
+  SDCard *card = new SDCard(SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+  #endif
+
+  Load_SNA(machine, "/fs/manic.sna");
   //  Load_SNA(&z80Regs,"/t1.sna");
-  Load_SNA(machine, "/elite.sna");
+  // Load_SNA(machine, "/elite.sna");
+  // Load_SNA(machine, "/jetset.sna");
   Serial.printf("Entrando en el loop\n");
   // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
   frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
@@ -405,30 +413,71 @@ void show_classic(const unsigned char *data)
   Serial.printf("zl, zr = (%d,%d)\n", state.zl, state.zr);
 }
 
-int elapsedTime = 0;
-void loop(void)
+void loop()
 {
-  vTaskDelay(10);
-  elapsedTime += 10;
-  if (elapsedTime == 1000)
+  if (Serial.available() > 0)
   {
-    Serial.println("Sending N");
-    machine->updatekey(SPECKEY_N, 1);
-    vTaskDelay(200);
-    machine->updatekey(SPECKEY_N, 0);
-  }
-  if (elapsedTime == 2000)
-  {
-    Serial.println("Sending SPACE");
-    machine->updatekey(SPECKEY_SPACE, 1);
-    vTaskDelay(200);
-    machine->updatekey(SPECKEY_SPACE, 0);
-  }
-  if (elapsedTime == 3000)
-  {
-    Serial.println("Sending 1");
-    machine->updatekey(SPECKEY_1, 1);
-    vTaskDelay(200);
-    machine->updatekey(SPECKEY_1, 0);
+    String message = Serial.readStringUntil('\n'); // Read the incoming message until newline
+    message.trim();   
+    
+    Serial.println("Got message:" + message);                             // Remove any whitespace
+
+    // Check if message is a key down event
+    if (message.startsWith("down:"))
+    {
+      String key = message.substring(5);  // Get the key from the message
+      Serial.println("Key Down: " + key); // Echo back the key down event
+      int keyValue = key.toInt();         // Convert key value part to integer
+
+      // Handle key down action
+      machine->updatekey(keyValue, 1);
+    }
+    // Check if message is a key up event
+    else if (message.startsWith("up:"))
+    {
+      String key = message.substring(3); // Get the key from the message
+      Serial.println("Key Up: " + key);  // Echo back the key up event
+      int keyValue = key.toInt();         // Convert key value part to integer
+
+      // Handle key up action
+      machine->updatekey(keyValue, 0);
+    }
   }
 }
+  // void loop(void)
+  // {
+  // int packetSize = udp.parsePacket();
+  // if (packetSize) {
+  //   // Received packet
+  //   char incomingPacket[255]; // buffer for incoming packets
+  //   int len = udp.read(incomingPacket, 255);
+  //   if (len > 0) {
+  //     incomingPacket[len] = '\0'; // Null-terminate the packet
+  //   }
+  //   Serial.printf("Received packet of size %d: %s\n", len, incomingPacket);
+
+  //   // Extract the event type and key value from the packet
+  //   String message(incomingPacket);
+  //   int delimiterIndex = message.indexOf(':');
+  //   if (delimiterIndex != -1) {
+  //     String eventType = message.substring(0, delimiterIndex);
+  //     int keyValue = message.substring(delimiterIndex + 1).toInt(); // Convert key value part to integer
+
+  //     // Log or handle the key event
+  //     Serial.print("Event Type: ");
+  //     Serial.println(eventType);
+  //     Serial.print("Key Value: ");
+  //     Serial.println(keyValue);
+  //     // Example action
+  //     if(eventType == "down") {
+  //       // Key down action
+  //       machine->updatekey(keyValue, 1);
+  //       Serial.println("Key Pressed");
+  //     } else if(eventType == "up") {
+  //       // Key up action
+  //       Serial.println("Key Released");
+  //       machine->updatekey(keyValue, 0);
+  //     }
+  //   }
+  // }
+  // }

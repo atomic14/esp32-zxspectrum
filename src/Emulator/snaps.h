@@ -26,12 +26,11 @@
 #endif
 #define TRUE 1
 #define FALSE 0
-#include "z80.h"
-#include "spectrum.h"
+#include "./z80/z80.h"
+#include "./spectrum.h"
 
 enum tipos_archivo { TYPE_NULL=0, TYPE_Z80, TYPE_SNA,
 			TYPE_SP, TYPE_SCR }; 
-int typeoffile(const char *);
 
 uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
 uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);

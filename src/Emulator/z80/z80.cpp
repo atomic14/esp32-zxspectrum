@@ -17,7 +17,7 @@
  */
 #include <stdint.h>
 #include <stdio.h>
-#include "spectrum.h"
+#include "../spectrum.h"
 #include "tables.h"
 #include "z80.h"
 
@@ -214,16 +214,6 @@ void Z80Interrupt (Z80Regs * regs, uint16_t ivec){
 void
 Z80Patch (register Z80Regs * regs)
 {
-// QUE ALGUIEN ME EXPLIQUE por que hay dos tapfile ???
-/*  extern FILE *tapfile;  
-  extern tipo_emuopt emuopt;
-    if (emuopt.tapefile[0] != 0)
-    {
-    //  Serial.printf("Z80patch:%x\n",tapfile);
-      LoadTAP (regs, tapfile);
-      POP (PC);
-    }
-*/
 }
 
 /*====================================================================
