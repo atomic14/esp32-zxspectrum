@@ -29,17 +29,10 @@
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
 
-// A letter of the alphabet with a list of files
-class FileLetter {
-public:
-  std::string name;
-  std::vector<FileInfo *> files;
-};
-
 TFT_eSPI *tft = nullptr;
 AudioOutput *audioOutput = nullptr;
-PickerScreen<FileInfo> *filePickerScreen = nullptr;
-PickerScreen<FileLetter> *alphabetPicker = nullptr;
+PickerScreen<FileInfoPtr> *filePickerScreen = nullptr;
+PickerScreen<FileLetterGroupPtr> *alphabetPicker = nullptr;
 EmulatorScreen *emulatorScreen = nullptr;
 Screen *activeScreen = nullptr;
 Files *files = nullptr;
@@ -105,38 +98,37 @@ void setup(void)
 
   // wire everything up
   files = new Files();
-  std::vector<FileInfo *> fileInfos = files->listFilePaths("/", ".sna");
+  auto fileInfos = files->listFilePaths("/", ".sna");
   // group the files by first letter
-  std::map<std::string, FileLetter *> firstLetterFiles;
+  std::map<std::string, FileLetterGroupPtr> firstLetterFiles;
   for (auto &fileInfo : fileInfos)
   {
-    if (fileInfo->path.length() > 0)
+    if (fileInfo->getPath().length() > 0)
     {
-      auto letter = fileInfo->name.substr(0, 1);
+      auto letter = fileInfo->getName().substr(0, 1);
       if (firstLetterFiles.find(letter) == firstLetterFiles.end())
       {
-        firstLetterFiles[letter] = new FileLetter();
-        firstLetterFiles[letter]->name = letter;
+        firstLetterFiles[letter] = FileLetterGroupPtr(new FileLetterGroup(letter));
       }
-      firstLetterFiles[letter]->files.push_back(fileInfo);
+      firstLetterFiles[letter]->addFile(fileInfo);
     }
   }
   // get the sorted list of first letters - the map just gives us this
-  std::vector<FileLetter *> firstLetters;
+  FileLetterGroupVector firstLetters;
   for (auto &entry : firstLetterFiles)
   {
     firstLetters.push_back(entry.second);
   }
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
-  alphabetPicker = new PickerScreen<FileLetter>(*tft, audioOutput, [&](FileLetter *entry, int index) {
-    Serial.printf("Picked letter: %s\n", entry->name.c_str()), 
-    filePickerScreen->setItems(entry->files);
+  alphabetPicker = new PickerScreen<FileLetterGroupPtr>(*tft, audioOutput, [&](FileLetterGroupPtr entry, int index) {
+    Serial.printf("Picked letter: %s\n", entry->getName().c_str()), 
+    filePickerScreen->setItems(entry->getFiles());
     activeScreen = filePickerScreen;
   });
-  filePickerScreen = new PickerScreen<FileInfo>(*tft, audioOutput, [&](FileInfo *file, int index) {
-    Serial.printf("Loading snapshot: %s\n", file->path.c_str());
-    emulatorScreen->run(file->path);
+  filePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
+    Serial.printf("Loading snapshot: %s\n", file->getPath().c_str());
+    emulatorScreen->run(file->getPath());
     activeScreen = emulatorScreen;
   });
   keyboard = new SerialKeyboard([&](int key, bool down) {

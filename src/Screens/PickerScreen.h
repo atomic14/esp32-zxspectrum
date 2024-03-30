@@ -14,13 +14,13 @@ template <class ItemT>
 class PickerScreen : public Screen
 {
 private:
-  std::vector<ItemT *> m_items;
+  std::vector<ItemT> m_items;
   int m_selectedItem = 0;
   int m_lastPageDrawn = -1;
   unsigned long lastKeyTime = 0;
   unsigned long repeatDelay = 500;
   // load snapshot callback
-  using SelectItemCallback = std::function<void(ItemT *item, int itemIndex)>;
+  using SelectItemCallback = std::function<void(ItemT item, int itemIndex)>;
   SelectItemCallback m_selectItemCallback;
 
 public:
@@ -33,7 +33,7 @@ public:
     repeatDelay = 500;
   }
   
-  void setItems(std::vector<ItemT *> items)
+  void setItems(std::vector<ItemT> items)
   {
     m_items = items;
     m_selectedItem = 0;
@@ -108,7 +108,7 @@ public:
       }
       m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_LIGHTGREY, TFT_BLACK);
       // draw the last component of the path
-      m_tft.drawString(m_items[itemIndex]->name.c_str(), 20, 10 + i * 30);
+      m_tft.drawString(m_items[itemIndex]->getName().c_str(), 20, 10 + i * 30);
     }
     m_tft.endWrite();
   }

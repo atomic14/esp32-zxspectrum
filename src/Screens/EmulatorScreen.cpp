@@ -137,6 +137,7 @@ void z80Runner(void *pvParameter)
       emulatorScreen->cycleCount += emulatorScreen->machine->runForFrame(emulatorScreen->m_audioOutput);
       // draw a frame
       uint32_t evt = 0;
+
       xQueueSend(emulatorScreen->frameRenderTimerQueue, &evt, portMAX_DELAY);
     } else {
       vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -149,7 +150,7 @@ EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen
   machine = new ZXSpectrum();
   machine->reset();
   Serial.printf("Z80 Initialization completed\n");
-  machine->init_spectrum(SPECMDL_48K, "/48.rom");
+  machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
   machine->reset_spectrum(machine->z80Regs);
 
   frameBuffer = (uint16_t *)malloc(256 * 192 * sizeof(uint16_t));
@@ -168,12 +169,12 @@ EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, this, 5, NULL, 0);
 }
 
-void EmulatorScreen::run(std::string filename)
+void EmulatorScreen::run(std::string snaPath)
 {
   machine->reset();
-  machine->init_spectrum(SPECMDL_48K, "/48.rom");
+  machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
   machine->reset_spectrum(machine->z80Regs);
-  Load_SNA(machine, filename.c_str());
+  Load_SNA(machine, snaPath.c_str());
   memset(frameBuffer, 0, 256 * 192 * sizeof(uint16_t));
   m_tft.fillScreen(TFT_BLACK);
   isRunning = true;
