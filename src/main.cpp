@@ -16,6 +16,7 @@
 #include <esp_err.h>
 #include <map>
 #include <vector>
+#include <sstream>
 #include "SPI.h"
 #include "AudioOutput/I2SOutput.h"
 #include "AudioOutput/PDMOutput.h"
@@ -97,28 +98,7 @@ void setup(void)
   tft->fillScreen(TFT_BLACK);
 
   // wire everything up
-  files = new Files();
-  auto fileInfos = files->listFilePaths("/", ".sna");
-  // group the files by first letter
-  std::map<std::string, FileLetterGroupPtr> firstLetterFiles;
-  for (auto &fileInfo : fileInfos)
-  {
-    if (fileInfo->getPath().length() > 0)
-    {
-      auto letter = fileInfo->getName().substr(0, 1);
-      if (firstLetterFiles.find(letter) == firstLetterFiles.end())
-      {
-        firstLetterFiles[letter] = FileLetterGroupPtr(new FileLetterGroup(letter));
-      }
-      firstLetterFiles[letter]->addFile(fileInfo);
-    }
-  }
-  // get the sorted list of first letters - the map just gives us this
-  FileLetterGroupVector firstLetters;
-  for (auto &entry : firstLetterFiles)
-  {
-    firstLetters.push_back(entry.second);
-  }
+  files = new Files("/", ".sna");
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
   alphabetPicker = new PickerScreen<FileLetterGroupPtr>(*tft, audioOutput, [&](FileLetterGroupPtr entry, int index) {
@@ -137,7 +117,7 @@ void setup(void)
       activeScreen->updatekey(key, down);
     }
   });
-  alphabetPicker->setItems(firstLetters);
+  alphabetPicker->setItems(files->getGroupedFiles());
 
   #ifdef NUNCHUK_CLOCK
   nunchuck = new Nunchuck([&](int key, bool down) {

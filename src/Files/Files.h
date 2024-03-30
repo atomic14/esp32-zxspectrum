@@ -7,6 +7,14 @@
 #include "SDCard.h"
 #include "Flash.h"
 
+std::string upcase(const std::string &str)
+{
+  std::string result = str;
+  std::transform(result.begin(), result.end(), result.begin(), 
+                 [](unsigned char c) { return std::toupper(c); });
+  return result;
+}
+
 class FileInfo
 {
 public:
@@ -28,9 +36,15 @@ class FileLetterGroup
 public:
   FileLetterGroup(const std::string &name) : name(name) {}
   std::string getName() const { return name; }
+  void setName(const std::string &name) { this->name = name; }
   void addFile(FileInfoPtr file) { files.push_back(file); }
   const FileInfoVector &getFiles() const { return files; }
-
+  void sortFiles()
+  {
+    std::sort(files.begin(), files.end(), [](const FileInfoPtr &a, const FileInfoPtr &b) {
+      return a->getName() < b->getName();
+    });
+  }
 private:
   std::string name;
   FileInfoVector files;
@@ -41,8 +55,9 @@ using FileLetterGroupVector = std::vector<FileLetterGroupPtr>;
 
 class Files
 {
+  FileLetterGroupVector filesGroupedByLetter;
 public:
-  Files()
+  Files(const char *folder, const char *extension)
   {
 #ifdef USE_SDCARD
 #ifdef SD_CARD_PWR
@@ -60,20 +75,17 @@ public:
 #else
     Flash *flash = new Flash(MOUNT_POINT);
 #endif
-  }
-  FileInfoVector listFilePaths(const char *folder, const char *extension)
-  {
-    FileInfoVector files;
-    std::string full_path = std::string(MOUNT_POINT) + folder;
+    std::string full_path = std::string(MOUNT_POINT) + "/";
     std::cout << "Listing directory: " << full_path << std::endl;
 
     DIR *dir = opendir(full_path.c_str());
     if (!dir)
     {
       std::cout << "Failed to open directory" << std::endl;
-      return files; // This will return an empty vector if the directory cannot be opened
+      return;
     }
 
+    std::map<std::string, FileLetterGroupPtr> firstLetterFiles;
     struct dirent *ent;
     while ((ent = readdir(dir)) != NULL)
     {
@@ -82,13 +94,31 @@ public:
       bool isFile = ent->d_type == DT_REG;
       bool isVisible = filename[0] != '.';
       bool isMatchingExtension = extension == NULL || filename.substr(filename.length() - strlen(extension)) == extension;
-      if (isFile && isVisible && isMatchingExtension)
+      if (isFile && isVisible && isMatchingExtension && filename.length() > 0)
       {
-        files.push_back(FileInfoPtr(new FileInfo(filename, full_path + filename)));
+        // get the first letter
+        auto name = upcase(filename);
+        auto letter = name.substr(0, 1);
+        if (firstLetterFiles.find(letter) == firstLetterFiles.end())
+        {
+          firstLetterFiles[letter] = FileLetterGroupPtr(new FileLetterGroup(letter));
+        }
+        firstLetterFiles[letter]->addFile(FileInfoPtr(new FileInfo(name, full_path + filename)));
       }
     }
     closedir(dir);
-    return files;
+    for (auto &entry : firstLetterFiles)
+    {
+      std::ostringstream oss;
+      oss << entry.second->getName() << " (" << entry.second->getFiles().size() << " files)";
+      entry.second->setName(oss.str());
+      entry.second->sortFiles();
+      filesGroupedByLetter.push_back(entry.second);
+    }
+  }
+  const FileLetterGroupVector &getGroupedFiles() const
+  {
+    return filesGroupedByLetter;
   }
 
 private:
