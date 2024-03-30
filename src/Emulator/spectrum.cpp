@@ -246,52 +246,24 @@ void ZXSpectrum::pageout(int size, int bloq, int page)
   mem.wo[c] = mem.swo[c];
 }
 
-int ZXSpectrum::load_48krom(const char *filename)
+int ZXSpectrum::load_rom(const char *filename)
 {
-  File f;
-  f = SPIFFS.open(filename, FILE_READ);
-  if (!f)
+  FILE *fp = fopen(filename, "rb");
+  if (!fp)
   {
-    Serial.printf("Algo fallo cargando 1 bloque de rom\n");
+    Serial.printf("Missing rom file %s\n", filename);
     return 1;
   }
-  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size()); // 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
-  f.read(mem.p, f.size());
-  f.close();
+  // get the size of the file
+  fseek(fp, 0, SEEK_END);
+  int size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  Serial.printf("Cargando %s\tSIZE: %i\n", filename, size);
+  fread(mem.p, size, 1, fp);
+  fclose(fp);
   return 0;
 }
 
-int ZXSpectrum::load_128krom(const char *filename)
-{
-  File f;
-  f = SPIFFS.open(filename, FILE_READ);
-  if (!f)
-  {
-    Serial.printf("Algo fallo cargando 2 bloques de rom\n");
-    return 1;
-  }
-  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size());
-  // Serial.printf("Cargando 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
-  f.read(mem.p, f.size());
-  f.close();
-  return 0;
-}
-
-int ZXSpectrum::load_p3rom(const char *filename)
-{
-  File f;
-  f = SPIFFS.open(filename, FILE_READ);
-  if (!f)
-  {
-    Serial.printf("Algo fallo cargando 4 bloques de rom\n");
-    return 1;
-  }
-  Serial.printf("Cargando %s\tSIZE: %i\n", filename, f.size());
-  // Serial.printf("Cargando 48.rom"); Serial.printf("\tSIZE: "); Serial.println(f.size()); Serial.printf("\n");
-  f.read(mem.p, f.size());
-  f.close();
-  return 0;
-}
 
 int ZXSpectrum::init_spectrum(int model, const char *romfile)
 {
@@ -356,7 +328,7 @@ int ZXSpectrum::end_spectrum(void)
 int ZXSpectrum::init_48k(const char *romfile)
 {
   int i;
-  printf(__FILE__ ": Init 48K hardware.\n");
+  printf(__FILE__ ": Init 48K hardware - %s.\n", romfile);
   mem.md = 0x3FFF;
   mem.mp = 0xC000;
   mem.mr = 14;
@@ -400,7 +372,7 @@ int ZXSpectrum::init_48k(const char *romfile)
   hwopt.int_type = NORMAL;
   hwopt.videopage = 0;
   hwopt.SoundBits = 1;
-  return load_48krom("/48.rom");
+  return load_rom(romfile);
 }
 
 /* "Inves Spectrum +" is a (spanish clone) 48K, but:
@@ -459,7 +431,7 @@ int ZXSpectrum::init_inves(const char *romfile)
   hwopt.SoundBits = 1;
   hwopt.videopage = 0;
   // cargar rom de 16K
-  return load_48krom("/inves.rom");
+  return load_rom(romfile);
 }
 
 int ZXSpectrum::init_16k(const char *romfile)
@@ -511,7 +483,7 @@ int ZXSpectrum::init_16k(const char *romfile)
   hwopt.int_type = NORMAL;
   hwopt.videopage = 0;
   hwopt.SoundBits = 1;
-  return load_48krom("/48.rom");
+  return load_rom(romfile);
 }
 
 int ZXSpectrum::init_128k(void)
@@ -560,7 +532,7 @@ int ZXSpectrum::init_128k(void)
   hwopt.videopage = 0;
   hwopt.BANKM = 0x00;
   hwopt.SoundBits = 1;
-  return load_128krom("/derbi.rom");
+  return load_rom("/derbi.rom");
   ;
 }
 
@@ -592,7 +564,7 @@ int ZXSpectrum::init_plus2(void)
   init_128k();
   Serial.printf(__FILE__ ": Init +2 hardware.\n");
   hwopt.hw_model = SPECMDL_PLUS2;
-  return load_128krom("/p2.rom");
+  return load_rom("/p2.rom");
 }
 
 int ZXSpectrum::init_plus3(void)
@@ -640,7 +612,7 @@ int ZXSpectrum::init_plus3(void)
   hwopt.BANKM = 0x00;
   hwopt.BANK678 = 0x00;
   hwopt.SoundBits = 1;
-  return load_p3rom("/p3.rom");
+  return load_rom("/p3.rom");
   ;
 }
 

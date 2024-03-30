@@ -77,6 +77,7 @@ public:
     struct dirent *ent;
     while ((ent = readdir(dir)) != NULL)
     {
+      Serial.println(ent->d_name);
       std::string filename = std::string(ent->d_name);
       bool isFile = ent->d_type == DT_REG;
       bool isVisible = filename[0] != '.';
@@ -87,9 +88,6 @@ public:
       }
     }
     closedir(dir);
-
-    // Sorting is removed as per request, but it could be added here if needed
-
     return files;
   }
 
