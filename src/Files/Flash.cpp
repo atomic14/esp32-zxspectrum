@@ -2,9 +2,9 @@
 #include <SPIFFS.h>
 #include "Flash.h"
 
-Flash::Flash()
+Flash::Flash(const char *mountPoint)
 {
-  if (!SPIFFS.begin(true, MOUNT_POINT))
+  if (!SPIFFS.begin(true, mountPoint))
   {
     Serial.println("An error occurred while mounting SPIFFS");
   }

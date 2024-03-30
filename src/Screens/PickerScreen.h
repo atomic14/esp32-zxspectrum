@@ -1,0 +1,115 @@
+#pragma once
+
+#include <vector>
+#include <string>
+#include "Screen.h"
+#include "TFT_eSPI.h"
+#include "../Emulator/spectrum.h"
+#include "font.h"
+
+class TFT_eSPI;
+class ScrollingList;
+
+template <class ItemT>
+class PickerScreen : public Screen
+{
+private:
+  std::vector<ItemT *> m_items;
+  int m_selectedItem = 0;
+  int m_lastPageDrawn = -1;
+  unsigned long lastKeyTime = 0;
+  unsigned long repeatDelay = 500;
+  // load snapshot callback
+  using SelectItemCallback = std::function<void(ItemT *item, int itemIndex)>;
+  SelectItemCallback m_selectItemCallback;
+
+public:
+  PickerScreen(
+      TFT_eSPI &tft,
+      AudioOutput *audioOutput,
+      SelectItemCallback selectItem) : Screen(tft, audioOutput), m_selectItemCallback(selectItem)
+  {
+    m_tft.loadFont(GillSans_30_vlw);
+    repeatDelay = 500;
+  }
+  
+  void setItems(std::vector<ItemT *> items)
+  {
+    m_items = items;
+    m_selectedItem = 0;
+    m_lastPageDrawn = -1;
+    updateDisplay();
+  }
+
+  void updatekey(uint8_t key, uint8_t state)
+  {
+    if (state == 1)
+    {
+      // key is pressed - should we repeat it?
+      if (millis() - lastKeyTime < repeatDelay)
+      {
+        return;
+      }
+      repeatDelay = 100;
+      switch (key)
+      {
+      case JOYK_UP:
+      case SPECKEY_6:
+        if (m_selectedItem > 0)
+        {
+          m_selectedItem--;
+          updateDisplay();
+        }
+        lastKeyTime = millis();
+        break;
+      case JOYK_DOWN:
+      case SPECKEY_7:
+        if (m_selectedItem < m_items.size() - 1)
+        {
+          m_selectedItem++;
+          updateDisplay();
+        }
+        lastKeyTime = millis();
+        break;
+      }
+    }
+    else
+    {
+      // reset the key repeat delay
+      repeatDelay = 500;
+      lastKeyTime = 0;
+      // key is released
+      switch (key)
+      {
+      case JOYK_FIRE:
+      case SPECKEY_5:
+        m_selectItemCallback(m_items[m_selectedItem], m_selectedItem);
+        break;
+      }
+    }
+  }
+
+  void updateDisplay()
+  {
+    m_tft.startWrite();
+    int linesPerPage = (TFT_WIDTH - 10) / 30;
+    int page = m_selectedItem / linesPerPage;
+    if (page != m_lastPageDrawn)
+    {
+      m_tft.fillScreen(TFT_BLACK);
+      m_lastPageDrawn = page;
+    }
+    for (int i = 0; i < linesPerPage; i++)
+    {
+      int itemIndex = page * linesPerPage + i;
+      if (itemIndex >= m_items.size())
+      {
+        break;
+      }
+      m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_LIGHTGREY, TFT_BLACK);
+      // draw the last component of the path
+      m_tft.drawString(m_items[itemIndex]->name.c_str(), 20, 10 + i * 30);
+    }
+    m_tft.endWrite();
+  }
+};

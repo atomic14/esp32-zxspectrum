@@ -20,14 +20,6 @@
 #include "spectrum.h"
 #include "AudioOutput/AudioOutput.h"
 
-// Con estas variables se controla el mapeado de los botones  hardware reales a los virtuales del spectrum
-uint8_t mappingkey[4][12] = {
-    {SPECKEY_Z, SPECKEY_M, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_Q, SPECKEY_A, SPECKEY_O, SPECKEY_P, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
-    {SPECKEY_P, JOYK_FIRE, SPECKEY_SPACE, SPECKEY_ENTER, JOYK_UP, JOYK_DOWN, JOYK_LEFT, JOYK_RIGHT, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
-    {SPECKEY_P, SPECKEY_0, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_9, SPECKEY_8, SPECKEY_6, SPECKEY_7, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
-    {SPECKEY_5, SPECKEY_M, SPECKEY_SPACE, SPECKEY_ENTER, SPECKEY_P, SPECKEY_L, SPECKEY_Z, SPECKEY_X, VEGAKEY_MENU, SPECKEY_SHIFT, SPECKEY_J, SPECKEY_H},
-};
-
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
     {0, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
@@ -106,7 +98,6 @@ void ZXSpectrum::interrupt()
 
 void ZXSpectrum::updatekey(uint8_t key, uint8_t state)
 {
-  uint8_t n;
   // Bit pattern: XXXFULDR
   switch (key)
   {
@@ -141,11 +132,6 @@ void ZXSpectrum::updatekey(uint8_t key, uint8_t state)
       kempston_port &= B11101111;
     break;
   default:
-    if (state == 1)
-      n = key2specy[1][key];
-    else
-      n = (key2specy[1][key]) ^ 0xFF;
-
     if (state == 1)
       speckey[key2specy[0][key]] &= key2specy[1][key];
     else

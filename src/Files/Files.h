@@ -3,9 +3,20 @@
 #include <vector>
 #include <string>
 
-#define MOUNT_POINT "/fs"
-
-class Files {
+class FileInfo {
   public:
-    std::vector<std::string> listFiles(const char *folder, const char *extension=NULL);
+    std::string name;
+    std::string path;
+    FileInfo(std::string name, std::string path) : name(name), path(path) {}
+};
+
+class SDCard;
+class Flash;
+class Files {
+  private:
+    SDCard *sdCard;
+    Flash *flash;
+  public:
+    Files();
+    std::vector<FileInfo *> listFilePaths(const char *folder, const char *extension=NULL);
 };

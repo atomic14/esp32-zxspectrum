@@ -1,7 +1,7 @@
 #ifndef WII_I2C_H_FILE
 #define WII_I2C_H_FILE
 
-#define WII_I2C_ENABLE_MULTI_CORE 1  // 0=disable, 1=enable
+#define WII_I2C_ENABLE_MULTI_CORE 0 // 0=disable, 1=enable
 
 #define WII_I2C_IDENT_NONE     0
 #define WII_I2C_IDENT_NUNCHUK  0xa4200000

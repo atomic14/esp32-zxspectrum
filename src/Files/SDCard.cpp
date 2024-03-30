@@ -3,16 +3,14 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "driver/sdmmc_host.h"
-#include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
 #include "SDCard.h"
 
 #define SPI_DMA_CHAN SPI_DMA_CH_AUTO
 
-SDCard::SDCard(gpio_num_t clk, gpio_num_t cmd, gpio_num_t d0, gpio_num_t d1, gpio_num_t d2, gpio_num_t d3)
+SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_t d0, gpio_num_t d1, gpio_num_t d2, gpio_num_t d3)
 {
-  #ifdef USE_SDIO
+  m_mountPoint = mountPoint;
   m_host.max_freq_khz = SDMMC_FREQ_52M;
   m_host.flags = SDMMC_HOST_FLAG_4BIT;
   esp_err_t ret;
@@ -39,7 +37,7 @@ SDCard::SDCard(gpio_num_t clk, gpio_num_t cmd, gpio_num_t d0, gpio_num_t d1, gpi
   slot_config.d5 = GPIO_NUM_NC;
   slot_config.d6 = GPIO_NUM_NC;
   slot_config.d7 = GPIO_NUM_NC;
-  ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &m_host, &slot_config, &mount_config, &m_card);
+  ret = esp_vfs_fat_sdmmc_mount(mountPoint, &m_host, &slot_config, &mount_config, &m_card);
   if (ret != ESP_OK)
   {
     if (ret == ESP_FAIL)
@@ -55,14 +53,14 @@ SDCard::SDCard(gpio_num_t clk, gpio_num_t cmd, gpio_num_t d0, gpio_num_t d1, gpi
     }
     return;
   }
-  Serial.printf("SDCard mounted at: %s\n", MOUNT_POINT);
+  Serial.printf("SDCard mounted at: %s\n", mountPoint);
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
-  #endif
 }
 
-SDCard::SDCard(gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
+SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
 {
+  m_mountPoint = mountPoint;
   m_host.max_freq_khz = SDMMC_FREQ_52M;
   esp_err_t ret;
   // Options for mounting the filesystem.
@@ -98,7 +96,7 @@ SDCard::SDCard(gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
   slot_config.gpio_cs = cs;
   slot_config.host_id = spi_host_device_t(m_host.slot);
 
-  ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &m_host, &slot_config, &mount_config, &m_card);
+  ret = esp_vfs_fat_sdspi_mount(mountPoint, &m_host, &slot_config, &mount_config, &m_card);
   if (ret != ESP_OK)
   {
     if (ret == ESP_FAIL)
@@ -114,7 +112,7 @@ SDCard::SDCard(gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
     }
     return;
   }
-  Serial.printf("SDCard mounted at: %s\n", MOUNT_POINT);
+  Serial.printf("SDCard mounted at: %s\n", mountPoint);
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
 }
@@ -122,12 +120,7 @@ SDCard::SDCard(gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
 SDCard::~SDCard()
 {
   // All done, unmount partition and disable SDMMC or SPI peripheral
-  esp_vfs_fat_sdcard_unmount(MOUNT_POINT, m_card);
+  esp_vfs_fat_sdcard_unmount(m_mountPoint.c_str(), m_card);
   //deinitialize the bus after all devices are removed
   spi_bus_free(spi_host_device_t(m_host.slot));
-}
-
-
-bool SDCard::isMounted() {
-  return sdmmc_get_status(m_card) == ESP_OK;
 }

@@ -1,11 +1,8 @@
 #pragma once
 
-#include "Files.h"
-
-class Flash : public Files
+class Flash
 {
 public:
-  Flash();
+  Flash(const char *mountPoint);
   ~Flash();
-  bool isMounted();
 };

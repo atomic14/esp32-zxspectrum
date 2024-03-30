@@ -73,7 +73,6 @@ enum SpecKeys
   JOYK_LEFT,
   JOYK_RIGHT,
   JOYK_FIRE,
-  VEGAKEY_MENU
 };
 
 typedef struct
