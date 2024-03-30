@@ -19,20 +19,24 @@ private:
   int m_lastPageDrawn = -1;
   unsigned long lastKeyTime = 0;
   unsigned long repeatDelay = 500;
-  // load snapshot callback
+  // select callback
   using SelectItemCallback = std::function<void(ItemT item, int itemIndex)>;
   SelectItemCallback m_selectItemCallback;
+  // back callback
+  using BackCallback = std::function<void()>;
+  BackCallback m_backCallback;
 
 public:
   PickerScreen(
       TFT_eSPI &tft,
       AudioOutput *audioOutput,
-      SelectItemCallback selectItem) : Screen(tft, audioOutput), m_selectItemCallback(selectItem)
+      SelectItemCallback selectItem,
+      BackCallback backCallback) : Screen(tft, audioOutput), m_selectItemCallback(selectItem), m_backCallback(backCallback)
   {
     m_tft.loadFont(GillSans_30_vlw);
     repeatDelay = 500;
   }
-  
+
   void setItems(std::vector<ItemT> items)
   {
     m_items = items;
@@ -41,6 +45,13 @@ public:
     updateDisplay();
   }
 
+
+  void didAppear()
+  {
+    m_lastPageDrawn=-1;
+    updateDisplay();
+  }
+  
   void updatekey(uint8_t key, uint8_t state)
   {
     if (state == 1)
@@ -71,6 +82,12 @@ public:
         }
         lastKeyTime = millis();
         break;
+      case JOYK_LEFT:
+      case SPECKEY_5:
+      {
+        m_backCallback();
+        break;
+      }
       }
     }
     else
@@ -106,9 +123,16 @@ public:
       {
         break;
       }
-      m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_LIGHTGREY, TFT_BLACK);
-      // draw the last component of the path
+      m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_WHITE, TFT_BLACK);
       m_tft.drawString(m_items[itemIndex]->getName().c_str(), 20, 10 + i * 30);
+    }
+    // draw the spectrum flash
+    for (int y = 0; y < TFT_WIDTH; y++)
+    {
+      m_tft.drawFastHLine(TFT_HEIGHT - 57 + y / 4, y, 12, TFT_RED);
+      m_tft.drawFastHLine(TFT_HEIGHT - 45 + y / 4, y, 10, TFT_YELLOW);
+      m_tft.drawFastHLine(TFT_HEIGHT - 35 + y / 4, y, 11, TFT_GREEN);
+      m_tft.drawFastHLine(TFT_HEIGHT - 24 + y / 4, y, 10, TFT_CYAN);
     }
     m_tft.endWrite();
   }

@@ -15,6 +15,14 @@ std::string upcase(const std::string &str)
   return result;
 }
 
+std::string downcase(const std::string &str)
+{
+  std::string result = str;
+  std::transform(result.begin(), result.end(), result.begin(), 
+                 [](unsigned char c) { return std::tolower(c); });
+  return result;
+}
+
 class FileInfo
 {
 public:
@@ -93,7 +101,8 @@ public:
       std::string filename = std::string(ent->d_name);
       bool isFile = ent->d_type == DT_REG;
       bool isVisible = filename[0] != '.';
-      bool isMatchingExtension = extension == NULL || filename.substr(filename.length() - strlen(extension)) == extension;
+      std::string lowerCaseFilename = downcase(filename);
+      bool isMatchingExtension = extension == NULL || lowerCaseFilename.substr(filename.length() - strlen(extension)) == extension;
       if (isFile && isVisible && isMatchingExtension && filename.length() > 0)
       {
         // get the first letter

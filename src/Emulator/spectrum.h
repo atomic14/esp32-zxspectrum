@@ -162,7 +162,13 @@ public:
   }
 
   uint8_t z80_in(uint16_t dir);
-  void z80_out(uint16_t dir, uint8_t dato);
+  inline void z80_out(uint16_t dir, uint8_t dato) {
+    if (!(port & 0x01))
+    {
+      hwopt.BorderColor = (dato & 0x07);
+      hwopt.SoundBits = (dato & B00010000);
+    }
+  }
 
   void pagein(int size, int bloq, int page, int ro, int issystem);
   void pageout(int size, int bloq, int page);

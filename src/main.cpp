@@ -43,14 +43,7 @@ Nunchuck *nunchuck = nullptr;
 void setup(void)
 {
   Serial.begin(115200);
-  // wait for the serial monitor to connect
-  for (int i = 0; i < 3; i++)
-  {
-    delay(1000);
-    Serial.printf("Waiting %i\n", i);
-  }
-  Serial.printf("Boot!\n");
-
+  // Audio output
 #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
   digitalWrite(SPK_MODE, HIGH);
@@ -84,6 +77,7 @@ void setup(void)
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
   audioOutput->start(15600);
+  // Display
 #ifdef TFT_POWER
   // turn on the TFT
   pinMode(TFT_POWER, OUTPUT);
@@ -96,29 +90,39 @@ void setup(void)
 #endif
   tft->setRotation(3);
   tft->fillScreen(TFT_BLACK);
-
-  // wire everything up
+  // Files
   files = new Files("/", ".sna");
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
   alphabetPicker = new PickerScreen<FileLetterGroupPtr>(*tft, audioOutput, [&](FileLetterGroupPtr entry, int index) {
+    // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getName().c_str()), 
     filePickerScreen->setItems(entry->getFiles());
     activeScreen = filePickerScreen;
+  }, [&]() {
+    // nothing to do here - we're at the top level
   });
   filePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
+    // a file was picked - load it into the emulator
     Serial.printf("Loading snapshot: %s\n", file->getPath().c_str());
     emulatorScreen->run(file->getPath());
     activeScreen = emulatorScreen;
+  }, [&]() {
+    // go back to the alphabet picker
+    activeScreen = alphabetPicker;
+    activeScreen->didAppear();
   });
+  // feed in the alphabetically grouped files to the alphabet picker
+  alphabetPicker->setItems(files->getGroupedFiles());
+  // start off the keyboard and feed keys into the active scene
   keyboard = new SerialKeyboard([&](int key, bool down) {
     if (activeScreen)
     {
       activeScreen->updatekey(key, down);
     }
   });
-  alphabetPicker->setItems(files->getGroupedFiles());
 
+  // start up the nunchuk controller and feed events into the active screen
   #ifdef NUNCHUK_CLOCK
   nunchuck = new Nunchuck([&](int key, bool down) {
     if (activeScreen)

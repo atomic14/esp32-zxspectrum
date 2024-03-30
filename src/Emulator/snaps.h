@@ -29,9 +29,6 @@
 #include "./z80/z80.h"
 #include "./spectrum.h"
 
-enum tipos_archivo { TYPE_NULL=0, TYPE_Z80, TYPE_SNA,
-			TYPE_SP, TYPE_SCR }; 
-
 uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
 uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
 //uint8_t LoadSNA (ZXSpectrum *speccy, FILE *);

@@ -183,15 +183,6 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
   return 0xFF;
 }
 
-void ZXSpectrum::z80_out(uint16_t port, uint8_t dato)
-{
-  if (!(port & 0x01))
-  {
-    hwopt.BorderColor = (dato & 0x07);
-    hwopt.SoundBits = (dato & B00010000);
-  }
-}
-
 /* por que estas rutinas y no paginar directamente sobre los arrais???
  * Supon la arquitectura del +2 y la del +2 con el pokeador automatico de MH
  * en el primero el tamaño de la pagina es de 16K mientras que en el segundo es de 2K
@@ -684,9 +675,9 @@ void ZXSpectrum::outbankm_p37(uint8_t dato)
   // printf("Rom is %x\n",roms-8);
   mem.ro[0] = mem.sro[0] = mem.sp * roms;
   mem.wo[0] = mem.swo[0] = mem.roo;
-  //  pagein(0x4000,0,(dato & 0x10) >> 4,RO_PAGE,SYSTEM_PAGE);
+  pagein(0x4000,0,(dato & 0x10) >> 4,RO_PAGE,SYSTEM_PAGE);
   mem.ro[3] = mem.sro[3] = mem.wo[3] = mem.swo[3] = (dato & 0x07) * mem.sp;
-  //  pagein(0x4000,3,dato & 0x07,RW_PAGE,SYSTEM_PAGE);
+  pagein(0x4000,3,dato & 0x07,RW_PAGE,SYSTEM_PAGE);
 }
 
 int ZXSpectrum::reset_plus3(void)

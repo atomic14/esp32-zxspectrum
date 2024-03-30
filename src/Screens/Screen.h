@@ -13,4 +13,6 @@ class Screen {
   Screen(TFT_eSPI &tft, AudioOutput *audioOutput) : m_tft(tft), m_audioOutput(audioOutput) {}
   // input
   virtual void updatekey(uint8_t key, uint8_t state) = 0;
+  // lifecycle
+  virtual void didAppear() {}
 };
