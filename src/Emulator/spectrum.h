@@ -135,7 +135,7 @@ public:
 
   ZXSpectrum();
   void reset();
-  int runForFrame(AudioOutput *audioOutput);
+  int runForFrame(AudioOutput *audioOutput, FILE *audioFile);
   void runForCycles(int cycles);
   void interrupt();
   void updatekey(uint8_t key, uint8_t state);
@@ -162,13 +162,8 @@ public:
   }
 
   uint8_t z80_in(uint16_t dir);
-  inline void z80_out(uint16_t dir, uint8_t dato) {
-    if (!(port & 0x01))
-    {
-      hwopt.BorderColor = (dato & 0x07);
-      hwopt.SoundBits = (dato & B00010000);
-    }
-  }
+  
+  void z80_out(uint16_t port, uint8_t dato);
 
   void pagein(int size, int bloq, int page, int ro, int issystem);
   void pageout(int size, int bloq, int page);

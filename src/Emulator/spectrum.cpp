@@ -52,7 +52,7 @@ void ZXSpectrum::runForCycles(int cycles)
   Z80Run(z80Regs, cycles);
 }
 
-int ZXSpectrum::runForFrame(AudioOutput *audioOutput)
+int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
   int8_t audioBuffer[312];
   uint8_t *attrBase = mem.p + mem.vo[hwopt.videopage] + 0x1800;
@@ -81,12 +81,16 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput)
     }
     else
     {
-      audioBuffer[i] = 0;
+      audioBuffer[i] = -20;
     }
   }
   interrupt();
   // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
   audioOutput->write(audioBuffer, 312);
+  // if (audioFile != NULL) {
+  //   fwrite(audioBuffer, 1, 312, audioFile);
+  //   fflush(audioFile);
+  // }
   return c;
 }
 
@@ -182,6 +186,14 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
   }
   return 0xFF;
 }
+
+void ZXSpectrum::z80_out(uint16_t port, uint8_t dato) {
+    if (!(port & 0x01))
+    {
+      hwopt.BorderColor = (dato & 0x07);
+      hwopt.SoundBits = (dato & B00010000);
+    }
+  }
 
 /* por que estas rutinas y no paginar directamente sobre los arrais???
  * Supon la arquitectura del +2 y la del +2 con el pokeador automatico de MH

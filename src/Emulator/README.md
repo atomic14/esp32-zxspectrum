@@ -1,0 +1,3 @@
+The code in this folder is mostly from here: [OpenVegaPlus GitHub repository](https://github.com/alvaroalea/OpenVegaPlus)
+
+I've tried to do a bit of clean up to make it a bit more "OO", but it's a bit of a mess. Best not to look too closely at it...
