@@ -124,7 +124,7 @@ public:
         break;
       }
       m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_WHITE, TFT_BLACK);
-      m_tft.drawString(m_items[itemIndex]->getName().c_str(), 20, 10 + i * 30);
+      m_tft.drawString(m_items[itemIndex]->getTitle().c_str(), 20, 10 + i * 30);
     }
     // draw the spectrum flash
     for (int y = 0; y < TFT_WIDTH; y++)

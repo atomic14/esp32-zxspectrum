@@ -33,7 +33,7 @@
 TFT_eSPI *tft = nullptr;
 AudioOutput *audioOutput = nullptr;
 PickerScreen<FileInfoPtr> *filePickerScreen = nullptr;
-PickerScreen<FileLetterGroupPtr> *alphabetPicker = nullptr;
+PickerScreen<FileLetterCountPtr> *alphabetPicker = nullptr;
 EmulatorScreen *emulatorScreen = nullptr;
 Screen *activeScreen = nullptr;
 Files *files = nullptr;
@@ -91,13 +91,13 @@ void setup(void)
   tft->setRotation(3);
   tft->fillScreen(TFT_BLACK);
   // Files
-  files = new Files("/", ".sna");
+  files = new Files();
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
-  alphabetPicker = new PickerScreen<FileLetterGroupPtr>(*tft, audioOutput, [&](FileLetterGroupPtr entry, int index) {
+  alphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
     // a letter was picked - show the files for that letter
-    Serial.printf("Picked letter: %s\n", entry->getName().c_str()), 
-    filePickerScreen->setItems(entry->getFiles());
+    Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
+    filePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), ".sna"));
     activeScreen = filePickerScreen;
   }, [&]() {
     // nothing to do here - we're at the top level
@@ -113,7 +113,7 @@ void setup(void)
     activeScreen->didAppear();
   });
   // feed in the alphabetically grouped files to the alphabet picker
-  alphabetPicker->setItems(files->getGroupedFiles());
+  alphabetPicker->setItems(files->getFileLetters("/", ".sna"));
   // start off the keyboard and feed keys into the active scene
   keyboard = new SerialKeyboard([&](int key, bool down) {
     if (activeScreen)
