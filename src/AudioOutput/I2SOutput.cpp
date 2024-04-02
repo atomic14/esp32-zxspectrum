@@ -16,7 +16,7 @@ void I2SOutput::start(uint32_t sample_rate)
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2,
         .dma_buf_count = 2,
-        .dma_buf_len = 400,
+        .dma_buf_len = 312,
         .use_apll = true,
         .tx_desc_auto_clear = true,
         .fixed_mclk = 0,

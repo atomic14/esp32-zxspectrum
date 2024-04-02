@@ -10,6 +10,7 @@
 
 SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_t d0, gpio_num_t d1, gpio_num_t d2, gpio_num_t d3)
 {
+  #ifdef USE_SDIO
   m_mountPoint = mountPoint;
   m_host.max_freq_khz = SDMMC_FREQ_52M;
   m_host.flags = SDMMC_HOST_FLAG_4BIT;
@@ -56,6 +57,7 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_
   Serial.printf("SDCard mounted at: %s\n", mountPoint);
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
+  #endif
 }
 
 SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)

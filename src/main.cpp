@@ -76,7 +76,7 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
-  audioOutput->start(15600);
+  audioOutput->start(15625);
   // Display
 #ifdef TFT_POWER
   // turn on the TFT
@@ -138,14 +138,17 @@ void setup(void)
 unsigned long frame_millis;
 void loop()
 {
-  if (millis() - frame_millis > 1000)
+  auto ms = millis() - frame_millis;
+  if (ms > 1000)
   {
     if (activeScreen == emulatorScreen)
     {
-      Serial.printf("Executed at %.2FMHz cycles, frame rate=%d\n", emulatorScreen->cycleCount / 1000000.0, emulatorScreen->frameCount);
+      float cycles = emulatorScreen->cycleCount / (ms * 1000.0);
+      float fps = emulatorScreen->frameCount / (ms / 1000.0);
+      Serial.printf("Executed at %.3FMHz cycles, frame rate=%.2f\n", cycles, fps);
       emulatorScreen->frameCount = 0;
-      frame_millis = millis();
       emulatorScreen->cycleCount = 0;
+      frame_millis = millis();
     }
   }
 }

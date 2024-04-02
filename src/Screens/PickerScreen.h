@@ -99,7 +99,7 @@ public:
       switch (key)
       {
       case JOYK_FIRE:
-      case SPECKEY_5:
+      case SPECKEY_ENTER:
         m_selectItemCallback(m_items[m_selectedItem], m_selectedItem);
         break;
       }

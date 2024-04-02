@@ -20,7 +20,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
 {
   TFT_eSPI &tft = emulatorScreen->m_tft;
   ZXSpectrum *machine = emulatorScreen->machine;
-  
+
   tft.startWrite();
 #ifdef USE_DMA
   tft.dmaWait();
@@ -167,50 +167,33 @@ void z80Runner(void *pvParameter)
 
 EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
-  machine = new ZXSpectrum();
-  machine->reset();
-  Serial.printf("Z80 Initialization completed\n");
-  machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
-  machine->reset_spectrum(machine->z80Regs);
-
-  // frameBuffer = (uint16_t *)malloc(256 * 192 * sizeof(uint16_t));
-  // if (frameBuffer == NULL)
-  // {
-  //   Serial.printf("Error! memory not allocated for screenbuffer.\n");
-  // }
-  // memset(frameBuffer, 0, 256 * 192 * sizeof(uint16_t));
   dmaBuffer1 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
   dmaBuffer2 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
-  screenBuffer = (uint8_t *)malloc(6192);
-  memset(screenBuffer, 0, 6192);
-
-  Serial.printf("Entrando en el loop\n");
-  // cpuRunTimerQueue = xQueueCreate(10, sizeof(uint32_t));
-  // frameRenderTimerQueue = xQueueCreate(10, sizeof(uint32_t));
+  screenBuffer = (uint8_t *)malloc(6912);
+  if (screenBuffer == NULL)
+  {
+    Serial.println("Failed to allocate screen buffer");
+  }
+  memset(screenBuffer, 0, 6912);
   m_displaySemaphore = xSemaphoreCreateBinary();
-  // tasks to do the work
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 16384, this, 1, NULL, 1);
-  // use the I2S output to control the frame rate
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 16384, this, 5, NULL, 0);
 }
 
 void EmulatorScreen::run(std::string snaPath)
 {
-  isRunning = false;
+  memset(dmaBuffer1, 0, 256 * 8 * sizeof(uint16_t));
+  memset(dmaBuffer2, 0, 256 * 8 * sizeof(uint16_t));
+  memset(screenBuffer, 0, 6192);
+  machine = new ZXSpectrum();
   machine->reset();
   machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
   machine->reset_spectrum(machine->z80Regs);
   Load_SNA(machine, snaPath.c_str());
-  memset(dmaBuffer1, 0, 256 * 8 * sizeof(uint16_t));
-  memset(dmaBuffer2, 0, 256 * 8 * sizeof(uint16_t));
-  memset(screenBuffer, 0, 6192);
   m_tft.fillScreen(TFT_BLACK);
   isRunning = true;
-  audioFile = fopen("/fs/audio.raw", "wb");
-  if (!audioFile)
-  {
-    Serial.printf("Error opening audio file\n");
-  }
+  // tasks to do the work
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
+  // use the I2S output to control the frame rate
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
 void EmulatorScreen::stop()
