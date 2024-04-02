@@ -65,7 +65,7 @@ public:
       switch (key)
       {
       case JOYK_UP:
-      case SPECKEY_6:
+      case SPECKEY_7:
         if (m_selectedItem > 0)
         {
           m_selectedItem--;
@@ -74,7 +74,7 @@ public:
         lastKeyTime = millis();
         break;
       case JOYK_DOWN:
-      case SPECKEY_7:
+      case SPECKEY_6:
         if (m_selectedItem < m_items.size() - 1)
         {
           m_selectedItem++;

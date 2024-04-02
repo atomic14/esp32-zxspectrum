@@ -11,7 +11,7 @@ key_map = {
     'a': 21, 's': 22, 'd': 23, 'f': 24, 'g': 25,
     'h': 26, 'j': 27, 'k': 28, 'l': 29, 'enter': 30,
     'shift': 31, 'z': 32, 'x': 33, 'c': 34, 'v': 35,
-    'b': 36, 'n': 37, 'm': 38, 'space': 40
+    'b': 36, 'n': 37, 'm': 38, 'space': 40,
     # Add any additional keys you need to map
 }
 
@@ -26,7 +26,16 @@ def get_key_value(key):
             return key_map['space']
         elif key == keyboard.Key.shift:
             return key_map['shift']
-        # Add additional special key handling here
+        elif key == keyboard.Key.left:
+            return key_map['5']
+        elif key == keyboard.Key.right:
+            return key_map['8']
+        elif key == keyboard.Key.up:
+            return key_map['7']
+        elif key == keyboard.Key.down:
+            return key_map['6']
+        elif key == keyboard.Key.esc:
+            return 0
     except KeyError:
         # If the key is not in our mapping, return None
         return None
