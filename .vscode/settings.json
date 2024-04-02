@@ -1,6 +1,0 @@
-{
-  "files.associations": {
-    "opcodes.h": "c",
-    "op_cb.h": "c"
-  }
-}
