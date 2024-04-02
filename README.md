@@ -1,4 +1,6 @@
 
+[![Build Firmware](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml)
+
 # Overview
 
 This is heavily inspired b the [OpenVegaPlus](https://github.com/alvaroalea/OpenVegaPlus) project. But I've hacked around the code quite substantially.
