@@ -19,6 +19,7 @@
 #include <SPIFFS.h>
 #include "spectrum.h"
 #include "AudioOutput/AudioOutput.h"
+#include "Input/TouchKeyboard.h"
 
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
@@ -35,10 +36,11 @@ uint8_t speckey[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 int keys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int oldkeys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-ZXSpectrum::ZXSpectrum()
+ZXSpectrum::ZXSpectrum(TouchKeyboard *touchKeyboard)
 {
   z80Regs = (Z80Regs *)malloc(sizeof(Z80Regs));
   z80Regs->userInfo = this;
+  this->touchKeyboard = touchKeyboard;
 }
 
 void ZXSpectrum::reset()
@@ -150,6 +152,50 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
   if ((port & 0x01) == 0)
   {
     uint8_t data = 0xFF;
+    if (touchKeyboard) {
+      // Bit 0,Bit 1,Bit 2,Bit 3,Bit 4
+      uint8_t touchBits = 0xFF;
+      if (touchKeyboard->padBit0.isTouched()) {
+        touchBits &= B11111110;
+      }
+      if (touchKeyboard->padBit1.isTouched()) {
+        touchBits &= B11111101;
+      }
+      if (touchKeyboard->padBit2.isTouched()) {
+        touchBits &= B11111011;
+      }
+      if (touchKeyboard->padBit3.isTouched()) {
+        touchBits &= B11110111;
+      }
+      if (touchKeyboard->padBit4.isTouched()) {
+        touchBits &= B11101111;
+      }
+      if (!(port & 0x0100) && touchKeyboard->padFEFE.isTouched()) {
+        data &= touchBits; // Shift,Z,X,C,V
+      }
+      if (!(port & 0x0200) && touchKeyboard->padFDFE.isTouched()) {
+        data &= touchBits; // A,S,D,F,G
+      }
+      if (!(port & 0x0400) && touchKeyboard->padFBFE.isTouched()) {
+        data &= touchBits; // Q,W,E,R,T
+      }
+      if (!(port & 0x0800) && touchKeyboard->padF7FE.isTouched()) {
+        data &= touchBits; // 1,2,3,4,5
+      }
+      if (!(port & 0x1000) && touchKeyboard->padEFFE.isTouched()) {
+        data &= touchBits; // 0,9,8,7,6
+      }
+      if (!(port & 0x2000) && touchKeyboard->padDFFE.isTouched()) {
+        data &= touchBits; // P,O,I,U,Y
+      }
+      if (!(port & 0x4000) && touchKeyboard->padBFFE.isTouched()) {
+        data &= touchBits; // Enter,L,K,J,H
+      }
+      if (!(port & 0x8000) && touchKeyboard->pad7FFE.isTouched()) {
+        data &= touchBits; // Space,Sym,M,N,B
+      }
+    }
+    // other keyboard handling
     if (!(port & 0x0100))
       data &= speckey[0]; // keys shift,z-v
     if (!(port & 0x0200))

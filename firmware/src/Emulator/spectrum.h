@@ -124,16 +124,19 @@ typedef struct
 } tipo_mem;
 
 class AudioOutput;
+class TouchKeyboard;
+
 class ZXSpectrum
 {
 public:
+  TouchKeyboard *touchKeyboard;
   Z80Regs *z80Regs;
   tipo_mem mem;
   tipo_hwopt hwopt;
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
 
-  ZXSpectrum();
+  ZXSpectrum(TouchKeyboard *touchKeyboard);
   void reset();
   int runForFrame(AudioOutput *audioOutput, FILE *audioFile);
   void runForCycles(int cycles);
@@ -162,7 +165,7 @@ public:
   }
 
   uint8_t z80_in(uint16_t dir);
-  
+
   void z80_out(uint16_t port, uint8_t dato);
 
   void pagein(int size, int bloq, int page, int ro, int issystem);

@@ -29,6 +29,7 @@
 #include "Screens/EmulatorScreen.h"
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
+#include "Input/TouchKeyboard.h"
 
 TFT_eSPI *tft = nullptr;
 AudioOutput *audioOutput = nullptr;
@@ -39,10 +40,17 @@ Screen *activeScreen = nullptr;
 Files *files = nullptr;
 SerialKeyboard *keyboard = nullptr;
 Nunchuck *nunchuck = nullptr;
+TouchKeyboard *touchKeyboard = nullptr;
 
 void setup(void)
 {
   Serial.begin(115200);
+  for(int i = 0; i<5; i++)
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println("Starting up");
   // Audio output
 #ifdef SPK_MODE
   pinMode(SPK_MODE, OUTPUT);
@@ -62,6 +70,18 @@ void setup(void)
       .data_out_num = PDM_GPIO_NUM,
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
+#endif
+#ifdef TOUCH_KEYBOARD
+  touchKeyboard = new TouchKeyboard(
+    [&](int key, bool down) {
+    // don't feed keys into the emulator screen - it handles the touch keyboard itself
+    if (activeScreen && activeScreen != emulatorScreen)
+    {
+      activeScreen->updatekey(key, down);
+    }
+  });
+  touchKeyboard->calibrate();
+  touchKeyboard->start();
 #endif
 #ifdef I2S_SPEAKER_SERIAL_CLOCK
 #ifdef SPK_MODE
@@ -88,12 +108,16 @@ void setup(void)
 #ifdef USE_DMA
   tft->initDMA(); // Initialise the DMA engine
 #endif
+#ifdef TFT_ROTATION
+  tft->setRotation(TFT_ROTATION);
+#else
   tft->setRotation(3);
-  tft->fillScreen(TFT_BLACK);
+#endif
+  // tft->fillScreen(TFT_BLACK);
   // Files
   files = new Files();
   // wire everythign up
-  emulatorScreen = new EmulatorScreen(*tft, audioOutput);
+  emulatorScreen = new EmulatorScreen(*tft, audioOutput, touchKeyboard);
   alphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 

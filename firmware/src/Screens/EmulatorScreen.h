@@ -9,10 +9,12 @@
 class TFT_eSPI;
 class AudioOutput;
 class ZXSpectrum;
+class TouchKeyboard;
 class EmulatorScreen : public Screen
 {
   private:
     ZXSpectrum *machine = nullptr;
+    TouchKeyboard *touchKeyboard = nullptr;
     bool isRunning = false;
     SemaphoreHandle_t m_displaySemaphore;
     // uint16_t *frameBuffer = nullptr;
@@ -22,7 +24,7 @@ class EmulatorScreen : public Screen
     uint8_t *screenBuffer = nullptr;
     FILE *audioFile = nullptr;
   public:
-    EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput);
+    EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput, TouchKeyboard *touchKeyboard);
     void updatekey(uint8_t key, uint8_t state);
     void run(std::string filename);
     void stop();
