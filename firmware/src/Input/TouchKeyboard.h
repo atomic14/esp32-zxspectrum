@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <unordered_map>
+#include <set>
 #include <vector>
 #include <string>
 #include "../Emulator/spectrum.h"
@@ -17,7 +18,7 @@ private:
 
   int mPin = -1;
   std::string mName;
-  // special handling for symbol shift and caps shift keys - our keyboard is not quite right so 
+  // special handling for symbol shift and caps shift keys - our keyboard is not quite right so
   // we can't detect CAPS and SYMB keys at the same time as some other keys
   // TODO - is this just some weirdness with touch not working properly?
   bool isToggle = false;
@@ -57,13 +58,18 @@ public:
           for (;;)
           {
             unsigned long value = touchRead(pad->mPin);
-            if (value > pad->mThreshold) {
-              if (!pad->mIsTouched) {
+            if (value > pad->mThreshold)
+            {
+              if (!pad->mIsTouched)
+              {
                 pad->mIsTouched = true;
-                pad->mTouchEvent();  
+                pad->mTouchEvent();
               }
-            } else {
-              if (pad->mIsTouched && !pad->isToggle) {
+            }
+            else
+            {
+              if (pad->mIsTouched && !pad->isToggle)
+              {
                 pad->mIsTouched = false;
                 pad->mTouchEvent();
               }
@@ -109,51 +115,60 @@ public:
   TouchPad pad7FFE;
 
   std::vector<TouchPad *> ports = {
-    &padFEFE,
-    &padFDFE,
-    &padFBFE,
-    &padF7FE,
-    &padEFFE,
-    &padDFFE,
-    &padBFFE,
-    &pad7FFE
-  };
+      &padFEFE,
+      &padFDFE,
+      &padFBFE,
+      &padF7FE,
+      &padEFFE,
+      &padDFFE,
+      &padBFFE,
+      &pad7FFE};
 
   std::vector<TouchPad *> bits = {
-    &padBit0,
-    &padBit1,
-    &padBit2,
-    &padBit3,
-    &padBit4
-  };
+      &padBit0,
+      &padBit1,
+      &padBit2,
+      &padBit3,
+      &padBit4};
 
   // Mapping of port and bit index to keys
   std::unordered_map<int, std::vector<SpecKeys>> keyMap = {
-    {0, {SPECKEY_0, SPECKEY_Z, SPECKEY_X, SPECKEY_C, SPECKEY_V}},
-    {1, {SPECKEY_A, SPECKEY_S, SPECKEY_D, SPECKEY_F, SPECKEY_G}},
-    {2, {SPECKEY_Q, SPECKEY_W, SPECKEY_E, SPECKEY_R, SPECKEY_T}},
-    {3, {SPECKEY_1, SPECKEY_2, SPECKEY_3, SPECKEY_4, SPECKEY_5}},
-    {4, {SPECKEY_0, SPECKEY_9, SPECKEY_8, SPECKEY_7, SPECKEY_6}},
-    {5, {SPECKEY_P, SPECKEY_O, SPECKEY_I, SPECKEY_U, SPECKEY_Y}},
-    {6, {SPECKEY_ENTER, SPECKEY_L, SPECKEY_K, SPECKEY_J, SPECKEY_H}},
-    {7, {SPECKEY_SPACE, SPECKEY_SYMB, SPECKEY_M, SPECKEY_N, SPECKEY_B}}
-  };
+      {0, {SPECKEY_SHIFT, SPECKEY_Z, SPECKEY_X, SPECKEY_C, SPECKEY_V}},
+      {1, {SPECKEY_A, SPECKEY_S, SPECKEY_D, SPECKEY_F, SPECKEY_G}},
+      {2, {SPECKEY_Q, SPECKEY_W, SPECKEY_E, SPECKEY_R, SPECKEY_T}},
+      {3, {SPECKEY_1, SPECKEY_2, SPECKEY_3, SPECKEY_4, SPECKEY_5}},
+      {4, {SPECKEY_0, SPECKEY_9, SPECKEY_8, SPECKEY_7, SPECKEY_6}},
+      {5, {SPECKEY_P, SPECKEY_O, SPECKEY_I, SPECKEY_U, SPECKEY_Y}},
+      {6, {SPECKEY_ENTER, SPECKEY_L, SPECKEY_K, SPECKEY_J, SPECKEY_H}},
+      {7, {SPECKEY_SPACE, SPECKEY_SYMB, SPECKEY_M, SPECKEY_N, SPECKEY_B}}};
 
-  TouchKeyboard(KeyEventType keyEvent) : 
-    m_keyEvent(keyEvent),
-    padBit0(12, "bit0", [this](){sendKeyEvent();}),
-    padBit1(11, "bit1", [this](){sendKeyEvent();}),
-    padBit2(10, "bit2", [this](){sendKeyEvent();}),
-    padBit3(3, "bit3", [this](){sendKeyEvent();}),
-    padBit4(8, "bit4", [this](){sendKeyEvent();}),
-    padFEFE(7, "FEFE", [this](){sendKeyEvent();}),
-    padFDFE(6, "FDFE", [this](){sendKeyEvent();}),
-    padFBFE(5, "FBFE", [this](){sendKeyEvent();}),
-    padF7FE(4, "F7FE", [this](){sendKeyEvent();}),
-    padEFFE(13, "EFFE", [this](){sendKeyEvent();}),
-    padDFFE(9, "DFFE", [this](){sendKeyEvent();}),
-    padBFFE(2, "BFFE", [this](){sendKeyEvent();}),
-    pad7FFE(1, "7FFE", [this](){sendKeyEvent();})
+  TouchKeyboard(KeyEventType keyEvent) : m_keyEvent(keyEvent),
+                                         padBit0(12, "bit0", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padBit1(11, "bit1", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padBit2(10, "bit2", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padBit3(3, "bit3", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padBit4(8, "bit4", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padFEFE(7, "FEFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padFDFE(6, "FDFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padFBFE(5, "FBFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padF7FE(4, "F7FE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padEFFE(13, "EFFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padDFFE(9, "DFFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         padBFFE(2, "BFFE", [this]()
+                                                 { sendKeyEvent(); }),
+                                         pad7FFE(1, "7FFE", [this]()
+                                                 { sendKeyEvent(); })
   {
     m_keyboardSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(m_keyboardSemaphore);
@@ -174,7 +189,8 @@ public:
     padBFFE.calibrate();
     pad7FFE.calibrate();
   }
-  void start() {
+  void start()
+  {
     padBit0.start();
     padBit1.start();
     padBit2.start();
@@ -190,34 +206,116 @@ public:
     pad7FFE.start();
   }
 
-  SpecKeys getCurrentKey() {
-    // work out which key is pressed (or if no keys are pressed...)
-    for (int portIndex = 0; portIndex < ports.size(); ++portIndex) {
-        if (ports[portIndex]->isTouched()) {
-            for (int bitIndex = 0; bitIndex < bits.size(); ++bitIndex) {
-                if (bits[bitIndex]->isTouched()) {
-                    return keyMap[portIndex][bitIndex];
-                }
-            }
-        }
-    }
-    return SPECKEY_NONE;
-  }
+  std::unordered_map<SpecKeys, bool> isKeyPressed = {
+      {SPECKEY_1, false},
+      {SPECKEY_2, false},
+      {SPECKEY_3, false},
+      {SPECKEY_4, false},
+      {SPECKEY_5, false},
+      {SPECKEY_6, false},
+      {SPECKEY_7, false},
+      {SPECKEY_8, false},
+      {SPECKEY_9, false},
+      {SPECKEY_0, false},
+      {SPECKEY_Q, false},
+      {SPECKEY_W, false},
+      {SPECKEY_E, false},
+      {SPECKEY_R, false},
+      {SPECKEY_T, false},
+      {SPECKEY_Y, false},
+      {SPECKEY_U, false},
+      {SPECKEY_I, false},
+      {SPECKEY_O, false},
+      {SPECKEY_P, false},
+      {SPECKEY_A, false},
+      {SPECKEY_S, false},
+      {SPECKEY_D, false},
+      {SPECKEY_F, false},
+      {SPECKEY_G, false},
+      {SPECKEY_H, false},
+      {SPECKEY_J, false},
+      {SPECKEY_K, false},
+      {SPECKEY_L, false},
+      {SPECKEY_ENTER, false},
+      {SPECKEY_SHIFT, false},
+      {SPECKEY_Z, false},
+      {SPECKEY_X, false},
+      {SPECKEY_C, false},
+      {SPECKEY_V, false},
+      {SPECKEY_B, false},
+      {SPECKEY_N, false},
+      {SPECKEY_M, false},
+      {SPECKEY_SYMB, false},
+      {SPECKEY_SPACE, false}
+    };
 
-  void sendKeyEvent() {
-    if (xSemaphoreTake(m_keyboardSemaphore, portMAX_DELAY)) {
-      SpecKeys key = getCurrentKey();
-      if (key != lastKeyPressed) {
-        if (lastKeyPressed != SPECKEY_NONE) {
-          m_keyEvent(lastKeyPressed, false);
-          Serial.printf("Key up: %d\n", lastKeyPressed);
+  std::unordered_map<SpecKeys, bool> toggleKey = {
+      {SPECKEY_SHIFT, false},
+      {SPECKEY_SYMB, false}
+  };
+
+  void sendKeyEvent()
+  {
+    if (xSemaphoreTake(m_keyboardSemaphore, portMAX_DELAY))
+    {
+      // work out which key is pressed (or if no keys are pressed...)
+      for (int portIndex = 0; portIndex < ports.size(); ++portIndex)
+      {
+        for (int bitIndex = 0; bitIndex < bits.size(); ++bitIndex)
+        {
+          // this is the key that we are examining
+          SpecKeys theKey = keyMap[portIndex][bitIndex];
+          // is it pressed?
+          if (bits[bitIndex]->isTouched() && ports[portIndex]->isTouched())
+          {
+            // if it was already pressed then don't do anything
+            if (!isKeyPressed[theKey])
+            {
+              // otherwise we need to press it
+              m_keyEvent(theKey, true);
+              isKeyPressed[theKey] = true;
+            }
+          } else {
+            // if the key was pressed then we need to release it
+            if (isKeyPressed[theKey])
+            {
+              // special handling for symbol shift if the caps shift key is already toggled - we want to release the sym shift and caps shift keys
+              if (theKey == SPECKEY_SYMB && toggleKey[SPECKEY_SHIFT])
+              {
+                m_keyEvent(SPECKEY_SHIFT, false);
+                m_keyEvent(SPECKEY_SYMB, false);
+                toggleKey[SPECKEY_SHIFT] = false;
+              } else {
+                // check to see if this is a toggle key - ie, it's in the toggleKey map
+                if (toggleKey.find(theKey) != toggleKey.end())
+                {
+                  // do we need to release the key?
+                  if (toggleKey[theKey]) {
+                    m_keyEvent(theKey, false);
+                    toggleKey[theKey] = false;
+                  } else {
+                    // toggle it the next time round
+                    toggleKey[theKey] = true;
+                  }
+                } else {
+                  // otherwise we need to release the key
+                  m_keyEvent(theKey, false);
+                  // and if there are any toggle keys then we need to release them too
+                  for (auto &toggle : toggleKey)
+                  {
+                    if (toggle.second)
+                    {
+                      m_keyEvent(toggle.first, false);
+                      toggle.second = false;
+                    }
+                  }
+                }
+              }
+              isKeyPressed[theKey] = false;
+            }
+          }
         }
       }
-      if (key != SPECKEY_NONE) {
-        m_keyEvent(key, true);
-        Serial.printf("Key down: %d\n", key);
-      }
-      lastKeyPressed = key;
     }
     xSemaphoreGive(m_keyboardSemaphore);
   }

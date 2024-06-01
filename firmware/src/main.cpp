@@ -31,6 +31,55 @@
 #include "Input/Nunchuck.h"
 #include "Input/TouchKeyboard.h"
 
+const char *keyNames[] = {
+    "SPECKEY_NONE",
+    "SPECKEY_1",
+    "SPECKEY_2",
+    "SPECKEY_3",
+    "SPECKEY_4",
+    "SPECKEY_5",
+    "SPECKEY_6",
+    "SPECKEY_7",
+    "SPECKEY_8",
+    "SPECKEY_9",
+    "SPECKEY_0",
+    "SPECKEY_Q",
+    "SPECKEY_W",
+    "SPECKEY_E",
+    "SPECKEY_R",
+    "SPECKEY_T",
+    "SPECKEY_Y",
+    "SPECKEY_U",
+    "SPECKEY_I",
+    "SPECKEY_O",
+    "SPECKEY_P",
+    "SPECKEY_A",
+    "SPECKEY_S",
+    "SPECKEY_D",
+    "SPECKEY_F",
+    "SPECKEY_G",
+    "SPECKEY_H",
+    "SPECKEY_J",
+    "SPECKEY_K",
+    "SPECKEY_L",
+    "SPECKEY_ENTER",
+    "SPECKEY_SHIFT",
+    "SPECKEY_Z",
+    "SPECKEY_X",
+    "SPECKEY_C",
+    "SPECKEY_V",
+    "SPECKEY_B",
+    "SPECKEY_N",
+    "SPECKEY_M",
+    "SPECKEY_SYMB",
+    "SPECKEY_SPACE",
+    "JOYK_UP",
+    "JOYK_DOWN",
+    "JOYK_LEFT",
+    "JOYK_RIGHT",
+    "JOYK_FIRE",
+};
+
 // Mode picker
 class ModePicker
 {
@@ -95,9 +144,8 @@ void setup(void)
 #ifdef TOUCH_KEYBOARD
   touchKeyboard = new TouchKeyboard(
     [&](int key, bool down) {
-    // don't feed keys into the emulator screen - it handles the touch keyboard itself
-    if (activeScreen && activeScreen != emulatorScreen)
     {
+      Serial.printf("Touch Key %s, %s\n", keyNames[key], down ? "down" : "up");
       activeScreen->updatekey(key, down);
     }
   });
