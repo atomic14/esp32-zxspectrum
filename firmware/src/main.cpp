@@ -31,8 +31,29 @@
 #include "Input/Nunchuck.h"
 #include "Input/TouchKeyboard.h"
 
+// Mode picker
+class ModePicker
+{
+public:
+  ModePicker(const std::string &title) : title(title) {}
+  std::string getTitle() const { return title; }
+
+private:
+  std::string title;
+};
+
+using ModePickerPtr = std::shared_ptr<ModePicker>;
+using ModePickerVector = std::vector<ModePickerPtr>;
+
+// Emulator modes
+ModePickerVector emulatorModes = {
+    std::make_shared<ModePicker>("Basic"),
+    std::make_shared<ModePicker>("Games")
+};
+
 TFT_eSPI *tft = nullptr;
 AudioOutput *audioOutput = nullptr;
+PickerScreen<ModePickerPtr> *modePicker = nullptr;
 PickerScreen<FileInfoPtr> *filePickerScreen = nullptr;
 PickerScreen<FileLetterCountPtr> *alphabetPicker = nullptr;
 EmulatorScreen *emulatorScreen = nullptr;
@@ -118,13 +139,28 @@ void setup(void)
   files = new Files();
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput, touchKeyboard);
+  modePicker = new PickerScreen<ModePickerPtr>(*tft, audioOutput, [&](ModePickerPtr mode, int index) {
+    if(index == 0) {
+      // switch to basic
+      emulatorScreen->run("");
+      activeScreen = emulatorScreen;
+    } else {
+      // switch to the alphabet picker
+      activeScreen = alphabetPicker;
+      activeScreen->didAppear();
+    }
+  }, [&]() {
+    // nothing to do here - we're at the top level
+  });
   alphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
     filePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), ".sna"));
     activeScreen = filePickerScreen;
   }, [&]() {
-    // nothing to do here - we're at the top level
+    // go back to the mode picker
+    activeScreen = modePicker;
+    activeScreen->didAppear();
   });
   filePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
     // a file was picked - load it into the emulator
@@ -138,6 +174,8 @@ void setup(void)
   });
   // feed in the alphabetically grouped files to the alphabet picker
   alphabetPicker->setItems(files->getFileLetters("/", ".sna"));
+  // set the mode picker to show the emulator modes
+  modePicker->setItems(emulatorModes);
   // start off the keyboard and feed keys into the active scene
   keyboard = new SerialKeyboard([&](int key, bool down) {
     if (activeScreen)
@@ -156,7 +194,7 @@ void setup(void)
   }, NUNCHUK_CLOCK, NUNCHUK_DATA);
   #endif
   // start off on the file picker screen
-  activeScreen = alphabetPicker;
+  activeScreen = modePicker;
 }
 
 unsigned long frame_millis;

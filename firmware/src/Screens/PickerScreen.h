@@ -61,6 +61,13 @@ public:
       {
         return;
       }
+      #ifdef BUZZER_GPIO_NUM
+      for(int i = 0; i<10; i++) {
+        digitalWrite(BUZZER_GPIO_NUM, HIGH);
+        digitalWrite(BUZZER_GPIO_NUM, LOW);
+      }
+      #endif
+
       repeatDelay = 100;
       switch (key)
       {

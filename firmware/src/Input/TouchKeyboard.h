@@ -6,7 +6,7 @@
 #include <string>
 #include "../Emulator/spectrum.h"
 
-const int TOUCH_CALIBRATION_SAMPLES = 1000;
+const int TOUCH_CALIBRATION_SAMPLES = 100;
 const float TOUCH_THRESHOLD = 0.1;
 
 class TouchPad
@@ -17,6 +17,10 @@ private:
 
   int mPin = -1;
   std::string mName;
+  // special handling for symbol shift and caps shift keys - our keyboard is not quite right so 
+  // we can't detect CAPS and SYMB keys at the same time as some other keys
+  // TODO - is this just some weirdness with touch not working properly?
+  bool isToggle = false;
   bool mIsTouched = false;
   unsigned long mThreshold = 0;
 
@@ -26,15 +30,17 @@ public:
   }
   void calibrate()
   {
-    // assume the pin is not touched and calculate the average value for untouched
-    unsigned long sum = 0;
+    // assume the pin is not touched and calculate the median value for untouched state
+    unsigned long samples[TOUCH_CALIBRATION_SAMPLES];
+    // touchSetCycles(10000, 1000);
     for (int i = 0; i < TOUCH_CALIBRATION_SAMPLES; i++)
     {
-      unsigned long value = touchRead(mPin);
-      sum += value;
+      samples[i] = touchRead(mPin);
+      delay(1);
     }
-    // this is the threshold we will use for the interrupt
-    mThreshold = (1 + TOUCH_THRESHOLD) * sum / TOUCH_CALIBRATION_SAMPLES;
+    std::sort(samples, samples + TOUCH_CALIBRATION_SAMPLES);
+    // the median value is the value at the midpoint of the sorted array
+    mThreshold = (1 + TOUCH_THRESHOLD) * samples[TOUCH_CALIBRATION_SAMPLES / 2];
     Serial.printf("Calibrated %s(%d) to %d\n", mName.c_str(), mPin, mThreshold);
   }
   void start()
@@ -53,13 +59,13 @@ public:
             unsigned long value = touchRead(pad->mPin);
             if (value > pad->mThreshold) {
               if (!pad->mIsTouched) {
-                pad->mTouchEvent();  
                 pad->mIsTouched = true;
+                pad->mTouchEvent();  
               }
             } else {
-              if (pad->mIsTouched) {
-                pad->mTouchEvent();
+              if (pad->mIsTouched && !pad->isToggle) {
                 pad->mIsTouched = false;
+                pad->mTouchEvent();
               }
             }
             vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -81,6 +87,8 @@ public:
 class TouchKeyboard
 {
 private:
+  SemaphoreHandle_t m_keyboardSemaphore;
+
   using KeyEventType = std::function<void(int keyCode, bool isPressed)>;
   KeyEventType m_keyEvent;
   SpecKeys lastKeyPressed = SPECKEY_NONE;
@@ -146,7 +154,10 @@ public:
     padDFFE(9, "DFFE", [this](){sendKeyEvent();}),
     padBFFE(2, "BFFE", [this](){sendKeyEvent();}),
     pad7FFE(1, "7FFE", [this](){sendKeyEvent();})
-  {};
+  {
+    m_keyboardSemaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(m_keyboardSemaphore);
+  };
   void calibrate()
   {
     padBit0.calibrate();
@@ -194,17 +205,20 @@ public:
   }
 
   void sendKeyEvent() {
-    SpecKeys key = getCurrentKey();
-    if (key != lastKeyPressed) {
-      if (lastKeyPressed != SPECKEY_NONE) {
-        m_keyEvent(lastKeyPressed, false);
-        Serial.printf("Key up: %d\n", lastKeyPressed);
+    if (xSemaphoreTake(m_keyboardSemaphore, portMAX_DELAY)) {
+      SpecKeys key = getCurrentKey();
+      if (key != lastKeyPressed) {
+        if (lastKeyPressed != SPECKEY_NONE) {
+          m_keyEvent(lastKeyPressed, false);
+          Serial.printf("Key up: %d\n", lastKeyPressed);
+        }
       }
+      if (key != SPECKEY_NONE) {
+        m_keyEvent(key, true);
+        Serial.printf("Key down: %d\n", key);
+      }
+      lastKeyPressed = key;
     }
-    if (key != SPECKEY_NONE) {
-      m_keyEvent(key, true);
-      Serial.printf("Key down: %d\n", key);
-    }
-    lastKeyPressed = key;
+    xSemaphoreGive(m_keyboardSemaphore);
   }
 };

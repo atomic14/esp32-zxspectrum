@@ -14,7 +14,7 @@ const uint16_t specpal565[16] = {
     0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
 uint16_t flashTimer = 0;
-uint16_t lastBorderColor = 0;
+uint16_t lastBorderColor = -1;
 
 void drawScreen(EmulatorScreen *emulatorScreen)
 {
@@ -30,6 +30,8 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint16_t tftColor = specpal565[borderColor];
   if (tftColor != lastBorderColor)
   {
+    // swap the byte order
+    tftColor = (tftColor >> 8) | (tftColor << 8);
     // do the border with some simple rects - no need to push pixels for a solid color
     tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
     tft.fillRect(0, screenHeight - borderHeight, screenWidth, borderHeight, tftColor);
@@ -187,8 +189,11 @@ void EmulatorScreen::run(std::string snaPath)
   machine->reset();
   machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
   machine->reset_spectrum(machine->z80Regs);
-  Load_SNA(machine, snaPath.c_str());
-  m_tft.fillScreen(TFT_BLACK);
+  m_tft.fillScreen(TFT_WHITE);
+  if (snaPath.length() > 0)
+  {
+    Load_SNA(machine, snaPath.c_str());
+  }
   isRunning = true;
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
