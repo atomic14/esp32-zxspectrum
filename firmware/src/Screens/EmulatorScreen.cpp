@@ -7,14 +7,23 @@
 
 const int screenWidth = TFT_HEIGHT;
 const int screenHeight = TFT_WIDTH;
+#ifdef SCALE_SCREEN
+// scale the screen by 1.5 times
+const int borderWidth = (screenWidth - 384) / 2;
+const int borderHeight = (screenHeight - 288) / 2;
+#else
 const int borderWidth = (screenWidth - 256) / 2;
 const int borderHeight = (screenHeight - 192) / 2;
+#endif
 
 const uint16_t specpal565[16] = {
     0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
 uint16_t flashTimer = 0;
 uint16_t lastBorderColor = -1;
+#ifdef SCALE_SCREEN
+uint16_t scaledBuffer[384 * 12];
+#endif
 
 void drawScreen(EmulatorScreen *emulatorScreen)
 {
@@ -28,10 +37,10 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   // do the border
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
+  // swap the byte order
+  tftColor = (tftColor >> 8) | (tftColor << 8);
   if (tftColor != lastBorderColor)
   {
-    // swap the byte order
-    tftColor = (tftColor >> 8) | (tftColor << 8);
     // do the border with some simple rects - no need to push pixels for a solid color
     tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
     tft.fillRect(0, screenHeight - borderHeight, screenWidth, borderHeight, tftColor);
@@ -105,7 +114,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
         }
       }
     }
-    if (dirty)
+    if (dirty || emulatorScreen->firstDraw)
     {
 // push out this block of pixels 256 * 8
 #ifdef USE_DMA
@@ -113,8 +122,36 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
       tft.pushPixelsDMA(emulatorScreen->dmaBuffer1, 256 * 8);
 #else
+#ifdef SCALE_SCREEN
+      // scale the buffer by 1.5 times (repeat every other pixel horizontally and vertically)
+      int dstY = 0;
+      for (int y = 0; y < 8; y++)
+      {
+        int dstX = 0;
+        for (int x = 0; x < 256; x++)
+        {
+          scaledBuffer[dstY * 384 + dstX] = emulatorScreen->dmaBuffer1[y * 256 + x];
+          if (x % 2 == 0)
+          {
+            dstX++;
+            scaledBuffer[dstY * 384 + dstX] = emulatorScreen->dmaBuffer1[y * 256 + x];
+          }
+          dstX++;
+        }
+        if (y % 2 == 0) {
+          dstY++;
+          for(int x = 0; x < 384; x++) {
+            scaledBuffer[dstY * 384 + x] = scaledBuffer[(dstY - 1) * 384 + x];
+          }
+        }
+        dstY++;
+      }
+      tft.setWindow(borderWidth, borderHeight + attrY * 12, borderWidth + 383, borderHeight + attrY * 12 + 11);
+      tft.pushPixels(scaledBuffer, 384 * 12);
+#else
       tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
       tft.pushPixels(emulatorScreen->dmaBuffer1, 256 * 8);
+#endif
 #endif
       // swap the DMA buffers
       uint16_t *temp = emulatorScreen->dmaBuffer1;
@@ -122,7 +159,11 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       emulatorScreen->dmaBuffer2 = temp;
     }
   }
+  #ifdef USE_DMA
+    tft.dmaWait();
+  #endif
   tft.endWrite();
+  emulatorScreen->firstDraw = false;
 }
 
 void drawDisplay(void *pvParameters)
@@ -194,6 +235,7 @@ void EmulatorScreen::run(std::string snaPath)
   {
     Load_SNA(machine, snaPath.c_str());
   }
+  firstDraw = true;
   isRunning = true;
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
@@ -206,7 +248,7 @@ void EmulatorScreen::stop()
   isRunning = false;
 }
 
-void EmulatorScreen::updatekey(uint8_t key, uint8_t state)
+void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
 {
   // if (audioFile) {
   //   isRunning = false;
@@ -215,5 +257,7 @@ void EmulatorScreen::updatekey(uint8_t key, uint8_t state)
   //   audioFile = NULL;
   //   Serial.printf("Audio file closed\n");
   // }
-  machine->updatekey(key, state);
+  if (isRunning) {
+    machine->updatekey(key, state);
+  }
 }

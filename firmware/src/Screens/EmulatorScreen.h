@@ -22,10 +22,11 @@ class EmulatorScreen : public Screen
     uint16_t *dmaBuffer2 = nullptr;
     // copy of the screen so we can track changes
     uint8_t *screenBuffer = nullptr;
+    bool firstDraw = false;
     FILE *audioFile = nullptr;
   public:
     EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput, TouchKeyboard *touchKeyboard);
-    void updatekey(uint8_t key, uint8_t state);
+    void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename);
     void stop();
     friend void drawDisplay(void *pvParameters);

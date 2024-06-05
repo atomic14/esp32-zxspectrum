@@ -26,7 +26,7 @@ void SerialKeyboard::keyboardTask(void *pParam)
       {
         key = message.substring(3);
       }
-      int keyValue = key.toInt();
+      SpecKeys keyValue = SpecKeys(key.toInt());
       keyboard->m_keyEvent(keyValue, down);
     }
     vTaskDelay(10);

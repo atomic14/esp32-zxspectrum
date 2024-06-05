@@ -115,11 +115,11 @@ TouchKeyboard *touchKeyboard = nullptr;
 void setup(void)
 {
   Serial.begin(115200);
-  for(int i = 0; i<5; i++)
-  {
-    Serial.print(".");
-    delay(1000);
-  }
+  // for(int i = 0; i<5; i++)
+  // {
+  //   Serial.print(".");
+  //   delay(1000);
+  // }
   Serial.println("Starting up");
   // Audio output
 #ifdef SPK_MODE
@@ -143,9 +143,8 @@ void setup(void)
 #endif
 #ifdef TOUCH_KEYBOARD
   touchKeyboard = new TouchKeyboard(
-    [&](int key, bool down) {
+    [&](SpecKeys key, bool down) {
     {
-      Serial.printf("Touch Key %s, %s\n", keyNames[key], down ? "down" : "up");
       activeScreen->updatekey(key, down);
     }
   });
@@ -191,6 +190,11 @@ void setup(void)
     if(index == 0) {
       // switch to basic
       emulatorScreen->run("");
+      // switch the touch keyboard to toggle mode so shift and sym-shift are sticky
+      if (touchKeyboard)
+      {
+        touchKeyboard->setToggleMode(true);
+      }
       activeScreen = emulatorScreen;
     } else {
       // switch to the alphabet picker
@@ -213,6 +217,11 @@ void setup(void)
   filePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
     // a file was picked - load it into the emulator
     Serial.printf("Loading snapshot: %s\n", file->getPath().c_str());
+    // switch the touch keyboard to non toggle - we don't want shift and sym-shift to be sticky
+    if (touchKeyboard)
+    {
+      touchKeyboard->setToggleMode(false);
+    }
     emulatorScreen->run(file->getPath());
     activeScreen = emulatorScreen;
   }, [&]() {
@@ -225,7 +234,7 @@ void setup(void)
   // set the mode picker to show the emulator modes
   modePicker->setItems(emulatorModes);
   // start off the keyboard and feed keys into the active scene
-  keyboard = new SerialKeyboard([&](int key, bool down) {
+  keyboard = new SerialKeyboard([&](SpecKeys key, bool down) {
     if (activeScreen)
     {
       activeScreen->updatekey(key, down);

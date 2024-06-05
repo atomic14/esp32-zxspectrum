@@ -52,7 +52,7 @@ public:
     updateDisplay();
   }
   
-  void updatekey(uint8_t key, uint8_t state)
+  void updatekey(SpecKeys key, uint8_t state)
   {
     if (state == 1)
     {
@@ -69,6 +69,7 @@ public:
       #endif
 
       repeatDelay = 100;
+      bool isHandled = false;
       switch (key)
       {
       case JOYK_UP:
@@ -79,6 +80,7 @@ public:
           updateDisplay();
         }
         lastKeyTime = millis();
+        isHandled = true;
         break;
       case JOYK_DOWN:
       case SPECKEY_6:
@@ -88,13 +90,32 @@ public:
           updateDisplay();
         }
         lastKeyTime = millis();
+        isHandled = true;
         break;
       case JOYK_LEFT:
       case SPECKEY_5:
       {
         m_backCallback();
+        isHandled = true;
         break;
       }
+      }
+      if (!isHandled)
+      {
+        // does the speckey map onto a letter - look in the mapping table
+        if (specKeyToLetter.find(key) != specKeyToLetter.end())
+        {
+          char letter = specKeyToLetter.at(key);
+          for (int i = 0; i < m_items.size(); i++)
+          {
+            if (m_items[i]->getTitle()[0] == letter)
+            {
+              m_selectedItem = i;
+              updateDisplay();
+              break;
+            }
+          }
+        }
       }
     }
     else

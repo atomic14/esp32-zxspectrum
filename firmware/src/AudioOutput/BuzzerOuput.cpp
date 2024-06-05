@@ -13,7 +13,9 @@ bool IRAM_ATTR onTimerCallback(void *args) {
 void BuzzerOutput::start(uint32_t sample_rate)
 {
   mSampleRate = sample_rate;
-  pinMode(mBuzzerPin, OUTPUT);
+  // pinMode(mBuzzerPin, OUTPUT);
+  ledcSetup(0, 100000, 8);
+  ledcAttachPin(mBuzzerPin, 0);
   // create a timer that will fire at the sample rate
   timer_config_t timer_config = {
       .alarm_en = TIMER_ALARM_EN,
@@ -67,9 +69,11 @@ bool BuzzerOutput::onTimer()
     int16_t sample = mBuffer[mCurrentIndex];
     mCurrentIndex++;
     if (sample <= 0) {
-      digitalWrite(mBuzzerPin, LOW);
+      // digitalWrite(mBuzzerPin, LOW);
+      ledcWrite(0, 0);
     } else {
-      digitalWrite(mBuzzerPin, HIGH);
+      // digitalWrite(mBuzzerPin, HIGH);
+      ledcWrite(0, 255);
     }
   }
   if(mCurrentIndex >= mBufferLength)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "Emulator/keyboard_defs.h"
 
 class TFT_eSPI;
 class AudioOutput;
@@ -12,7 +13,7 @@ class Screen {
   public:
   Screen(TFT_eSPI &tft, AudioOutput *audioOutput) : m_tft(tft), m_audioOutput(audioOutput) {}
   // input
-  virtual void updatekey(uint8_t key, uint8_t state) = 0;
+  virtual void updatekey(SpecKeys key, uint8_t state) = 0;
   // lifecycle
   virtual void didAppear() {}
 };

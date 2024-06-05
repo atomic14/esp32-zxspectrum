@@ -38,8 +38,6 @@ uint8_t LoadSCR (ZXSpectrum *speccy, FILE *);
 int Load_SNA (ZXSpectrum *speccy, const char *filename);
 int Load_SCR (ZXSpectrum *speccy, const char *filename);
 
-uint8_t SaveSnapshot   (ZXSpectrum *speccy, const char *filename);
-uint8_t SaveScreenshot (ZXSpectrum *speccy, const char *filename);
 uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
 uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
 uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);

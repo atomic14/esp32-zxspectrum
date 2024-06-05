@@ -5,7 +5,7 @@
 #include <set>
 #include <vector>
 #include <string>
-#include "../Emulator/spectrum.h"
+#include "../Emulator/keyboard_defs.h"
 
 const int TOUCH_CALIBRATION_SAMPLES = 100;
 const float TOUCH_THRESHOLD = 0.1;
@@ -95,7 +95,7 @@ class TouchKeyboard
 private:
   SemaphoreHandle_t m_keyboardSemaphore;
 
-  using KeyEventType = std::function<void(int keyCode, bool isPressed)>;
+  using KeyEventType = std::function<void(SpecKeys keyCode, bool isPressed)>;
   KeyEventType m_keyEvent;
   SpecKeys lastKeyPressed = SPECKEY_NONE;
 
@@ -253,6 +253,12 @@ public:
       {SPECKEY_SHIFT, false},
       {SPECKEY_SYMB, false}
   };
+  bool toggleMode = false;
+
+  void setToggleMode(bool toggle)
+  {
+    toggleMode = toggle;
+  }
 
   void sendKeyEvent()
   {
@@ -279,37 +285,41 @@ public:
             // if the key was pressed then we need to release it
             if (isKeyPressed[theKey])
             {
-              // special handling for symbol shift if the caps shift key is already toggled - we want to release the sym shift and caps shift keys
-              if (theKey == SPECKEY_SYMB && toggleKey[SPECKEY_SHIFT])
-              {
-                m_keyEvent(SPECKEY_SHIFT, false);
-                m_keyEvent(SPECKEY_SYMB, false);
-                toggleKey[SPECKEY_SHIFT] = false;
-              } else {
-                // check to see if this is a toggle key - ie, it's in the toggleKey map
-                if (toggleKey.find(theKey) != toggleKey.end())
+              if (toggleMode) {
+                // special handling for symbol shift if the caps shift key is already toggled - we want to release the sym shift and caps shift keys
+                if (theKey == SPECKEY_SYMB && toggleKey[SPECKEY_SHIFT])
                 {
-                  // do we need to release the key?
-                  if (toggleKey[theKey]) {
-                    m_keyEvent(theKey, false);
-                    toggleKey[theKey] = false;
-                  } else {
-                    // toggle it the next time round
-                    toggleKey[theKey] = true;
-                  }
+                  m_keyEvent(SPECKEY_SHIFT, false);
+                  m_keyEvent(SPECKEY_SYMB, false);
+                  toggleKey[SPECKEY_SHIFT] = false;
                 } else {
-                  // otherwise we need to release the key
-                  m_keyEvent(theKey, false);
-                  // and if there are any toggle keys then we need to release them too
-                  for (auto &toggle : toggleKey)
+                  // check to see if this is a toggle key - ie, it's in the toggleKey map
+                  if (toggleKey.find(theKey) != toggleKey.end())
                   {
-                    if (toggle.second)
+                    // do we need to release the key?
+                    if (toggleKey[theKey]) {
+                      m_keyEvent(theKey, false);
+                      toggleKey[theKey] = false;
+                    } else {
+                      // toggle it the next time round
+                      toggleKey[theKey] = true;
+                    }
+                  } else {
+                    // otherwise we need to release the key
+                    m_keyEvent(theKey, false);
+                    // and if there are any toggle keys then we need to release them too
+                    for (auto &toggle : toggleKey)
                     {
-                      m_keyEvent(toggle.first, false);
-                      toggle.second = false;
+                      if (toggle.second)
+                      {
+                        m_keyEvent(toggle.first, false);
+                        toggle.second = false;
+                      }
                     }
                   }
                 }
+              } else {
+                m_keyEvent(theKey, false);
               }
               isKeyPressed[theKey] = false;
             }
