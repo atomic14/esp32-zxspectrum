@@ -243,7 +243,7 @@ void setup(void)
 
   // start up the nunchuk controller and feed events into the active screen
   #ifdef NUNCHUK_CLOCK
-  nunchuck = new Nunchuck([&](int key, bool down) {
+  nunchuck = new Nunchuck([&](SpecKeys key, bool down) {
     if (activeScreen)
     {
       activeScreen->updatekey(key, down);
