@@ -36,11 +36,10 @@ uint8_t speckey[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 int keys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int oldkeys[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-ZXSpectrum::ZXSpectrum(TouchKeyboard *touchKeyboard)
+ZXSpectrum::ZXSpectrum()
 {
   z80Regs = (Z80Regs *)malloc(sizeof(Z80Regs));
   z80Regs->userInfo = this;
-  this->touchKeyboard = touchKeyboard;
 }
 
 void ZXSpectrum::reset()

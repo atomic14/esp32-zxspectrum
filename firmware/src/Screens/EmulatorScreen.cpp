@@ -208,7 +208,7 @@ void z80Runner(void *pvParameter)
   }
 }
 
-EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput, TouchKeyboard *touchKeyboard) : Screen(tft, audioOutput), touchKeyboard(touchKeyboard)
+EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
   dmaBuffer1 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
   dmaBuffer2 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
@@ -226,7 +226,7 @@ void EmulatorScreen::run(std::string snaPath)
   memset(dmaBuffer1, 0, 256 * 8 * sizeof(uint16_t));
   memset(dmaBuffer2, 0, 256 * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
-  machine = new ZXSpectrum(touchKeyboard);
+  machine = new ZXSpectrum();
   machine->reset();
   machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
   machine->reset_spectrum(machine->z80Regs);

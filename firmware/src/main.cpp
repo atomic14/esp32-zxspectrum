@@ -29,56 +29,12 @@
 #include "Screens/EmulatorScreen.h"
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
+#ifdef TOUCH_KEYBOARD
 #include "Input/TouchKeyboard.h"
-
-const char *keyNames[] = {
-    "SPECKEY_NONE",
-    "SPECKEY_1",
-    "SPECKEY_2",
-    "SPECKEY_3",
-    "SPECKEY_4",
-    "SPECKEY_5",
-    "SPECKEY_6",
-    "SPECKEY_7",
-    "SPECKEY_8",
-    "SPECKEY_9",
-    "SPECKEY_0",
-    "SPECKEY_Q",
-    "SPECKEY_W",
-    "SPECKEY_E",
-    "SPECKEY_R",
-    "SPECKEY_T",
-    "SPECKEY_Y",
-    "SPECKEY_U",
-    "SPECKEY_I",
-    "SPECKEY_O",
-    "SPECKEY_P",
-    "SPECKEY_A",
-    "SPECKEY_S",
-    "SPECKEY_D",
-    "SPECKEY_F",
-    "SPECKEY_G",
-    "SPECKEY_H",
-    "SPECKEY_J",
-    "SPECKEY_K",
-    "SPECKEY_L",
-    "SPECKEY_ENTER",
-    "SPECKEY_SHIFT",
-    "SPECKEY_Z",
-    "SPECKEY_X",
-    "SPECKEY_C",
-    "SPECKEY_V",
-    "SPECKEY_B",
-    "SPECKEY_N",
-    "SPECKEY_M",
-    "SPECKEY_SYMB",
-    "SPECKEY_SPACE",
-    "JOYK_UP",
-    "JOYK_DOWN",
-    "JOYK_LEFT",
-    "JOYK_RIGHT",
-    "JOYK_FIRE",
-};
+#endif
+#ifdef TOUCH_KEYBOARD_V2
+#include "Input/TouchKeyboardV2.h"
+#endif
 
 // Mode picker
 class ModePicker
@@ -110,16 +66,21 @@ Screen *activeScreen = nullptr;
 Files *files = nullptr;
 SerialKeyboard *keyboard = nullptr;
 Nunchuck *nunchuck = nullptr;
+#ifdef TOUCH_KEYBOARD
 TouchKeyboard *touchKeyboard = nullptr;
+#endif
+#ifdef TOUCH_KEYBOARD_V2
+TouchKeyboardV2 *touchKeyboard = nullptr;
+#endif
 
 void setup(void)
 {
   Serial.begin(115200);
-  // for(int i = 0; i<5; i++)
-  // {
-  //   Serial.print(".");
-  //   delay(1000);
-  // }
+  for(int i = 0; i<5; i++)
+  {
+    Serial.print(".");
+    delay(1000);
+  }
   Serial.println("Starting up");
   // Audio output
 #ifdef SPK_MODE
@@ -149,6 +110,15 @@ void setup(void)
     }
   });
   touchKeyboard->calibrate();
+  touchKeyboard->start();
+#endif
+#ifdef TOUCH_KEYBOARD_V2
+  touchKeyboard = new TouchKeyboardV2(
+    [&](SpecKeys key, bool down) {
+    {
+      activeScreen->updatekey(key, down);
+    }
+  });
   touchKeyboard->start();
 #endif
 #ifdef I2S_SPEAKER_SERIAL_CLOCK
@@ -181,20 +151,22 @@ void setup(void)
 #else
   tft->setRotation(3);
 #endif
-  // tft->fillScreen(TFT_BLACK);
+  tft->fillScreen(TFT_BLACK);
   // Files
   files = new Files();
   // wire everythign up
-  emulatorScreen = new EmulatorScreen(*tft, audioOutput, touchKeyboard);
+  emulatorScreen = new EmulatorScreen(*tft, audioOutput);
   modePicker = new PickerScreen<ModePickerPtr>(*tft, audioOutput, [&](ModePickerPtr mode, int index) {
     if(index == 0) {
       // switch to basic
       emulatorScreen->run("");
       // switch the touch keyboard to toggle mode so shift and sym-shift are sticky
+      #ifdef TOUCH_KEYBOARD
       if (touchKeyboard)
       {
         touchKeyboard->setToggleMode(true);
       }
+      #endif
       activeScreen = emulatorScreen;
     } else {
       // switch to the alphabet picker
@@ -218,10 +190,12 @@ void setup(void)
     // a file was picked - load it into the emulator
     Serial.printf("Loading snapshot: %s\n", file->getPath().c_str());
     // switch the touch keyboard to non toggle - we don't want shift and sym-shift to be sticky
+    #ifdef TOUCH_KEYBOARD
     if (touchKeyboard)
     {
       touchKeyboard->setToggleMode(false);
     }
+    #endif
     emulatorScreen->run(file->getPath());
     activeScreen = emulatorScreen;
   }, [&]() {

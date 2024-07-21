@@ -75,19 +75,17 @@ typedef struct
 } tipo_mem;
 
 class AudioOutput;
-class TouchKeyboard;
 
 class ZXSpectrum
 {
 public:
-  TouchKeyboard *touchKeyboard;
   Z80Regs *z80Regs;
   tipo_mem mem;
   tipo_hwopt hwopt;
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
 
-  ZXSpectrum(TouchKeyboard *touchKeyboard);
+  ZXSpectrum();
   void reset();
   int runForFrame(AudioOutput *audioOutput, FILE *audioFile);
   void runForCycles(int cycles);

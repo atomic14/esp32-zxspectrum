@@ -14,7 +14,6 @@ class EmulatorScreen : public Screen
 {
   private:
     ZXSpectrum *machine = nullptr;
-    TouchKeyboard *touchKeyboard = nullptr;
     bool isRunning = false;
     SemaphoreHandle_t m_displaySemaphore;
     // uint16_t *frameBuffer = nullptr;
@@ -25,7 +24,7 @@ class EmulatorScreen : public Screen
     bool firstDraw = false;
     FILE *audioFile = nullptr;
   public:
-    EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput, TouchKeyboard *touchKeyboard);
+    EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename);
     void stop();
