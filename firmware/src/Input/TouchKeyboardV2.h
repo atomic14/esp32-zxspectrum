@@ -19,11 +19,14 @@ private:
 
   // touch pad calibration values
   uint32_t calibrations[8][5] = {0};
+#ifdef TOUCH_KEYBOARD_V2
   // all the touch pads we are using
   touch_pad_t touchPads[5] = {TOUCH_PAD_NUM13, TOUCH_PAD_NUM12, TOUCH_PAD_NUM11, TOUCH_PAD_NUM10, TOUCH_PAD_NUM9};
+#endif
 
   void setupTouchPad()
   {
+#ifdef TOUCH_KEYBOARD_V2
     touch_pad_init();
     // this is the magic line to make it go faster... no real idea what these values really do...
     touch_pad_set_meas_time(4, 50);
@@ -42,10 +45,12 @@ private:
     {
       touch_pad_config(touch_pad_t(touchPads[touchPadIdx]));
     }
+#endif
   }
 
   void calibrate()
   {
+#ifdef TOUCH_KEYBOARD_V2
     for (int i = 0; i < 8; i++)
     {
       digitalWrite(14, (i & 1) ? HIGH : LOW);
@@ -66,6 +71,7 @@ private:
         Serial.printf("Calibration %d,%d: %d\n", i, touchPadIdx, calibrations[i][touchPadIdx]);
       }
     }
+#endif
   }
 
   static void keyboardTask(void *arg);
@@ -137,6 +143,7 @@ public:
 
   void start()
   {
+#ifdef TOUCH_KEYBOARD_V2
     pinMode(14, OUTPUT);
     pinMode(21, OUTPUT);
     pinMode(47, OUTPUT);
@@ -152,5 +159,6 @@ public:
         1,
         NULL,
         0);
+#endif
   }
 };

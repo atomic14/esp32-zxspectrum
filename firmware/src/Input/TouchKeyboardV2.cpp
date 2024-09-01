@@ -2,6 +2,7 @@
 
 void TouchKeyboardV2::keyboardTask(void *arg)
 {
+#ifdef TOUCH_KEYBOARD_V2
   Serial.println("Touch Keyboard Task Started");
   TouchKeyboardV2 *touchKeyboard = (TouchKeyboardV2 *)arg;
   while (true)
@@ -42,4 +43,5 @@ void TouchKeyboardV2::keyboardTask(void *arg)
       }
     }
   }
+#endif
 }
