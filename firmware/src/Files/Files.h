@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <algorithm>
 #include <memory>
 #include <vector>
 #include <string>

@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <TFT_eSPI.h>
+#include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
 #include "../Emulator/snaps.h"
 #include "../AudioOutput/AudioOutput.h"
@@ -27,7 +27,7 @@ uint16_t scaledBuffer[384 * 12];
 
 void drawScreen(EmulatorScreen *emulatorScreen)
 {
-  TFT_eSPI &tft = emulatorScreen->m_tft;
+  TFTDisplay &tft = emulatorScreen->m_tft;
   ZXSpectrum *machine = emulatorScreen->machine;
 
   tft.startWrite();
@@ -38,7 +38,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
   // swap the byte order
-  tftColor = (tftColor >> 8) | (tftColor << 8);
+  // tftColor = (tftColor >> 8) | (tftColor << 8);
   if (tftColor != lastBorderColor)
   {
     // do the border with some simple rects - no need to push pixels for a solid color
@@ -208,10 +208,10 @@ void z80Runner(void *pvParameter)
   }
 }
 
-EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
+EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
-  dmaBuffer1 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
-  dmaBuffer2 = (uint16_t *)heap_caps_malloc(256 * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
+  dmaBuffer1 = (uint16_t *)heap_caps_malloc(screenWidth * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
+  dmaBuffer2 = (uint16_t *)heap_caps_malloc(screenWidth * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
   screenBuffer = (uint8_t *)malloc(6912);
   if (screenBuffer == NULL)
   {
@@ -223,8 +223,8 @@ EmulatorScreen::EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput) : Screen
 
 void EmulatorScreen::run(std::string snaPath)
 {
-  memset(dmaBuffer1, 0, 256 * 8 * sizeof(uint16_t));
-  memset(dmaBuffer2, 0, 256 * 8 * sizeof(uint16_t));
+  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();

@@ -3,11 +3,11 @@
 #include <vector>
 #include <string>
 #include "Screen.h"
-#include "TFT_eSPI.h"
+#include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
 #include "font.h"
 
-class TFT_eSPI;
+class TFTDisplay;
 class ScrollingList;
 
 template <class ItemT>
@@ -28,7 +28,7 @@ private:
 
 public:
   PickerScreen(
-      TFT_eSPI &tft,
+      TFTDisplay &tft,
       AudioOutput *audioOutput,
       SelectItemCallback selectItem,
       BackCallback backCallback) : Screen(tft, audioOutput), m_selectItemCallback(selectItem), m_backCallback(backCallback)

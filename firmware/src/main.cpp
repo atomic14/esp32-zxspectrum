@@ -12,7 +12,6 @@
  * Compile as ESP32 Wrover Module
  *======================================================================
  */
-#include <TFT_eSPI.h>
 #include <esp_err.h>
 #include <map>
 #include <vector>
@@ -29,6 +28,9 @@
 #include "Screens/EmulatorScreen.h"
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
+#include "TFT/TFTDisplay.h"
+#include "TFT/TFTeSPIWrapper.h"
+#include "TFT/ST7789.h"
 #ifdef TOUCH_KEYBOARD
 #include "Input/TouchKeyboard.h"
 #endif
@@ -56,7 +58,7 @@ ModePickerVector emulatorModes = {
     std::make_shared<ModePicker>("Games")
 };
 
-TFT_eSPI *tft = nullptr;
+TFTDisplay *tft = nullptr;
 AudioOutput *audioOutput = nullptr;
 PickerScreen<ModePickerPtr> *modePicker = nullptr;
 PickerScreen<FileInfoPtr> *filePickerScreen = nullptr;
@@ -134,24 +136,11 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
+#ifdef BUZZER_GPIO_NUM
   audioOutput->start(15625);
-  // Display
-#ifdef TFT_POWER
-  // turn on the TFT
-  pinMode(TFT_POWER, OUTPUT);
-  digitalWrite(TFT_POWER, LOW);
 #endif
-  tft = new TFT_eSPI();
-  tft->begin();
-#ifdef USE_DMA
-  tft->initDMA(); // Initialise the DMA engine
-#endif
-#ifdef TFT_ROTATION
-  tft->setRotation(TFT_ROTATION);
-#else
-  tft->setRotation(3);
-#endif
-  tft->fillScreen(TFT_BLACK);
+  tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
+  // tft = new TFTeSPIWrapper();
   // Files
   files = new Files();
   // wire everythign up
@@ -164,7 +153,7 @@ void setup(void)
       #ifdef TOUCH_KEYBOARD
       if (touchKeyboard)
       {
-        touchKeyboard->setToggleMode(true);
+        // touchKeyboard->setToggleMode(true);
       }
       #endif
       activeScreen = emulatorScreen;
@@ -226,6 +215,10 @@ void setup(void)
   #endif
   // start off on the file picker screen
   activeScreen = modePicker;
+  // activeScreen = emulatorScreen;
+  // activeScreen->didAppear();
+  // load manic.sna
+  // emulatorScreen->run("/fs/manic.sna");
 }
 
 unsigned long frame_millis;

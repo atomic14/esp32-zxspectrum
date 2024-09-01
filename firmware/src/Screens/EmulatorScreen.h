@@ -6,7 +6,7 @@
 #include <string>
 #include "Screen.h"
 
-class TFT_eSPI;
+class TFTDisplay;
 class AudioOutput;
 class ZXSpectrum;
 class TouchKeyboard;
@@ -24,7 +24,7 @@ class EmulatorScreen : public Screen
     bool firstDraw = false;
     FILE *audioFile = nullptr;
   public:
-    EmulatorScreen(TFT_eSPI &tft, AudioOutput *audioOutput);
+    EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename);
     void stop();
