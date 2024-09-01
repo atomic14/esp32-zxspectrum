@@ -4,6 +4,7 @@
 #include "../Emulator/snaps.h"
 #include "../AudioOutput/AudioOutput.h"
 #include "EmulatorScreen.h"
+#include "../Emulator/48k_rom.h"
 
 const int screenWidth = TFT_HEIGHT;
 const int screenHeight = TFT_WIDTH;
@@ -228,7 +229,7 @@ void EmulatorScreen::run(std::string snaPath)
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
-  machine->init_spectrum(SPECMDL_48K, "/fs/48.rom");
+  machine->init_spectrum(SPECMDL_48K, ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
   machine->reset_spectrum(machine->z80Regs);
   m_tft.fillScreen(TFT_WHITE);
   if (snaPath.length() > 0)

@@ -78,11 +78,11 @@ TouchKeyboardV2 *touchKeyboard = nullptr;
 void setup(void)
 {
   Serial.begin(115200);
-  for(int i = 0; i<5; i++)
-  {
-    Serial.print(".");
-    delay(1000);
-  }
+  // for(int i = 0; i<5; i++)
+  // {
+  //   Serial.print(".");
+  //   delay(1000);
+  // }
   Serial.println("Starting up");
   // Audio output
 #ifdef SPK_MODE
@@ -139,8 +139,8 @@ void setup(void)
 #ifdef BUZZER_GPIO_NUM
   audioOutput->start(15625);
 #endif
-  tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
-  // tft = new TFTeSPIWrapper();
+  // tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
+  tft = new TFTeSPIWrapper();
   // Files
   files = new Files();
   // wire everythign up

@@ -268,6 +268,22 @@ int ZXSpectrum::load_rom(const char *filename)
   return 0;
 }
 
+int ZXSpectrum::load_rom(uint8_t *rom, int rom_len) {
+  memcpy(mem.p, rom, rom_len);
+  return 0;
+}
+
+int ZXSpectrum::init_spectrum(int model, uint8_t *rom, int rom_len) {
+  switch (model)
+  {
+    // only 48K supported for now
+    case SPECMDL_48K:
+      return init_48k(rom, rom_len);
+    }
+    printf("MODELO NO SOPORTADO %x\n", model);
+    return -1;
+}
+
 
 int ZXSpectrum::init_spectrum(int model, const char *romfile)
 {
@@ -327,6 +343,54 @@ int ZXSpectrum::end_spectrum(void)
 {
   free(mem.p); /* free RAM */
   return 0;
+}
+
+int ZXSpectrum::init_48k(uint8_t *rom, int rom_len) {
+  int i;
+  mem.md = 0x3FFF;
+  mem.mp = 0xC000;
+  mem.mr = 14;
+  mem.np = 4;
+  mem.sp = 16 * 1024;
+  mem.roo = 4 * mem.sp;
+  mem.vn = 1;
+  mem.ro[0] = mem.sro[0] = 0;
+  mem.wo[0] = mem.swo[0] = mem.roo;
+  mem.ro[1] = mem.sro[1] = mem.wo[1] = mem.swo[1] = mem.sp;
+  mem.ro[2] = mem.sro[2] = mem.wo[2] = mem.swo[2] = 2 * mem.sp;
+  mem.ro[3] = mem.sro[3] = mem.wo[3] = mem.swo[3] = 3 * mem.sp;
+  mem.vo[0] = 0x4000;
+
+  mem.p = (uint8_t *)malloc((1 + 3 + 1) * mem.sp);
+  if (mem.p == NULL)
+  {
+    printf("NO MEMORY...\n");
+    return 1;
+  }
+  // ULA config
+  hwopt.emulate_FF = 1;
+  hwopt.ts_lebo = 24;    // left border t states
+  hwopt.ts_grap = 128;   // graphic zone t states
+  hwopt.ts_ribo = 24;    // right border t states
+  hwopt.ts_hore = 48;    // horizontal retrace t states
+  hwopt.ts_line = 224;   // to speed the calc, the sum of 4 abobe
+  hwopt.line_poin = 16;  // lines in retraze post interrup
+  hwopt.line_upbo = 48;  // lines of upper border
+  hwopt.line_grap = 192; // lines of graphic zone = 192
+  hwopt.line_bobo = 48;  // lines of bottom border
+  hwopt.line_retr = 8;   // lines of the retrace
+  hwopt.TSTATES_PER_LINE = 224;
+  hwopt.TOP_BORDER_LINES = 64;
+  hwopt.SCANLINES = 192;
+  hwopt.BOTTOM_BORDER_LINES = 56;
+  hwopt.tstate_border_left = 24;
+  hwopt.tstate_graphic_zone = 128;
+  hwopt.tstate_border_right = 72;
+  hwopt.hw_model = SPECMDL_48K;
+  hwopt.int_type = NORMAL;
+  hwopt.videopage = 0;
+  hwopt.SoundBits = 1;
+  return load_rom(rom, rom_len);
 }
 
 int ZXSpectrum::init_48k(const char *romfile)

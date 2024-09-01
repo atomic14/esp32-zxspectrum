@@ -121,10 +121,12 @@ public:
   void pageout(int size, int bloq, int page);
 
   int init_spectrum(int model, const char *romfile);
+  int init_spectrum(int model, uint8_t *rom, int rom_len);
   int end_spectrum(void);
   int reset_spectrum(Z80Regs *);
 
   int init_48k(const char *romfile);
+  int init_48k(uint8_t *rom, int rom_len);
   int init_16k(const char *romfile);
   int init_inves(const char *romfile);
 
@@ -139,6 +141,7 @@ public:
   void outbankm_p37(uint8_t dato);
 
   int load_rom(const char *);
+  int load_rom(uint8_t *rom, int rom_len);
 };
 
 #endif // #ifdef SPECTRUM_H
