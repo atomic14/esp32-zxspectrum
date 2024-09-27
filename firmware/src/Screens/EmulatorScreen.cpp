@@ -39,7 +39,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
   // swap the byte order
-  // tftColor = (tftColor >> 8) | (tftColor << 8);
+  tftColor = (tftColor >> 8) | (tftColor << 8);
   if (tftColor != lastBorderColor)
   {
     // do the border with some simple rects - no need to push pixels for a solid color
