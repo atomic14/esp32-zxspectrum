@@ -213,18 +213,19 @@ void ZXSpectrum::z80_out(uint16_t port, uint8_t data)
   }
 }
 
-void ZXSpectrum::init_spectrum(int model)
+bool ZXSpectrum::init_spectrum(int model)
 {
   switch (model)
   {
   // only 48K supported for now
   case SPECMDL_48K:
     init_48k();
-    break;
+    return true;
   case SPECMDL_128K:
     init_128k();
-    break;
+    return true;
   }
+  return false;
 }
 
 /* This do aditional stuff for reset, like mute sound chip, o reset bank switch */
@@ -237,7 +238,7 @@ void ZXSpectrum::reset_spectrum(Z80Regs *regs)
   Z80Reset(regs);
 }
 
-void ZXSpectrum::init_48k()
+bool ZXSpectrum::init_48k()
 {
   // ULA config
   hwopt.emulate_FF = 1;
@@ -262,9 +263,10 @@ void ZXSpectrum::init_48k()
   hwopt.int_type = NORMAL;
   hwopt.SoundBits = 1;
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
+  return true;
 }
 
-void ZXSpectrum::init_16k()
+bool ZXSpectrum::init_16k()
 {
   // ULA config
   hwopt.emulate_FF = 1;
@@ -290,9 +292,10 @@ void ZXSpectrum::init_16k()
   hwopt.SoundBits = 1;
   // treat it like a 48K
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
+  return true;
 }
 
-void ZXSpectrum::init_128k()
+bool ZXSpectrum::init_128k()
 {
   // ULA config
   hwopt.emulate_FF = 1;
@@ -317,6 +320,7 @@ void ZXSpectrum::init_128k()
   hwopt.int_type = NORMAL;
   hwopt.SoundBits = 1;
   mem.loadRom(ZXSpectrum_128_rom, ZXSpectrum_128_rom_len);
+  return true;
 }
 
 void ZXSpectrum::reset_128k(void)

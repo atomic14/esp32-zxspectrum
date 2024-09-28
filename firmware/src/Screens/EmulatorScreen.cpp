@@ -230,7 +230,7 @@ void EmulatorScreen::run(std::string snaPath)
   machine->reset();
   machine->init_spectrum(SPECMDL_48K);
   machine->reset_spectrum(machine->z80Regs);
-  Load_SNA(machine, snaPath.c_str());
+  LoadSNA(machine, snaPath.c_str());
   m_tft.fillScreen(TFT_WHITE);
   firstDraw = true;
   isRunning = true;

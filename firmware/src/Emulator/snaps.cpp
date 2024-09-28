@@ -30,7 +30,7 @@
 #include "./spectrum.h"
 #include "./snaps.h"
 
-void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp);
+// void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp);
 
 // uint8_t SaveScreenshot(ZXSpectrum *speccy, const char *fname)
 // {
@@ -59,432 +59,314 @@ void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp);
 #define Z80BL_V2UNCOMP 3
 #define Z80BL_V2COMPRE 4
 
-// void UncompressZ80(int tipo, int pc, ZXSpectrum *speccy, FILE *fp)
-// {
-//   byte c, last, last2, dato;
-//   int cont, num, limit;
-//   extern tipo_mem mem;
+// Decompress a block of data from a V2 or V3 Z80 snapshot
+void decompressZ80BlockV2orV3(FILE *fp, uint32_t compressedSize, uint8_t *decompressedData, uint32_t decompressedSize)
+{
+  uint32_t inPos = 0;  // Position in the compressed data
+  uint32_t outPos = 0; // Position in the decompressed data
 
-//   switch (tipo)
-//   {
-//   case Z80BL_V1UNCOMP:
-//     Serial.printf(" Uncompressed V1.\n");
-//     fread(speccy->mem.p + pc, 0xC000, 1, fp);
-//     break;
-//   case Z80BL_V2UNCOMP:
-//     Serial.printf(" Uncompressed V2.\n");
-//     fread(speccy->mem.p + pc, 0x4000, 1, fp);
-//     break;
-//   default:
+  while (inPos < compressedSize && outPos < decompressedSize)
+  {
+    // Read the current byte
+    uint8_t byte = fgetc(fp);
+    inPos++;
+    if (inPos < compressedSize)
+    {
+      uint8_t nextByte = fgetc(fp);
+      inPos++;
+      // Check if this is an RLE encoded sequence
+      if (byte == 0xED && nextByte == 0xED)
+      {
+        // Read the repetition count and value
+        uint8_t repeatCount = fgetc(fp);
+        inPos++;
+        uint8_t repeatValue = fgetc(fp);
+        inPos++;
 
-//     limit = pc + ((tipo == Z80BL_V1COMPRE) ? 0xc000 : 0x4000); // v1=> bloque de 48K, V2 =>de 16K
-//                                                                /*   Serial.printf (" tipo: %x PC: %x  limit:0x \n",tipo,pc, limit);
-//                                                                  if ((tipo == Z80BL_V1UNCOMP) || (tipo == Z80BL_V2UNCOMP)) {
-//                                                                      Serial.printf (" Block uncompres.\n");
-//                                                                    for (cont = pc; cont < limit; cont++)
-//                                                                //      speccy->z80Regs->RAM[cont] = fgetc (fp);
-//                                                                //      writemem (cont, fgetc (fp));
-//                                                                        *(speccy->mem.p+cont)=fgetc(fp);
-//                                                                      Serial.printf("pc=%x\n",cont);
-//                                                                  } else {
-//                                                                */
-//     Serial.printf(" Compressed.\n");
-//     last = 0;
-//     last2 = 0;
-//     c = 0;
-//     Serial.printf("cargando desde %x hasta %x\n", pc, limit);
-//     do
-//     {
-//       last2 = last;
-//       last = c;
-//       c = fgetc(fp);
-//       /* detect compressed blocks */
-//       if ((last == 0xED) && (c == 0xED))
-//       {
-//         num = fgetc(fp);
-//         /* Detect EOF */
-//         if ((tipo == Z80BL_V1COMPRE) && (last2 == 0x00) && (num == 0x00))
-//           break;
-//         dato = fgetc(fp);
-//         for (cont = 0; cont < num; cont++)
-//           *(speccy->mem.p + pc++) = dato;
-//         c = 0; /* avoid that ED ED xx yy ED zz uu shows zz uu as compressed */
-//         continue;
-//       }
-//       else
-//       {
-//         /* we found an 0xED but not the compression flag */
-//         if ((last == 0xED) && (c != 0xED))
-//           //         speccy->z80Regs->RAM[pc++] = last;
-//           //	       writemem (pc++, last);
-//           *(speccy->mem.p + pc++) = last;
-//         /* If it's ED wait for the next or else to memory */
-//         if (c != 0xED)
-//           //              speccy->z80Regs->RAM[pc++] = c;
-//           //	            writemem (pc++, c);
-//           *(speccy->mem.p + pc++) = c;
-//       }
-//       //    Serial.printf("pc=%i\ limit=%i\n",pc,limit);
-//     } while (pc < limit);
-//   }
-// }
+        // Repeat the value in the output buffer
+        for (int i = 0; i < repeatCount; i++)
+        {
+          if (outPos < decompressedSize)
+          {
+            decompressedData[outPos++] = repeatValue;
+          }
+        }
+      }
+      else
+      {
+        // If not a compressed sequence, copy the bytes directly
+        if (outPos < decompressedSize - 1)
+        {
+          decompressedData[outPos++] = byte;
+          decompressedData[outPos++] = nextByte;
+        }
+      }
+    }
+    else
+    {
+      if (outPos < decompressedSize)
+      {
+        decompressedData[outPos++] = byte;
+      }
+    }
+  }
+}
 
-// uint8_t LoadZ80(ZXSpectrum *speccy, FILE *fp)
-// {
-//   int f, tam, ini, sig, pag, ver = 0, hwmodel = SPECMDL_48K, np = 0;
-//   uint8_t buffer[87];
-//   fread(buffer, 87, 1, fp);
-//   if (buffer[12] == 255)
-//     buffer[12] = 1; /*as told in CSS FAQ / .z80 section */
+// special handling for V1 which is just a stream of RAM - we'll poke this into the Z80 memory
+void decompressZ80BlockV1(FILE *fp, uint32_t compressedSize, ZXSpectrum *speccy)
+{
+  uint32_t inPos = 0; // Position in the compressed data
+  // start writing at the start of RAM
+  uint32_t outPos = 0x4000;
+  uint32_t maxOutPos = 0xC000;
 
-//   // Check file version
-//   if ((uint16_t)buffer[6] == 0)
-//   {
-//     if ((uint16_t)buffer[30] == 23)
-//     {
-//       Serial.printf("Fichero Z80: Version 2.0\n");
-//       ver = 2;
-//     }
-//     else if (((uint16_t)buffer[30] == 54) || ((uint16_t)buffer[30] == 55))
-//     {
-//       Serial.printf("Fichero Z80: Version 3.0\n");
-//       ver = 3;
-//     }
-//     else
-//     {
-//       Serial.printf("Fichero Z80: Version Desconocida (%04X)\n", (uint16_t)buffer[30]);
-//     }
-//     // version>=2 more hardware allowed
-//     switch (buffer[34])
-//     { /* is it 48K? */
-//     case 0:
-//       if ((buffer[37] & 0x80) == 0x80)
-//       {
-//         Serial.printf("Hardware 16K (1)\n");
-//         hwmodel = SPECMDL_16K;
-//         np = 1;
-//       }
-//       else
-//       {
-//         Serial.printf("Hardware 48K (2)\n");
-//         hwmodel = SPECMDL_48K;
-//         np = 3;
-//       }
-//       break;
-//     case 1:
-//       Serial.printf("Hardware 48K + IF1 (3)\n");
-//       hwmodel = SPECMDL_48KIF1;
-//       break;
-//     case 2:
-//       Serial.printf("Hardware 48K + SAMRAM (4)\n");
-//       return (-1);
-//       break;
-//     case 3:
-//       if (ver == 2)
-//       {
-//         if ((buffer[37] & 0x80) == 0x80)
-//         {
-//           Serial.printf("Hardware +2 128K (5)\n");
-//           hwmodel = SPECMDL_PLUS2;
-//           np = 8;
-//         }
-//         else
-//         {
-//           Serial.printf("Hardware 128K (6)\n");
-//           hwmodel = SPECMDL_128K;
-//           np = 8;
-//         }
-//       }
-//       else
-//       {
-//         Serial.printf("48K + M.G.T. (7)\n");
-//         return (-1);
-//       }
-//       break;
-//     case 4:
-//       if (ver == 2)
-//       {
-//         Serial.printf("Hardware 128K + IF1 (8)\n");
-//         return (-1);
-//       }
-//       else
-//       {
-//         if ((buffer[37] & 0x80) == 0x80)
-//         {
-//           Serial.printf("Hardware +2 128K (9)\n");
-//           hwmodel = SPECMDL_PLUS2;
-//           np = 8;
-//         }
-//         else
-//         {
-//           Serial.printf("Hardware 128K (A)\n");
-//           hwmodel = SPECMDL_128K;
-//           np = 8;
-//         }
-//       }
-//       break;
-//     case 5:
-//       Serial.printf("Hardware 128K + IF1 (B)\n");
-//       return (-1);
-//       break;
-//     case 6:
-//       Serial.printf("Hardware 128K + M.G.T (C)\n");
-//       return (-1);
-//       break;
-//     case 7:
-//       if ((buffer[37] & 0x80) == 0x80)
-//       {
-//         Serial.printf("Hardware +2A 128K (D)\n");
-//         hwmodel = SPECMDL_PLUS3;
-//         np = 8;
-//       }
-//       else
-//       {
-//         Serial.printf("Hardware Spectrum +3 (E)\n");
-//         hwmodel = SPECMDL_PLUS3;
-//         np = 8;
-//       }
-//       break;
-//     case 8:
-//       if ((buffer[37] & 0x80) == 0x80)
-//       {
-//         Serial.printf("Hardware +2A 128K (F)\n");
-//         hwmodel = SPECMDL_PLUS3;
-//         np = 8;
-//       }
-//       else
-//       {
-//         Serial.printf("Hardware Spectrum +3 (xzx deprecated)(10)\n");
-//         hwmodel = SPECMDL_PLUS3;
-//         np = 8;
-//       }
-//       break;
-//     case 9:
-//       Serial.printf("Pentagon 128K (11)\n");
-//       np = 8;
-//       return (-1);
-//       break;
-//     case 10:
-//       Serial.printf("Hardware Scorpion (12)\n");
-//       np = 16;
-//       return (-1);
-//       break;
-//     case 11:
-//       Serial.printf("Hardware Didaktik-Kompakt (13)\n");
-//       return (-1);
-//       break;
-//     case 12:
-//       Serial.printf("Hardware Spectrum +2 128K (14)\n");
-//       hwmodel = SPECMDL_PLUS2;
-//       np = 8;
-//       break;
-//     case 13:
-//       Serial.printf("Hardware Spectrum +2A 128K (15)\n");
-//       hwmodel = SPECMDL_PLUS3;
-//       np = 8;
-//       break;
-//     case 14:
-//       Serial.printf("Hardware Timex TC2048 (16)\n");
-//       return (-1);
-//       break;
-//     case 64:
-//       Serial.printf("Hardware Inves Spectrum + 48K (Aspectrum Specific)(17)\n");
-//       hwmodel = SPECMDL_INVES;
-//       np = 4;
-//       break;
-//     case 65:
-//       Serial.printf("Hardware Spectrum 128K Spanish (Aspectrum Specific)(18)\n");
-//       hwmodel = SPECMDL_128K;
-//       np = 8;
-//       break;
-//     case 128:
-//       Serial.printf("Hardware Timex TC2068 (19)\n");
-//       return (-1);
-//       break;
-//     default:
-//       Serial.printf("Unknown hardware, %x\n", buffer[34]);
-//       return (-1);
-//       break;
-//     }
-//     /*
-//       if (hwmodel!=SPECMDL_48K) {
-//         Serial.printf("Hardware no soporta carga de .Z80\n");
-//         return (-1);
-//       }
-//     */
-//     if (speccy->hwopt.hw_model != hwmodel)
-//     { // cambiamos de arquitectura si no es correcta.
-//       speccy->end_spectrum();
-//       if (speccy->init_spectrum(hwmodel) == 1)
-//         return (1); // si falla la arquitectura no sigo
-//     }
+  while (inPos < compressedSize && outPos < maxOutPos)
+  {
+    // Read the current byte
+    uint8_t byte = fgetc(fp);
+    inPos++;
+    if (inPos < compressedSize)
+    {
+      uint8_t nextByte = fgetc(fp);
+      inPos++;
+      // Check if this is an RLE encoded sequence
+      if (byte == 0xED && nextByte == 0xED)
+      {
+        // Read the repetition count and value
+        uint8_t repeatCount = fgetc(fp);
+        inPos++;
+        uint8_t repeatValue = fgetc(fp);
+        inPos++;
 
-//     if (np == 0)
-//       Serial.printf("YEPA te has colado np=0\n");
+        // Repeat the value in the output buffer
+        for (int i = 0; i < repeatCount; i++)
+        {
+          if (outPos < maxOutPos)
+          {
+            speccy->z80_poke(outPos++, repeatValue);
+          }
+        }
+      }
+      else
+      {
+        // If not a compressed sequence, copy the bytes directly
+        if (outPos < maxOutPos - 1)
+        {
+          speccy->z80_poke(outPos++, byte);
+          speccy->z80_poke(outPos++, nextByte);
+        }
+      }
+    }
+    else
+    {
+      if (outPos < maxOutPos)
+      {
+        speccy->z80_poke(outPos++, byte);
+      }
+    }
+  }
+}
 
-//     sig = 30 + 2 + buffer[30];
-//     fseek(fp, sig, SEEK_SET);
-//     for (f = 0; f < np; f++)
-//     {
-//       tam = fgetc(fp);
-//       tam = tam + (fgetc(fp) << 8);
-//       pag = fgetc(fp);
-//       sig = sig + tam + 3;
-//       Serial.printf(" pagina a cargar es: %i, tama�o:%x\n", pag, tam);
-//       switch (hwmodel)
-//       {
-//       case SPECMDL_16K:
-//       case SPECMDL_48K:
-//         switch (pag)
-//         {
-//         case 4:
-//           ini = 0x8000;
-//           break;
-//         case 5:
-//           ini = 0xc000;
-//           break;
-//         case 8:
-//           ini = 0x4000;
-//           break;
-//         default:
-//           ini = 0x4000;
-//           Serial.printf("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
-//           break;
-//         }
-//         break;
-//       case SPECMDL_128K:
-//       case SPECMDL_PLUS2:
-//       case SPECMDL_PLUS3:
-//         switch (pag)
-//         {
-//         case 3:
-//           ini = 0x0000;
-//           break;
-//         case 4:
-//           ini = 0x4000;
-//           break;
-//         case 5:
-//           ini = 0x8000;
-//           break;
-//         case 6:
-//           ini = 0xc000;
-//           break;
-//         case 7:
-//           ini = 0x10000;
-//           break;
-//         case 8:
-//           ini = 0x14000;
-//           break;
-//         case 9:
-//           ini = 0x18000;
-//           break;
-//         case 10:
-//           ini = 0x1c000;
-//           break;
-//         default:
-//           ini = 0x04000;
-//           Serial.printf("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
-//           break;
-//         }
-//         break;
-//       case SPECMDL_INVES:
-//         switch (pag)
-//         {
-//         case 4:
-//           ini = 0x8000;
-//           break;
-//         case 5:
-//           ini = 0xc000;
-//           break;
-//         case 8:
-//           ini = 0x4000;
-//           break;
-//         case 0:
-//           ini = 0x10000;
-//           break;
-//         default:
-//           ini = 0x4000;
-//           Serial.printf("Algo raro pasa con ese Snapshot, remitalo al autor para debug\n");
-//           break;
-//         }
-//         break;
-//       }
-//       UncompressZ80((tam == 0xffff ? Z80BL_V2UNCOMP : Z80BL_V2COMPRE), ini, speccy, fp);
-//     }
-//     speccy->z80Regs->PC.B.l = buffer[32];
-//     speccy->z80Regs->PC.B.h = buffer[33];
-//     if ((hwmodel == SPECMDL_128K) || (hwmodel == SPECMDL_PLUS2))
-//     {
-//       speccy->hwopt.BANKM = 0x00; /* need to clear lock latch or next dont work. */
-//       speccy->outbankm_128k(buffer[35]);
-//     }
-//     if (hwmodel == SPECMDL_PLUS3)
-//     {
-//       speccy->hwopt.BANKM = 0x00; /* need to clear lock latch or next dont work. */
-//       speccy->outbankm_p37(buffer[35]);
-//       speccy->outbankm_p31(buffer[86]);
-//     }
+int getZ80Version(uint8_t *buffer)
+{
+  if ((uint16_t)buffer[6] == 0)
+  {
+    return 1;
+  }
+  if ((uint16_t)buffer[30] == 23)
+  {
+    return 2;
+  }
+  if (((uint16_t)buffer[30] == 54) || ((uint16_t)buffer[30] == 55))
+  {
+    return 3;
+  }
+  return 0;
+}
 
-//     // aki abria que a�adir lo del sonido claro.
-//   }
-//   else
-//   {
-//     Serial.printf("Fichero Z80: Version 1.0\n");
+void loadZ80Regs(ZXSpectrum *speccy, uint8_t *buffer)
+{
+  speccy->z80Regs->AF.B.h = buffer[0];
+  speccy->z80Regs->AF.B.l = buffer[1];
+  speccy->z80Regs->BC.B.l = buffer[2];
+  speccy->z80Regs->BC.B.h = buffer[3];
+  speccy->z80Regs->HL.B.l = buffer[4];
+  speccy->z80Regs->HL.B.h = buffer[5];
+  speccy->z80Regs->SP.B.l = buffer[8];
+  speccy->z80Regs->SP.B.h = buffer[9];
+  speccy->z80Regs->I = buffer[10];
+  speccy->z80Regs->R.B.l = buffer[11];
+  speccy->z80Regs->R.B.h = 0;
+  speccy->hwopt.BorderColor = ((buffer[12] & 0x0E) >> 1);
+  speccy->z80Regs->DE.B.l = buffer[13];
+  speccy->z80Regs->DE.B.h = buffer[14];
+  speccy->z80Regs->BCs.B.l = buffer[15];
+  speccy->z80Regs->BCs.B.h = buffer[16];
+  speccy->z80Regs->DEs.B.l = buffer[17];
+  speccy->z80Regs->DEs.B.h = buffer[18];
+  speccy->z80Regs->HLs.B.l = buffer[19];
+  speccy->z80Regs->HLs.B.h = buffer[20];
+  speccy->z80Regs->AFs.B.h = buffer[21];
+  speccy->z80Regs->AFs.B.l = buffer[22];
+  speccy->z80Regs->IY.B.l = buffer[23];
+  speccy->z80Regs->IY.B.h = buffer[24];
+  speccy->z80Regs->IX.B.l = buffer[25];
+  speccy->z80Regs->IX.B.h = buffer[26];
+  speccy->z80Regs->IFF1 = buffer[27] & 0x01;
+  speccy->z80Regs->IFF2 = buffer[28] & 0x01;
+  speccy->z80Regs->IM = buffer[29] & 0x03;
+}
 
-//     if (speccy->hwopt.hw_model != SPECMDL_48K)
-//     { // V1 es siempre 48K camb. arquit. si no es correcta.
-//       speccy->end_spectrum();
-//       speccy->init_spectrum(SPECMDL_48K);
-//     }
+bool loadZ80Version1(ZXSpectrum *speccy, uint8_t *buffer, FILE *fp)
+{
+  // only 48K is supported
+  if (speccy->hwopt.hw_model != SPECMDL_48K)
+  {
+    speccy->end_spectrum();
+    speccy->init_spectrum(SPECMDL_48K);
+  }
+  // get the file size
+  fseek(fp, 0, SEEK_END);
+  int totalSize = ftell(fp);
+  fseek(fp, 30, SEEK_SET);
+  if (buffer[12] & 0x20)
+  {
+    decompressZ80BlockV1(fp, totalSize - 30, speccy);
+  }
+  else
+  {
+    // read the data straight into the current ram
+    fread(speccy->mem.mappedMemory[1], 0x4000, 1, fp);
+    fread(speccy->mem.mappedMemory[2], 0x4000, 1, fp);
+    fread(speccy->mem.mappedMemory[3], 0x4000, 1, fp);
+    fread(speccy->mem.mappedMemory[4], 0x4000, 1, fp);
+  }
+  speccy->z80Regs->PC.B.l = buffer[6];
+  speccy->z80Regs->PC.B.h = buffer[7];
+  loadZ80Regs(speccy, buffer);
+  return true;
+}
 
-//     if (buffer[12] & 0x20)
-//     {
-//       Serial.printf("Fichero Z80: Comprimido\n");
-//       fseek(fp, 30, SEEK_SET);
-//       UncompressZ80(Z80BL_V1COMPRE, 0x4000, speccy, fp);
-//     }
-//     else
-//     {
-//       Serial.printf("Fichero Z80: Sin comprimir\n");
-//       fseek(fp, 30, SEEK_SET);
-//       UncompressZ80(Z80BL_V1UNCOMP, 0x4000, speccy, fp);
-//     }
-//     speccy->z80Regs->PC.B.l = buffer[6];
-//     speccy->z80Regs->PC.B.h = buffer[7];
-//   }
+models_enum getHardwareModel(uint8_t *buffer, int version)
+{
+  int mch = buffer[34];
+  if (version == 2)
+  {
+    if (mch == 0)
+      return SPECMDL_48K;
+    if (mch == 1)
+      return SPECMDL_48K; // + if1
+    // if (mch == 2) z80_arch = "SAMRAM";
+    if (mch == 3)
+      return SPECMDL_128K;
+    if (mch == 4)
+      return SPECMDL_128K; // + if1
+  }
+  else if (version == 3)
+  {
+    if (mch == 0)
+      return SPECMDL_48K;
+    if (mch == 1)
+      return SPECMDL_48K; // + if1
+    // if (mch == 2) z80_arch = "SAMRAM";
+    if (mch == 3)
+      return SPECMDL_48K; // + mgt
+    if (mch == 4)
+      return SPECMDL_128K;
+    if (mch == 5)
+      return SPECMDL_128K; // + if1
+    if (mch == 6)
+      return SPECMDL_128K; // + mgt
+    if (mch == 7)
+      return SPECMDL_128K; // Spectrum +3
+    // if (mch == 9) z80_arch = "Pentagon";
+    if (mch == 12)
+      return SPECMDL_128K; // Spectrum +2
+    if (mch == 13)
+      return SPECMDL_128K; // Spectrum +2A
+  }
+  return SPECMDL_UNKNOWN;
+}
 
-//   speccy->z80Regs->AF.B.h = buffer[0];
-//   speccy->z80Regs->AF.B.l = buffer[1];
-//   speccy->z80Regs->BC.B.l = buffer[2];
-//   speccy->z80Regs->BC.B.h = buffer[3];
-//   speccy->z80Regs->HL.B.l = buffer[4];
-//   speccy->z80Regs->HL.B.h = buffer[5];
-//   speccy->z80Regs->SP.B.l = buffer[8];
-//   speccy->z80Regs->SP.B.h = buffer[9];
-//   speccy->z80Regs->I = buffer[10];
-//   speccy->z80Regs->R.B.l = buffer[11];
-//   speccy->z80Regs->R.B.h = 0;
-//   speccy->hwopt.BorderColor = ((buffer[12] & 0x0E) >> 1);
-//   speccy->z80Regs->DE.B.l = buffer[13];
-//   speccy->z80Regs->DE.B.h = buffer[14];
-//   speccy->z80Regs->BCs.B.l = buffer[15];
-//   speccy->z80Regs->BCs.B.h = buffer[16];
-//   speccy->z80Regs->DEs.B.l = buffer[17];
-//   speccy->z80Regs->DEs.B.h = buffer[18];
-//   speccy->z80Regs->HLs.B.l = buffer[19];
-//   speccy->z80Regs->HLs.B.h = buffer[20];
-//   speccy->z80Regs->AFs.B.h = buffer[21];
-//   speccy->z80Regs->AFs.B.l = buffer[22];
-//   speccy->z80Regs->IY.B.l = buffer[23];
-//   speccy->z80Regs->IY.B.h = buffer[24];
-//   speccy->z80Regs->IX.B.l = buffer[25];
-//   speccy->z80Regs->IX.B.h = buffer[26];
-//   speccy->z80Regs->IFF1 = buffer[27] & 0x01;
-//   speccy->z80Regs->IFF2 = buffer[28] & 0x01;
-//   speccy->z80Regs->IM = buffer[29] & 0x03;
+bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *fp)
+{
+  models_enum hwmodel = getHardwareModel(buffer, version);
+  if (speccy->hwopt.hw_model != hwmodel)
+  {
+    speccy->end_spectrum();
+    if (!speccy->init_spectrum(hwmodel))
+    {
+      return false;
+    }
+  }
+  bool isDataCompressed = (buffer[12] & 0x20) ? true : false;
+  // get the total length of the file
+  fseek(fp, 0, SEEK_END);
+  int totalSize = ftell(fp);
+  // move to the start of the memory pages
+  int dataOffset = 30 + 2 + buffer[30];
+  fseek(fp, dataOffset, SEEK_SET);
+  while (dataOffset < totalSize)
+  {
+    int length = fgetc(fp) + (fgetc(fp) << 8);
+    int page = fgetc(fp);
+    dataOffset += 3 + length;
+    Serial.printf("Reading page %d, length %d\n", page, length);
+    /*
+    Page 0: ROM bank 0 (128K mode)
+    Page 1: ROM bank 1 (48K mode)
+    Page 3: RAM page 0
+    Page 4: RAM page 1
+    Page 5: RAM page 2
+    Page 6: RAM page 3
+    Page 7: RAM page 4
+    Page 8: RAM page 5
+    Page 9: RAM page 6
+    Page 10: RAM page 7
+    */
+    // ignore the ROM pages - let's assume we've got the correct ROM loaded...
+    if (page < 3)
+    {
+      continue;
+    }
+    // if the data is compressed, we need to uncompress it
+    if (isDataCompressed)
+    {
+      decompressZ80BlockV2orV3(fp, length, speccy->mem.banks[page - 3], 0x4000);
+    }
+    else
+    {
+      fread(speccy->mem.banks[page - 3], length, 1, fp);
+    }
+  }
+  speccy->z80Regs->PC.B.l = buffer[32];
+  speccy->z80Regs->PC.B.h = buffer[33];
+  if ((hwmodel == SPECMDL_128K))
+  {
+    speccy->mem.page(buffer[35]);
+  }
+  loadZ80Regs(speccy, buffer);
+  return true;
+}
 
-//   return (0);
-// }
+bool LoadZ80(ZXSpectrum *speccy, FILE *fp)
+{
+  // read in the header
+  uint8_t buffer[87];
+  fread(buffer, 87, 1, fp);
+  if (buffer[12] == 255)
+    buffer[12] = 1; /*as told in CSS FAQ / .z80 section */
+  switch (getZ80Version(buffer))
+  {
+  case 1:
+    return loadZ80Version1(speccy, buffer, fp);
+  case 2:
+  case 3:
+    return loadZ80Version2or3(speccy, buffer, getZ80Version(buffer), fp);
+  }
+  Serial.println("Unknown Z80 version");
+  return false;
+}
 
 // /*-----------------------------------------------------------------
 //  char LoadSP( Z80Regs *regs, FILE *fp );
@@ -571,7 +453,7 @@ void writeZ80block(ZXSpectrum *speccy, int block, int offset, FILE *fp);
  char LoadSNA( Z80Regs *regs, char *filename );
  This loads a .SNA file from disk to the Z80 registers/memory.
 ------------------------------------------------------------------*/
-int Load_SNA(ZXSpectrum *speccy, const char *filename)
+bool LoadSNA(ZXSpectrum *speccy, const char *filename)
 {
   uint8_t page;
   uint8_t buffer[27];
@@ -582,7 +464,7 @@ int Load_SNA(ZXSpectrum *speccy, const char *filename)
   if (!fp)
   {
     Serial.println("Algo fallo cargando el SNA\n");
-    return 1;
+    return false;
   }
   // get the size of the file
   fseek(fp, 0, SEEK_END);
@@ -640,7 +522,7 @@ int Load_SNA(ZXSpectrum *speccy, const char *filename)
     speccy->z80Regs->SP.W++;
   }
   else if (model = SPECMDL_16K)
-  { 
+  {
     fread(speccy->mem.mappedMemory[1], 0x4000, 1, fp);
     speccy->z80Regs->PC.B.l = speccy->z80_peek(speccy->z80Regs->SP.W);
     speccy->z80Regs->SP.W++;
@@ -648,7 +530,7 @@ int Load_SNA(ZXSpectrum *speccy, const char *filename)
     speccy->z80Regs->SP.W++;
   }
   else
-  { 
+  {
     // 128K
     fseek(fp, 49179, SEEK_SET);
     fread(&unbyte, 1, 1, fp); // FIXME seguro que hay formas mejores
@@ -668,17 +550,21 @@ int Load_SNA(ZXSpectrum *speccy, const char *filename)
     fseek(fp, 49183, SEEK_SET);
     // this is the page that is mapped into the memory already and has already been loaded
     int currentPage = page & 0x07;
-    for(int i = 0; i<8; i++) {
-      if (i == currentPage || i == 5 || i == 2) {
+    for (int i = 0; i < 8; i++)
+    {
+      if (i == currentPage || i == 5 || i == 2)
+      {
         // nothing to do for these banks as they've already been loaded
         continue;
-      } else {
+      }
+      else
+      {
         fread(speccy->mem.banks[i], 0x4000, 1, fp);
       }
     }
   }
   fclose(fp);
-  return (0);
+  return true;
 }
 
 /*-----------------------------------------------------------------

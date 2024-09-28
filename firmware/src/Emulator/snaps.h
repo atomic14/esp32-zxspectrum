@@ -31,11 +31,10 @@
 
 // uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
 // uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
-//uint8_t LoadSNA (ZXSpectrum *speccy, FILE *);
-// uint8_t LoadZ80 (ZXSpectrum *speccy, FILE *);
 // uint8_t LoadSCR (ZXSpectrum *speccy, FILE *);
 
-int Load_SNA (ZXSpectrum *speccy, const char *filename);
+bool LoadSNA (ZXSpectrum *speccy, const char *filename);
+bool LoadZ80 (ZXSpectrum *speccy, const char *filename);
 // int Load_SCR (ZXSpectrum *speccy, const char *filename);
 
 // uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);

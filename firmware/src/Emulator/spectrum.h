@@ -8,6 +8,7 @@
 
 enum models_enum
 {
+  SPECMDL_UNKNOWN = 0,
   SPECMDL_16K = 1,
   SPECMDL_48K,
   // SPECMDL_INVES,
@@ -17,6 +18,7 @@ enum models_enum
   // SPECMDL_48KIF1,
   // SPECMDL_48KTRANSTAPE
 };
+
 enum inttypes_enum
 {
   NORMAL = 1,
@@ -150,13 +152,13 @@ public:
   uint8_t z80_in(uint16_t dir);
   void z80_out(uint16_t port, uint8_t dato);
 
-  void init_spectrum(int model);
+  bool init_spectrum(int model);
   void end_spectrum(void);
   void reset_spectrum(Z80Regs *);
 
-  void init_48k();
-  void init_16k();
-  void init_128k(void);
+  bool init_48k();
+  bool init_16k();
+  bool init_128k(void);
   void reset_128k(void);
 };
 
