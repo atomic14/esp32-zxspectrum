@@ -27,6 +27,8 @@ class EmulatorScreen : public Screen
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename);
+    void run48K();
+    void run128K();
     void stop();
     friend void drawDisplay(void *pvParameters);
     friend void drawScreen(EmulatorScreen *emulatorScreen);

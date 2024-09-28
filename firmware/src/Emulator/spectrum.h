@@ -3,28 +3,25 @@
 
 #include "z80/z80.h"
 #include "keyboard_defs.h"
+#include <string.h>
+#include <Arduino.h>
 
 enum models_enum
 {
   SPECMDL_16K = 1,
   SPECMDL_48K,
-  SPECMDL_INVES,
+  // SPECMDL_INVES,
   SPECMDL_128K,
-  SPECMDL_PLUS2,
-  SPECMDL_PLUS3,
-  SPECMDL_48KIF1,
-  SPECMDL_48KTRANSTAPE
+  // SPECMDL_PLUS2,
+  // SPECMDL_PLUS3,
+  // SPECMDL_48KIF1,
+  // SPECMDL_48KTRANSTAPE
 };
 enum inttypes_enum
 {
   NORMAL = 1,
   INVES
 };
-
-#define RO_PAGE 1
-#define RW_PAGE 0
-#define SYSTEM_PAGE 0
-#define NOSYS_PAGE 1
 
 typedef struct
 {
@@ -47,32 +44,80 @@ typedef struct
   int tstate_border_right;
   int hw_model;
   int int_type;
-  int videopage;
-  int BANKM;
-  int BANK678;
   int emulate_FF;
   uint8_t BorderColor;
   uint8_t portFF;
   uint8_t SoundBits;
 } tipo_hwopt;
 
-typedef struct
-{              // estructura de memoria
-  uint8_t *p;  // pointer to memory poll
-  int mp;      // bitmap for page bits in z80 mem
-  int md;      // bitmap for dir bits in z80 mem
-  int np;      // number of pages of memory
-  int ro[16];  // map of pages for read  (map ar alwais a offset for *p)
-  int wo[16];  // map of pages for write
-  int sro[16]; // map of system memory pages for read (to remember when perife-
-  int swo[16]; // map of system memory pages for write         -rical is paged)
-  int vn;      // number of video pages
-  int vo[2];   // map of video memory
-  int roo;     // offset to dummy page for readonly emulation
-               //   Precalculated data
-  int mr;      // times left rotations for page ( number of zero of mp)
-  int sp;      // size of pages (hFFFF / mp)
-} tipo_mem;
+class Memory {
+  public:
+    uint8_t hwBank = 0;
+    uint8_t *rom[2];
+    uint8_t *banks[8];
+    uint8_t *currentScreen;
+    uint8_t *mappedMemory[4];
+    Memory() {
+      // allocate space for the rom
+      for (int i = 0; i < 2; i++) {
+        rom[i] = (uint8_t *)malloc(0x4000);
+        if (rom[i] == 0) {
+          Serial.println("Failed to allocate ROM");
+        }
+        memset(rom[i], 0, 0x4000);
+      }
+      // allocate space for the memory banks
+      for (int i = 0; i < 8; i++) {
+        banks[i] = (uint8_t *)malloc(0x4000);
+        if (banks[i] == 0) {
+          Serial.println("Failed to allocate RAM");
+        }
+        memset(banks[i], 0, 0x4000);
+      }
+      // wire up the default memory configuration - this will work for the 48k model and is the default for the 128k model
+      mappedMemory[0] = rom[0];
+      mappedMemory[1] = banks[5];
+      mappedMemory[2] = banks[2];
+      mappedMemory[3] = banks[0];
+      currentScreen = banks[5];
+    }
+    // handle the 128k paging
+    void page(uint8_t newHwBank) {
+      // check to see if paging has been disabled
+      if (hwBank & 32) {
+        return;
+      }
+      hwBank = newHwBank;
+      // the lower 3 bits of the bank register determine which ram bank is paged in to the top 16K
+      mappedMemory[3] = banks[hwBank & 0x07];
+      // bit 3 controls the video page - but this is just for the ULA, the CPU always sees the same memory
+      currentScreen = banks[hwBank & 0x08 ? 7 : 5];
+      // bit 4 of the bank register determines which rom bank is paged in
+      mappedMemory[0] = rom[hwBank & 0x10 ? 1 : 0];      
+    }
+    inline uint8_t peek(int address) {
+      int memoryBank = address >> 14;
+      int bankAddress = address & 0x3fff;
+      return mappedMemory[memoryBank][bankAddress];
+    }
+    inline void poke(int address, uint8_t value) {
+      int memoryBank = address >> 14;
+      int bankAddress = address & 0x3fff;
+      if (memoryBank == 0) {
+        // ignore writes to rom
+      } else {
+        mappedMemory[memoryBank][bankAddress] = value;
+      }
+    }
+    void loadRom(uint8_t *rom_data, int rom_len) {
+      Serial.printf("Loading ROM %d", rom_len);
+      int romCount = rom_len / 0x4000;
+      for (int i = 0; i < romCount; i++) {
+        Serial.printf("Copying ROM %d\n", i);
+        memcpy(rom[i], rom_data + (i * 0x4000), 0x4000);
+      }
+    }
+};
 
 class AudioOutput;
 
@@ -80,7 +125,7 @@ class ZXSpectrum
 {
 public:
   Z80Regs *z80Regs;
-  tipo_mem mem;
+  Memory mem;
   tipo_hwopt hwopt;
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
@@ -92,56 +137,27 @@ public:
   void interrupt();
   void updatekey(SpecKeys key, uint8_t state);
 
-  inline uint8_t z80_peek(uint16_t dir)
+  inline uint8_t z80_peek(uint16_t address)
   {
-    int page;
-    uint8_t dato;
-    page = (dir & mem.mp) >> mem.mr;
-    dato = *(mem.p + mem.ro[page] + (dir & mem.md));
-    return dato;
+    return mem.peek(address);
   }
 
-  inline void z80_poke(uint16_t dir, uint8_t dato)
+  inline void z80_poke(uint16_t address, uint8_t value)
   {
-    int page;
-    page = (dir & mem.mp) >> mem.mr;
-    *(mem.p + mem.wo[page] + (dir & mem.md)) = dato;
-  }
-
-  inline uint8_t readvmem(uint16_t offset, int page)
-  {
-    return *(mem.p + mem.vo[page] + offset);
+    mem.poke(address, value);
   }
 
   uint8_t z80_in(uint16_t dir);
-
   void z80_out(uint16_t port, uint8_t dato);
 
-  void pagein(int size, int bloq, int page, int ro, int issystem);
-  void pageout(int size, int bloq, int page);
+  void init_spectrum(int model);
+  void end_spectrum(void);
+  void reset_spectrum(Z80Regs *);
 
-  int init_spectrum(int model, const char *romfile);
-  int init_spectrum(int model, uint8_t *rom, int rom_len);
-  int end_spectrum(void);
-  int reset_spectrum(Z80Regs *);
-
-  int init_48k(const char *romfile);
-  int init_48k(uint8_t *rom, int rom_len);
-  int init_16k(const char *romfile);
-  int init_inves(const char *romfile);
-
-  int init_plus2(void);
-  int init_128k(void);
-  int reset_128k(void);
-  void outbankm_128k(uint8_t dato);
-
-  int init_plus3(void);
-  int reset_plus3(void);
-  void outbankm_p31(uint8_t dato);
-  void outbankm_p37(uint8_t dato);
-
-  int load_rom(const char *);
-  int load_rom(uint8_t *rom, int rom_len);
+  void init_48k();
+  void init_16k();
+  void init_128k(void);
+  void reset_128k(void);
 };
 
 #endif // #ifdef SPECTRUM_H

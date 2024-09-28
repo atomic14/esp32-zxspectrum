@@ -4,7 +4,6 @@
 #include "../Emulator/snaps.h"
 #include "../AudioOutput/AudioOutput.h"
 #include "EmulatorScreen.h"
-#include "../Emulator/48k_rom.h"
 
 const int screenWidth = TFT_HEIGHT;
 const int screenHeight = TFT_WIDTH;
@@ -50,8 +49,8 @@ void drawScreen(EmulatorScreen *emulatorScreen)
     lastBorderColor = tftColor;
   }
   // do the pixels
-  uint8_t *attrBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage] + 0x1800;
-  uint8_t *pixelBase = machine->mem.p + machine->mem.vo[machine->hwopt.videopage];
+  uint8_t *attrBase = machine->mem.currentScreen + 0x1800;
+  uint8_t *pixelBase = machine->mem.currentScreen;
   uint8_t *attrBaseCopy = emulatorScreen->screenBuffer + 0x1800;
   uint8_t *pixelBaseCopy = emulatorScreen->screenBuffer;
   for (int attrY = 0; attrY < 192 / 8; attrY++)
@@ -229,13 +228,44 @@ void EmulatorScreen::run(std::string snaPath)
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
-  machine->init_spectrum(SPECMDL_48K, ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
+  machine->init_spectrum(SPECMDL_48K);
+  machine->reset_spectrum(machine->z80Regs);
+  Load_SNA(machine, snaPath.c_str());
+  m_tft.fillScreen(TFT_WHITE);
+  firstDraw = true;
+  isRunning = true;
+  // tasks to do the work
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
+  // use the I2S output to control the frame rate
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
+}
+
+void EmulatorScreen::run48K() {
+  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(screenBuffer, 0, 6192);
+  machine = new ZXSpectrum();
+  machine->reset();
+  machine->init_spectrum(SPECMDL_48K);
   machine->reset_spectrum(machine->z80Regs);
   m_tft.fillScreen(TFT_WHITE);
-  if (snaPath.length() > 0)
-  {
-    Load_SNA(machine, snaPath.c_str());
-  }
+  firstDraw = true;
+  isRunning = true;
+  // tasks to do the work
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
+  // use the I2S output to control the frame rate
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
+}
+
+void EmulatorScreen::run128K() {
+  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(screenBuffer, 0, 6192);
+  machine = new ZXSpectrum();
+  machine->reset();
+  machine->init_spectrum(SPECMDL_128K);
+  machine->reset_spectrum(machine->z80Regs);
+  m_tft.fillScreen(TFT_WHITE);
   firstDraw = true;
   isRunning = true;
   // tasks to do the work

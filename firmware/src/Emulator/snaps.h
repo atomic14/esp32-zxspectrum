@@ -29,18 +29,18 @@
 #include "./z80/z80.h"
 #include "./spectrum.h"
 
-uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
-uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
+// uint8_t LoadSnapshot (ZXSpectrum *speccy, const char *filename, tipo_mem &mem);
+// uint8_t LoadSP  (ZXSpectrum *speccy, FILE *, tipo_mem &mem);
 //uint8_t LoadSNA (ZXSpectrum *speccy, FILE *);
-uint8_t LoadZ80 (ZXSpectrum *speccy, FILE *);
-uint8_t LoadSCR (ZXSpectrum *speccy, FILE *);
+// uint8_t LoadZ80 (ZXSpectrum *speccy, FILE *);
+// uint8_t LoadSCR (ZXSpectrum *speccy, FILE *);
 
 int Load_SNA (ZXSpectrum *speccy, const char *filename);
-int Load_SCR (ZXSpectrum *speccy, const char *filename);
+// int Load_SCR (ZXSpectrum *speccy, const char *filename);
 
-uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
-uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
-uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);
-uint8_t SaveSCR (ZXSpectrum *speccy, FILE *);
+// uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
+// uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
+// uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);
+// uint8_t SaveSCR (ZXSpectrum *speccy, FILE *);
 
 #endif  // #ifdef SNAPS_H

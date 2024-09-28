@@ -54,7 +54,8 @@ using ModePickerVector = std::vector<ModePickerPtr>;
 
 // Emulator modes
 ModePickerVector emulatorModes = {
-    std::make_shared<ModePicker>("Basic"),
+    std::make_shared<ModePicker>("48K ZX Spectrum"),
+    std::make_shared<ModePicker>("128K ZX Spectrum"),
     std::make_shared<ModePicker>("Games")
 };
 
@@ -146,22 +147,29 @@ void setup(void)
   // wire everythign up
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
   modePicker = new PickerScreen<ModePickerPtr>(*tft, audioOutput, [&](ModePickerPtr mode, int index) {
-    if(index == 0) {
-      // switch to basic
-      emulatorScreen->run("");
-      // switch the touch keyboard to toggle mode so shift and sym-shift are sticky
+    switch(index) {
+      case 0: // 48K
+        emulatorScreen->run48K();
+        activeScreen = emulatorScreen;
+        break;
+      case 1: // 128K
+        emulatorScreen->run128K();
+        activeScreen = emulatorScreen;
+        break;
+      case 2: // Games
+        activeScreen = alphabetPicker;
+        break;
+    }
+    if(index == 0 || index == 1) {
+      // switch the touch keyboard to toggle mode so shift and sym-shift are sticky - this is for the original version 1 board
       #ifdef TOUCH_KEYBOARD
       if (touchKeyboard)
       {
-        // touchKeyboard->setToggleMode(true);
+        touchKeyboard->setToggleMode(true);
       }
       #endif
-      activeScreen = emulatorScreen;
-    } else {
-      // switch to the alphabet picker
-      activeScreen = alphabetPicker;
-      activeScreen->didAppear();
     }
+    activeScreen->didAppear();
   }, [&]() {
     // nothing to do here - we're at the top level
   });
