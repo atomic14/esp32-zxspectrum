@@ -262,6 +262,7 @@ bool ZXSpectrum::init_48k()
   hwopt.hw_model = SPECMDL_48K;
   hwopt.int_type = NORMAL;
   hwopt.SoundBits = 1;
+  mem.page(32, true);
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
   return true;
 }
@@ -291,6 +292,7 @@ bool ZXSpectrum::init_16k()
   hwopt.int_type = NORMAL;
   hwopt.SoundBits = 1;
   // treat it like a 48K
+  mem.page(32, true);
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
   return true;
 }
@@ -319,11 +321,12 @@ bool ZXSpectrum::init_128k()
   hwopt.hw_model = SPECMDL_128K;
   hwopt.int_type = NORMAL;
   hwopt.SoundBits = 1;
+  mem.page(0, true);
   mem.loadRom(ZXSpectrum_128_rom, ZXSpectrum_128_rom_len);
   return true;
 }
 
 void ZXSpectrum::reset_128k(void)
 {
-  mem.page(0x00);
+  mem.page(0x00, true);
 }

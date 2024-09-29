@@ -84,9 +84,9 @@ class Memory {
       currentScreen = banks[5];
     }
     // handle the 128k paging
-    void page(uint8_t newHwBank) {
+    void page(uint8_t newHwBank, bool force = false) {
       // check to see if paging has been disabled
-      if (hwBank & 32) {
+      if ((hwBank & 32) && !force) {
         return;
       }
       hwBank = newHwBank;
@@ -153,7 +153,6 @@ public:
   void z80_out(uint16_t port, uint8_t dato);
 
   bool init_spectrum(int model);
-  void end_spectrum(void);
   void reset_spectrum(Z80Regs *);
 
   bool init_48k();

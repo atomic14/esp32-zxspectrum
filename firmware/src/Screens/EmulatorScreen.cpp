@@ -230,13 +230,12 @@ void EmulatorScreen::run(std::string snaPath)
   machine->reset();
   machine->init_spectrum(SPECMDL_48K);
   machine->reset_spectrum(machine->z80Regs);
-  LoadSNA(machine, snaPath.c_str());
+  Load(machine, snaPath.c_str());
   m_tft.fillScreen(TFT_WHITE);
   firstDraw = true;
   isRunning = true;
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
-  // use the I2S output to control the frame rate
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
@@ -253,7 +252,6 @@ void EmulatorScreen::run48K() {
   isRunning = true;
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
-  // use the I2S output to control the frame rate
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
@@ -270,7 +268,6 @@ void EmulatorScreen::run128K() {
   isRunning = true;
   // tasks to do the work
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
-  // use the I2S output to control the frame rate
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
