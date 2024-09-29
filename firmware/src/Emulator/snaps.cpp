@@ -32,11 +32,14 @@
 
 bool Load(ZXSpectrum *speccy, const char *filename)
 {
-  if (strstr(filename, ".sna") != NULL)
+  // convert the filename to lower case
+  std::string filenameStr = filename;
+  std::transform(filenameStr.begin(), filenameStr.end(), filenameStr.begin(), ::tolower);
+  if (strstr(filenameStr.c_str(), ".sna") != NULL)
   {
     return LoadSNA(speccy, filename);
   }
-  else if (strstr(filename, ".z80") != NULL)
+  else if (strstr(filenameStr.c_str(), ".z80") != NULL)
   {
     return LoadZ80(speccy, filename);
   }
