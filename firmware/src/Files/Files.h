@@ -39,10 +39,10 @@ public:
   using iterator_category = std::input_iterator_tag;
 
   // Construct "end" iterator
-  DirectoryIterator() : dirp(nullptr), entry(nullptr), extension(nullptr) {}
+  DirectoryIterator() : dirp(nullptr), entry(nullptr) {}
 
   // Construct iterator for directory path with optional file prefix and extension filter
-  DirectoryIterator(const std::string &path, const char *prefix, const char *ext = nullptr) : dirp(opendir(path.c_str())), prefix(prefix), extension(ext)
+  DirectoryIterator(const std::string &path, const char *prefix, std::vector<std::string> extensions) : dirp(opendir(path.c_str())), prefix(prefix), extensions(extensions)
   {
     if (!dirp)
     {
@@ -56,7 +56,7 @@ public:
 
   // Allow move construction
   DirectoryIterator(DirectoryIterator &&other) noexcept
-      : dirp(other.dirp), entry(other.entry), extension(other.extension)
+      : dirp(other.dirp), entry(other.entry), extensions(other.extensions)
   {
     other.dirp = nullptr;
     other.entry = nullptr;
@@ -104,7 +104,7 @@ public:
 private:
   DIR *dirp;
   pointer entry;
-  const char *extension;
+  std::vector<std::string> extensions;
   const char *prefix;
 
   bool isValidEntry()
@@ -121,11 +121,20 @@ private:
     }
 
     std::string lowerCaseFilename = downcase(filename);
-    if (extension != nullptr)
+    if (extensions.size() > 0)
     {
-      std::string lowerCaseExtension = downcase(extension);
-      if (lowerCaseFilename.length() < lowerCaseExtension.length() ||
-          lowerCaseFilename.substr(lowerCaseFilename.length() - lowerCaseExtension.length()) != lowerCaseExtension)
+      bool validExtension = false;
+      for (const std::string &extension : extensions)
+      {
+        std::string lowerCaseExtension = downcase(extension);
+        if (lowerCaseFilename.length() >= lowerCaseExtension.length() &&
+            lowerCaseFilename.substr(lowerCaseFilename.length() - lowerCaseExtension.length()) == lowerCaseExtension)
+        {
+          validExtension = true;
+          break;
+        }
+      }
+      if (!validExtension)
       {
         return false; // Extension does not match
       }
@@ -206,7 +215,7 @@ public:
 #endif
   }
 
-  FileLetterCountVector getFileLetters(const char *folder, const char *extension)
+  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions)
   {
     FileLetterCountVector fileLetters;
 
@@ -215,7 +224,7 @@ public:
 
     std::map<std::string, int> fileCountByLetter;
 
-    for (DirectoryIterator it(full_path, nullptr, extension); it != DirectoryIterator(); ++it)
+    for (DirectoryIterator it(full_path, nullptr, extensions); it != DirectoryIterator(); ++it)
     {
       std::string filename = it->d_name;
       std::string lowerCaseFilename = downcase(filename);
@@ -238,14 +247,18 @@ public:
     return fileLetters;
   }
 
-  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const char *extension)
+  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions)
   {
     FileInfoVector files;
 
     std::string full_path = std::string(MOUNT_POINT) + folder;
-    std::cout << "Listing directory: " << full_path << " for files starting with " << prefix << " extension " << extension << std::endl;
+    std::cout << "Listing directory: " << full_path << " for files starting with " << prefix << std::endl;
+    for (const std::string &extension : extensions)
+    {
+      std::cout << "Extension: " << extension << std::endl;
+    }
 
-    for (DirectoryIterator it(full_path, prefix, extension); it != DirectoryIterator(); ++it)
+    for (DirectoryIterator it(full_path, prefix, extensions); it != DirectoryIterator(); ++it)
     {
       files.push_back(FileInfoPtr(new FileInfo(upcase(it->d_name), full_path + it->d_name)));
     }

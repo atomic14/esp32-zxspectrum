@@ -76,6 +76,8 @@ TouchKeyboard *touchKeyboard = nullptr;
 TouchKeyboardV2 *touchKeyboard = nullptr;
 #endif
 
+const std::vector<std::string> validExtensions = {".z80", ".sna"};
+
 void setup(void)
 {
   Serial.begin(115200);
@@ -105,6 +107,19 @@ void setup(void)
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
 #endif
+#ifdef I2S_SPEAKER_SERIAL_CLOCK
+#ifdef SPK_MODE
+  pinMode(SPK_MODE, OUTPUT);
+  digitalWrite(SPK_MODE, HIGH);
+#endif
+  // i2s speaker pins
+  i2s_pin_config_t i2s_speaker_pins = {
+      .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
+      .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
+      .data_out_num = I2S_SPEAKER_SERIAL_DATA,
+      .data_in_num = I2S_PIN_NO_CHANGE};
+  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
+#endif
 #ifdef TOUCH_KEYBOARD
   touchKeyboard = new TouchKeyboard(
     [&](SpecKeys key, bool down) {
@@ -124,22 +139,7 @@ void setup(void)
   });
   touchKeyboard->start();
 #endif
-#ifdef I2S_SPEAKER_SERIAL_CLOCK
-#ifdef SPK_MODE
-  pinMode(SPK_MODE, OUTPUT);
-  digitalWrite(SPK_MODE, HIGH);
-#endif
-  // i2s speaker pins
-  i2s_pin_config_t i2s_speaker_pins = {
-      .bck_io_num = I2S_SPEAKER_SERIAL_CLOCK,
-      .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
-      .data_out_num = I2S_SPEAKER_SERIAL_DATA,
-      .data_in_num = I2S_PIN_NO_CHANGE};
-  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
-#endif
-#ifdef BUZZER_GPIO_NUM
   audioOutput->start(15625);
-#endif
   // tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
   tft = new TFTeSPIWrapper();
   // Files
@@ -176,7 +176,7 @@ void setup(void)
   alphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
-    filePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), ".sna"));
+    filePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), validExtensions));
     activeScreen = filePickerScreen;
   }, [&]() {
     // go back to the mode picker
@@ -201,7 +201,7 @@ void setup(void)
     activeScreen->didAppear();
   });
   // feed in the alphabetically grouped files to the alphabet picker
-  alphabetPicker->setItems(files->getFileLetters("/", ".sna"));
+  alphabetPicker->setItems(files->getFileLetters("/", validExtensions));
   // set the mode picker to show the emulator modes
   modePicker->setItems(emulatorModes);
   // start off the keyboard and feed keys into the active scene
