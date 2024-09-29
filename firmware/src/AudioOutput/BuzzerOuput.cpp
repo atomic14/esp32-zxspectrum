@@ -33,7 +33,7 @@ void BuzzerOutput::start(uint32_t sample_rate)
   ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
 }
 
-void BuzzerOutput::write(int8_t *samples, int count)
+void BuzzerOutput::write(uint8_t *samples, int count)
 {
   while (true)
   {
@@ -43,7 +43,7 @@ void BuzzerOutput::write(int8_t *samples, int count)
       {
         //Serial.println("Filling second buffer");
         // make sure there's enough room for the samples
-        mSecondBuffer = (int8_t *)realloc(mSecondBuffer, count);
+        mSecondBuffer = (uint8_t *)realloc(mSecondBuffer, count);
         // copy them into the second buffer
         memcpy(mSecondBuffer, samples, count);
         // second buffer is now full of samples
@@ -66,19 +66,9 @@ bool BuzzerOutput::onTimer()
   {
     mCount++;
     // get the first sample from the buffer
-    int16_t sample = mBuffer[mCurrentIndex];
+    uint16_t sample = mBuffer[mCurrentIndex];
     mCurrentIndex++;
-    if (sample <= 0) {
-      // digitalWrite(mBuzzerPin, LOW);
-      ledcWrite(0, 0);
-    } else {
-      // digitalWrite(mBuzzerPin, HIGH);
-      #ifdef BUZZER_DEFAULT_VOLUME
-      ledcWrite(0, BUZZER_DEFAULT_VOLUME);
-      #else
-      ledcWrite(0, 255);
-      #endif
-    }
+    ledcWrite(0, sample);
   }
   if(mCurrentIndex >= mBufferLength)
   {
@@ -88,7 +78,7 @@ bool BuzzerOutput::onTimer()
     {
       if (mSecondBufferLength > 0) {
         // swap the buffers
-        int8_t *tmp = mBuffer;
+        uint8_t *tmp = mBuffer;
         mBuffer = mSecondBuffer;
         mBufferLength = mSecondBufferLength;
         mSecondBuffer = tmp;

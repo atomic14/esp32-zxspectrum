@@ -22,6 +22,7 @@
 #include "Input/TouchKeyboard.h"
 #include "48k_rom.h"
 #include "128k_rom.h"
+#include "AYSound/AySound.h"
 
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
@@ -57,7 +58,7 @@ void ZXSpectrum::runForCycles(int cycles)
 
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
-  int8_t audioBuffer[312];
+  uint8_t audioBuffer[312];
   uint8_t *attrBase = mem.currentScreen + 0x1800;
   int c = 0;
   // Each line should be 224 tstates long...
@@ -80,20 +81,31 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     runForCycles(224);
     if (hwopt.SoundBits != 0)
     {
-      audioBuffer[i] = 20;
+      audioBuffer[i] = BUZZER_DEFAULT_VOLUME;
     }
     else
     {
-      audioBuffer[i] = -20;
+      audioBuffer[i] = 0;
     }
   }
   interrupt();
+
+  // AY emulation
+  if (hwopt.hw_model == SPECMDL_128K)
+  {
+    AySound::gen_sound(312, 0);
+    // merge the AY sound with the audio buffer
+    for (int i = 0; i < 312; i++)
+    {
+      audioBuffer[i] = std::max(0, std::min(255, audioBuffer[i] + AySound::SamplebufAY[i]));
+    }
+  }
   // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
   audioOutput->write(audioBuffer, 312);
-  // if (audioFile != NULL) {
-  //   fwrite(audioBuffer, 1, 312, audioFile);
-  //   fflush(audioFile);
-  // }
+  if (audioFile != NULL) {
+    fwrite(audioBuffer, 1, 312, audioFile);
+    fflush(audioFile);
+  }
   return c;
 }
 
@@ -176,7 +188,11 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
   {
     return kempston_port;
   }
-
+  if (hwopt.hw_model == SPECMDL_128K) {
+    if ((port & 0xC002) == 0xC000) {
+      return AySound::getRegisterData();
+    }
+  }
   // emulacion port FF
   if ((port & 0xFF) == 0xFF)
   {
@@ -202,8 +218,13 @@ void ZXSpectrum::z80_out(uint16_t port, uint8_t data)
     // check for AY chip
     if ((port & 0x8002) == 0x8000)
     {
-      // TODO - AY emulation
-      return;
+      if (hwopt.hw_model == SPECMDL_128K) {
+        if ((port & 0x4000) != 0) {
+            AySound::selectRegister(data);
+        } else {
+            AySound::setRegisterData(data);
+        }
+      }
     }
     if ((port & 0x8002) == 0)
     {
@@ -323,6 +344,18 @@ bool ZXSpectrum::init_128k()
   hwopt.SoundBits = 1;
   mem.page(0, true);
   mem.loadRom(ZXSpectrum_128_rom, ZXSpectrum_128_rom_len);
+
+  // setup the AYSound emulator
+  Serial.println("Setting up AySound");
+  AySound::init();
+  AySound::set_sound_format(15625,1,8);
+  AySound::set_stereo(AYEMU_MONO,NULL);
+  AySound::reset();
+
+  // Empty audio buffers
+  for (int i=0;i<SAMPLES_PER_FRAME;i++) {
+    AySound::SamplebufAY[i]=0;
+  }
   return true;
 }
 

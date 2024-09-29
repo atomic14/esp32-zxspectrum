@@ -223,6 +223,7 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 
 void EmulatorScreen::run(std::string snaPath)
 {
+  // audioFile = fopen("/fs/audio.raw", "wb");
   memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
