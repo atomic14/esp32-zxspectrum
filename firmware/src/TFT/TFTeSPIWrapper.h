@@ -65,4 +65,13 @@ public:
   void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
     tft->drawFastHLine(x, y, w, color);
   }
+  inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
+    return tft->color565(r, g, b);
+  }
+  inline int width() {
+    return tft->width();
+  }
+  inline int height() {
+    return tft->height();
+  }
 };

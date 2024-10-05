@@ -17,4 +17,7 @@ public:
   virtual void loadFont(const uint8_t *font) = 0;
   virtual void setTextColor(uint16_t color, uint16_t bgColor) = 0;
   virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) = 0;
+  virtual uint16_t color565(uint8_t r, uint8_t g, uint8_t b) = 0;
+  virtual int width() = 0;
+  virtual int height() = 0;
 };

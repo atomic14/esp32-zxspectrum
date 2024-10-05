@@ -192,34 +192,28 @@ using FileLetterCountPtr = std::shared_ptr<FileLetterCount>;
 using FileLetterCountVector = std::vector<FileLetterCountPtr>;
 
 // Files class to list files in a directory
+template <class FileSystemT>
 class Files
 {
+private:
+  FileSystemT *fileSystem;
 public:
-  Files()
+  Files(FileSystemT *fileSystem) : fileSystem(fileSystem)
   {
-#ifdef USE_SDCARD
-#ifdef SD_CARD_PWR
-    if (SD_CARD_PWR != GPIO_NUM_NC)
-    {
-      pinMode(SD_CARD_PWR, OUTPUT);
-      digitalWrite(SD_CARD_PWR, SD_CARD_PWR_ON);
-    }
-#endif
-#ifdef USE_SDIO
-    SDCard *card = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-#else
-    SDCard *card = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
-#endif
-#else
-    Flash *flash = new Flash(MOUNT_POINT);
-#endif
+  }
+
+  bool isAvailable()
+  {
+    return fileSystem->isMounted();
   }
 
   FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions)
   {
     FileLetterCountVector fileLetters;
-
-    std::string full_path = std::string(MOUNT_POINT) + folder;
+    if (!fileSystem->isMounted()) {
+      return fileLetters;
+    }
+    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
     std::cout << "Listing directory: " << full_path << std::endl;
 
     std::map<std::string, int> fileCountByLetter;
@@ -250,8 +244,10 @@ public:
   FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions)
   {
     FileInfoVector files;
-
-    std::string full_path = std::string(MOUNT_POINT) + folder;
+    if (!fileSystem->isMounted()) {
+      return files;
+    }
+    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
     std::cout << "Listing directory: " << full_path << " for files starting with " << prefix << std::endl;
     for (const std::string &extension : extensions)
     {
@@ -267,7 +263,4 @@ public:
               { return a->getTitle() < b->getTitle(); });
     return files;
   }
-
-private:
-  static constexpr const char *MOUNT_POINT = "/fs";
 };

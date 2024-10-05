@@ -57,6 +57,7 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_
   Serial.printf("SDCard mounted at: %s\n", mountPoint);
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
+  _isMounted = true;
   #endif
 }
 
@@ -117,6 +118,7 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_nu
   Serial.printf("SDCard mounted at: %s\n", mountPoint);
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
+  _isMounted = true;
 }
 
 SDCard::~SDCard()
