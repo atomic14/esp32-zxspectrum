@@ -34,7 +34,7 @@ public:
     void dmaWait() {
         waitDMA();
     }
-    void drawString(const char *string, int16_t x, int16_t y) {}
+    void drawString(const char *string, int16_t x, int16_t y);
     void fillScreen(uint16_t color);
     void loadFont(const uint8_t *font);
     void setTextColor(uint16_t color, uint16_t bgColor);

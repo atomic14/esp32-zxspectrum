@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include <freertos/queue.h>
 #include "esp_log.h"
+#include "../Emulator/48k_rom.h"
 
 #define ST7789_CMD_MADCTL 0x36
 #define MADCTL_MY 0x80
@@ -389,4 +390,31 @@ void ST7789::setRotation(uint8_t m)
     }
     sendCmd(ST7789_CMD_MADCTL);
     sendData(&madctl, 1);
+}
+
+
+void ST7789::drawString(const char *string, int16_t x, int16_t y) {
+    // we can handle 0x20–0x7F by using the ZX Spectrum character set from the ROM
+    uint16_t characterBuffer[8 * 8];
+    uint8_t *charSetPtr = ZXSpectrum_48_rom + 0x3D00;
+
+    // go through each character in the string
+    for(int i = 0; i < strlen(string); i++) {
+        uint8_t character = string[i];
+        // check if the character is in the range of the ZX Spectrum character set
+        if(character >= 0x20 && character <= 0x7F) {
+            // get the character from the ROM
+            uint8_t *charPtr = charSetPtr + (character - 0x20) * 8;
+            // convert the character to a 8x8 pixel buffer
+            for(int row = 0; row < 8; row++) {
+                uint8_t charRow = charPtr[row];
+                for(int col = 0; col < 8; col++) {
+                    characterBuffer[row * 8 + col] = (charRow & (1 << (7 - col))) ? textcolor : textbgcolor;
+                }
+            }
+            // draw the character
+            setWindow(x + i * 8, y, x + i * 8 + 7, y + 7);
+            sendPixels(characterBuffer, 8 * 8);
+        }
+    }
 }

@@ -38,7 +38,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
   // swap the byte order
-  tftColor = (tftColor >> 8) | (tftColor << 8);
+  // tftColor = (tftColor >> 8) | (tftColor << 8);
   if (tftColor != lastBorderColor)
   {
     // do the border with some simple rects - no need to push pixels for a solid color
@@ -63,6 +63,14 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       uint8_t inkColor = attr & B00000111;
       uint8_t paperColor = (attr & B00111000) >> 3;
       // check for changes in the attribute
+      if ((attr & B10000000) != 0 && flashTimer < 16) {
+        // we are flashing we need to swap the ink and paper colors
+        uint8_t temp = inkColor;
+        inkColor = paperColor;
+        paperColor = temp;
+        // update the attribute with the new colors - this makes our dirty check work
+        attr = (attr & B11000000) | (inkColor & B00000111) | ((paperColor << 3) & B00111000);
+      }
       if (attr != *(attrBaseCopy + 32 * attrY + attrX))
       {
         dirty = true;
@@ -72,15 +80,6 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       {
         inkColor = inkColor + 8;
         paperColor = paperColor + 8;
-      }
-      // if we are flashing and the flash timer is less than 16 then swap ink and paper
-      if ((attr & B10000000) != 0 && flashTimer < 16)
-      {
-        uint8_t temp = inkColor;
-        inkColor = paperColor;
-        paperColor = temp;
-        // flash indicates that we are changing
-        dirty = true;
       }
       uint16_t tftInkColor = specpal565[inkColor];
       uint16_t tftPaperColor = specpal565[paperColor];

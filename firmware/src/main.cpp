@@ -147,8 +147,8 @@ void setup(void)
   touchKeyboard->start();
 #endif
   audioOutput->start(15625);
-  // tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
-  tft = new TFTeSPIWrapper();
+  tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
+  // tft = new TFTeSPIWrapper();
   // Files
 #ifdef USE_SDCARD
 #ifdef SD_CARD_PWR
