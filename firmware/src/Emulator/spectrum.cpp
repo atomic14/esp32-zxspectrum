@@ -81,7 +81,11 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     runForCycles(224);
     if (hwopt.SoundBits != 0)
     {
+      #ifdef BUZZER_DEFAULT_VOLUME
       audioBuffer[i] = BUZZER_DEFAULT_VOLUME;
+      #else
+      audioBuffer[i] = 0xFF;
+      #endif
     }
     else
     {
