@@ -1,23 +1,28 @@
-#include "VideoPlayer.h"
+#include "VideoPlayerScreen.h"
 #include "VideoPlayer/VideoSource.h"
 #include "AudioOutput/AudioOutput.h"
 #include "../TFT/TFTDisplay.h"
 #include <list>
 
-void VideoPlayer::_framePlayerTask(void *param)
+void VideoPlayerScreen::_framePlayerTask(void *param)
 {
-  VideoPlayer *player = (VideoPlayer *)param;
+  VideoPlayerScreen *player = (VideoPlayerScreen *)param;
   player->framePlayerTask();
 }
 
-void VideoPlayer::_audioPlayerTask(void *param)
+void VideoPlayerScreen::_audioPlayerTask(void *param)
 {
-  VideoPlayer *player = (VideoPlayer *)param;
+  VideoPlayerScreen *player = (VideoPlayerScreen *)param;
   player->audioPlayerTask();
 }
 
-void VideoPlayer::start()
+void VideoPlayerScreen::start()
 {
+  if (isStarted)
+  {
+    return;
+  }
+  mState = VideoPlayerState::STOPPED;
   xTaskCreatePinnedToCore(
       _framePlayerTask,
       "Frame Player",
@@ -25,22 +30,30 @@ void VideoPlayer::start()
       this,
       1,
       NULL,
-      1);
-  xTaskCreatePinnedToCore(_audioPlayerTask, "audio_loop", 10000, this, 1, NULL, 1);
+      0);
+  xTaskCreatePinnedToCore(_audioPlayerTask, "audio_loop", 10000, this, 1, NULL, 0);
+  isStarted = true;
 }
 
-void VideoPlayer::play()
+void VideoPlayerScreen::play(const char *aviFilename)
 {
-  if (mState == VideoPlayerState::PLAYING)
+  start();
+  if (mState != VideoPlayerState::STOPPED)
   {
     return;
   }
-  mState = VideoPlayerState::PLAYING;
+  if (mVideoSource != NULL)
+  {
+    delete mVideoSource;
+  }
+  m_aviFilename = aviFilename;
+  mVideoSource = new VideoSource(aviFilename);
   mVideoSource->setState(VideoPlayerState::PLAYING);
+  mState = VideoPlayerState::PLAYING;
   mCurrentAudioSample = 0;
 }
 
-void VideoPlayer::stop()
+void VideoPlayerScreen::stop()
 {
   if (mState == VideoPlayerState::STOPPED)
   {
@@ -52,7 +65,7 @@ void VideoPlayer::stop()
   m_tft.fillScreen(TFT_BLACK);
 }
 
-void VideoPlayer::pause()
+void VideoPlayerScreen::pause()
 {
   if (mState == VideoPlayerState::PAUSED)
   {
@@ -62,7 +75,7 @@ void VideoPlayer::pause()
   mVideoSource->setState(VideoPlayerState::PAUSED);
 }
 
-void VideoPlayer::playStatic()
+void VideoPlayerScreen::playStatic()
 {
   if (mState == VideoPlayerState::STATIC)
   {
@@ -78,9 +91,9 @@ uint16_t *dmaBuffer[2] = {NULL, NULL};
 int dmaBufferIndex = 0;
 int _doDraw(JPEGDRAW *pDraw)
 {
-  VideoPlayer *player = (VideoPlayer *)pDraw->pUser;
+  VideoPlayerScreen *player = (VideoPlayerScreen *)pDraw->pUser;
   player->m_tft.setWindow(pDraw->x, pDraw->y, pDraw->x + pDraw->iWidth - 1, pDraw->y + pDraw->iHeight - 1);
-  player->m_tft.pushPixelsDMA(pDraw->pPixels, pDraw->iWidth * pDraw->iHeight);
+  player->m_tft.pushPixels(pDraw->pPixels, pDraw->iWidth * pDraw->iHeight);
   return 1;
 }
 
@@ -96,7 +109,7 @@ unsigned short xorshift16()
   return w & 0xFFFF;
 }
 
-void VideoPlayer::framePlayerTask()
+void VideoPlayerScreen::framePlayerTask()
 {
   uint16_t *staticBuffer = NULL;
   uint8_t *jpegBuffer = NULL;
@@ -131,7 +144,7 @@ void VideoPlayer::framePlayerTask()
           staticBuffer[p] = m_tft.color565(grey, grey, grey);
         }
         m_tft.setWindow(0, i * height, width - 1, i * height + height - 1);
-        m_tft.pushPixelsDMA(staticBuffer, width * height);
+        m_tft.pushPixels(staticBuffer, width * height);
       }
       m_tft.endWrite();
       vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -164,10 +177,14 @@ void VideoPlayer::framePlayerTask()
   }
 }
 
-void VideoPlayer::audioPlayerTask()
+void VideoPlayerScreen::audioPlayerTask()
 {
   size_t bufferLength = 16000;
   uint8_t *audioData = (uint8_t *)malloc(16000);
+  if (!audioData)
+  {
+    Serial.println("Failed to allocate audio buffer");
+  }
   while (true)
   {
     if (mState != VideoPlayerState::PLAYING)
@@ -182,13 +199,13 @@ void VideoPlayer::audioPlayerTask()
     if (audioLength == 0) {
       // we want to loop the video so reset the channel data and start again
       stop();
-      play();
+      play(m_aviFilename.c_str());
       continue;
     }
     if (audioLength > 0) {
       // play the audio
       for(int i=0; i<audioLength; i+=1000) {
-        mAudioOutput->write(audioData + i, min(1000, audioLength - i));
+        m_audioOutput->write(audioData + i, min(1000, audioLength - i));
         mCurrentAudioSample += min(1000, audioLength - i);
         if (mState != VideoPlayerState::PLAYING)
         {
@@ -197,6 +214,7 @@ void VideoPlayer::audioPlayerTask()
           break;
         }
         mVideoSource->updateAudioTime(1000 * mCurrentAudioSample / 16000);
+        // vTaskDelay(1);
       }
     }
     else

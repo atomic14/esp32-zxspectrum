@@ -27,6 +27,7 @@
 #include "Screens/PickerScreen.h"
 #include "Screens/EmulatorScreen.h"
 #include "Screens/ErrorScreen.h"
+#include "Screens/VideoPlayerScreen.h"
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
 #include "TFT/TFTDisplay.h"
@@ -59,7 +60,10 @@ AudioOutput *audioOutput = nullptr;
 PickerScreen<MenuItemPtr> *menuPicker = nullptr;
 PickerScreen<FileInfoPtr> *gameFilePickerScreen = nullptr;
 PickerScreen<FileLetterCountPtr> *gameAlphabetPicker = nullptr;
+PickerScreen<FileInfoPtr> *videoFilePickerScreen = nullptr;
+PickerScreen<FileLetterCountPtr> *videoAlphabetPicker = nullptr;
 EmulatorScreen *emulatorScreen = nullptr;
+VideoPlayerScreen *videoPlayerScreen = nullptr;
 ErrorScreen *loadSDCardScreen = nullptr;
 ErrorScreen *noGamesScreen = nullptr;
 Screen *activeScreen = nullptr;
@@ -78,6 +82,7 @@ TouchKeyboardV2 *touchKeyboard = nullptr;
 #endif
 
 const std::vector<std::string> gameValidExtensions = {".z80", ".sna"};
+const std::vector<std::string> videoValidExtensions = {".avi"};
 const char *MOUNT_POINT = "/fs";
 
 void setup(void)
@@ -211,8 +216,25 @@ void setup(void)
       activeScreen->didAppear();
     }),
     std::make_shared<MenuItem>("Video Player", [&]() {
-      // activeScreen = videoPlayer;
-      // activeScreen->didAppear();
+      if (files->isAvailable())
+      {
+        // feed in the alphabetically grouped files to the alphabet picker
+        FileLetterCountVector fileLetterCounts = files->getFileLetters("/", videoValidExtensions);
+        videoAlphabetPicker->setItems(fileLetterCounts);
+        if (fileLetterCounts.size() == 0)
+        {
+          activeScreen = noGamesScreen;
+        }
+        else
+        {
+          activeScreen = videoAlphabetPicker;
+        }
+      }
+      else
+      {
+        activeScreen = loadSDCardScreen;
+      }
+      activeScreen->didAppear();
     }),
   };
   // wire everythign up
@@ -235,11 +257,17 @@ void setup(void)
     activeScreen->didAppear();
   });
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
+  videoPlayerScreen = new VideoPlayerScreen(*tft, audioOutput, [&]() {
+    // go back to the mode picker
+    activeScreen = menuPicker;
+    activeScreen->didAppear();
+  });
   menuPicker = new PickerScreen<MenuItemPtr>(*tft, audioOutput, [&](MenuItemPtr mode, int index) {
     mode->onSelect();
   }, [&]() {
     // nothing to do here - we're at the top level
   });
+  // game picking
   gameAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
@@ -262,6 +290,28 @@ void setup(void)
     #endif
     emulatorScreen->run(file->getPath());
     activeScreen = emulatorScreen;
+  }, [&]() {
+    // go back to the alphabet picker
+    activeScreen = gameAlphabetPicker;
+    activeScreen->didAppear();
+  });
+  // video picking - TODO - can we combine this with the game picking code?
+  videoAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
+    // a letter was picked - show the files for that letter
+    Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
+    videoFilePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), videoValidExtensions));
+    activeScreen = videoFilePickerScreen;
+  }, [&]() {
+    // go back to the mode picker
+    activeScreen = menuPicker;
+    activeScreen->didAppear();
+  });
+  videoFilePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
+    // a file was picked - load it into the emulator
+    Serial.printf("Loading video: %s\n", file->getPath().c_str());
+    activeScreen = videoPlayerScreen;
+    videoPlayerScreen->play(file->getPath().c_str());
+    
   }, [&]() {
     // go back to the alphabet picker
     activeScreen = gameAlphabetPicker;

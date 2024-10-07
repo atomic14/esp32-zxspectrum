@@ -74,12 +74,7 @@ int VideoSource::getAudioSamples(uint8_t **buffer, size_t &bufferSize, int curre
 {
   // read the audio data into the buffer
   if (audioParser) {
-    int audioLength = audioParser->getNextChunk((uint8_t **) buffer, bufferSize);
-    // conver the audio from unsigned to signed
-    for (int i = 0; i < audioLength; i++) {
-      (*buffer)[i] = ((uint8_t)(*buffer)[i]) - 128;
-    }
-    return audioLength;
+    return audioParser->getNextChunk((uint8_t **) buffer, bufferSize);
   }
   return 0;
 }

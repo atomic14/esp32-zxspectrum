@@ -68,7 +68,7 @@ bool BuzzerOutput::onTimer()
     // get the first sample from the buffer
     uint16_t sample = mBuffer[mCurrentIndex];
     mCurrentIndex++;
-    ledcWrite(0, sample);
+    ledcWrite(0, sample * mVolume / 10);
   }
   if(mCurrentIndex >= mBufferLength)
   {
