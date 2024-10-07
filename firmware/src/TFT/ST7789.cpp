@@ -395,7 +395,7 @@ void ST7789::setRotation(uint8_t m)
 
 void ST7789::drawString(const char *string, int16_t x, int16_t y) {
     // we can handle 0x20–0x7F by using the ZX Spectrum character set from the ROM
-    uint16_t characterBuffer[8 * 8];
+    uint16_t characterBuffer[16 * 24];
     uint8_t *charSetPtr = ZXSpectrum_48_rom + 0x3D00;
 
     // go through each character in the string
@@ -409,12 +409,16 @@ void ST7789::drawString(const char *string, int16_t x, int16_t y) {
             for(int row = 0; row < 8; row++) {
                 uint8_t charRow = charPtr[row];
                 for(int col = 0; col < 8; col++) {
-                    characterBuffer[row * 8 + col] = (charRow & (1 << (7 - col))) ? textcolor : textbgcolor;
+                    for(int dx = 0; dx < 2; dx++) {
+                        for(int dy = 0; dy < 3; dy++) {
+                            characterBuffer[(row * 3 + dy) * 16 + col * 2 + dx] = (charRow & (1 << (7 - col))) ? textcolor : textbgcolor;
+                        }
+                    }
                 }
             }
             // draw the character
-            setWindow(x + i * 8, y, x + i * 8 + 7, y + 7);
-            sendPixels(characterBuffer, 8 * 8);
+            setWindow(x + i * 16, y, x + i * 16 + 15, y + 23);
+            sendPixels(characterBuffer, 16 * 24);
         }
     }
 }
