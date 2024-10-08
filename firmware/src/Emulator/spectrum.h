@@ -44,7 +44,7 @@ typedef struct
   int tstate_border_left;
   int tstate_graphic_zone;
   int tstate_border_right;
-  int hw_model;
+  models_enum hw_model;
   int int_type;
   int emulate_FF;
   uint8_t BorderColor;
