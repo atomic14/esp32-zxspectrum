@@ -24,7 +24,6 @@ struct Font {
     const uint8_t* fontData;  // Pointer to the raw VLW font data
 };
 
-
 class ST7789: public TFTDisplay {
 public:
     QueueHandle_t transactionQueue;

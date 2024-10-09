@@ -20,6 +20,9 @@
 #define ST7789_CMD_RASET 0x2B
 #define ST7789_CMD_RAMWR 0x2C
 
+const size_t NUM_TRANSACTIONS = 10;
+const size_t DMA_BUFFER_SIZE = 320 * 8 * sizeof(uint16_t);
+
 
 // helper functions
 inline uint16_t swapBytes(uint16_t val)
@@ -54,14 +57,14 @@ class SPITransactionInfo
 public:
     spi_transaction_t transaction;
     bool isCommand = false;    // false = data, true = command
-    uint8_t *buffer = nullptr; // the DMA buffer
+    void *buffer = nullptr; // the DMA buffer
+    size_t bufferSize = 0;
     ST7789 *display = nullptr; // the display that the transaction was for
 
-    SPITransactionInfo(size_t dmaBufferSize)
+    SPITransactionInfo()
     {
         memset(&transaction, 0, sizeof(transaction));
         transaction.user = this;
-        buffer = (uint8_t *)heap_caps_malloc(dmaBufferSize, MALLOC_CAP_DMA);
     }
 
     void setCommand(uint8_t cmd)
@@ -74,43 +77,75 @@ public:
         transaction.user = this;
     }
 
-    void setData(const uint8_t *data, int len)
-    {
-        memcpy(buffer, data, len);
-        memset(&transaction, 0, sizeof(transaction));
-        isCommand = false;
-        transaction.length = len * 8; // Data length in bits
-        transaction.tx_buffer = buffer;
-        transaction.user = this;
-    }
-
-    void setPixels(const uint16_t *data, int numPixels)
-    {
-        memcpy(buffer, data, numPixels * 2);
-        memset(&transaction, 0, sizeof(transaction));
-        isCommand = false;
-        transaction.length = numPixels * 16; // Data length in bits
-        transaction.tx_buffer = buffer;
-        transaction.user = this;
-    }
-
-    void setColor(uint16_t color, int numPixels)
-    {
-        uint16_t *pixels = (uint16_t *)buffer;
-        for (int i = 0; i < numPixels; i++)
-        {
-            pixels[i] = color;
+    bool ensureBuffer(int len) {
+        if (buffer) {
+            buffer = heap_caps_realloc(buffer, len, MALLOC_CAP_DMA);
+        } else {
+            buffer = heap_caps_malloc(len, MALLOC_CAP_DMA);
         }
-        memset(&transaction, 0, sizeof(transaction));
-        isCommand = false;
-        transaction.length = numPixels * 16; // Data length in bits
-        transaction.tx_buffer = buffer;
-        transaction.user = this;
+        if (!buffer)
+        {
+            bufferSize = 0;
+            return false;
+        }
+        bufferSize = len;
+        return true;
+    }
+
+    bool copyData(const uint8_t *data, int len)
+    {
+        if (ensureBuffer(len)) {
+            memcpy(buffer, data, len);
+            return true;
+        }
+        return false;
+    }
+
+    void freeBuffer() {
+        if (buffer)
+        {
+            heap_caps_free(buffer);
+            buffer = nullptr;
+            bufferSize = 0;
+        }
+    }
+
+    bool setData(const uint8_t *data, int len)
+    {
+        if (copyData(data, len)) {
+            memset(&transaction, 0, sizeof(transaction));
+            isCommand = false;
+            transaction.length = len * 8; // Data length in bits
+            transaction.tx_buffer = buffer;
+            transaction.user = this;
+            return true;
+        }
+        return false;
+    }
+
+    bool setPixels(const uint16_t *data, int numPixels)
+    {
+        return setData((const uint8_t *)data, numPixels * 2);
+    }
+
+    bool setColor(uint16_t color, int numPixels)
+    {
+        if (ensureBuffer(numPixels * 2)) {
+            uint16_t *pixels = (uint16_t *)buffer;
+            for (int i = 0; i < numPixels; i++)
+            {
+                pixels[i] = color;
+            }
+            memset(&transaction, 0, sizeof(transaction));
+            isCommand = false;
+            transaction.length = numPixels * 16; // Data length in bits
+            transaction.tx_buffer = buffer;
+            transaction.user = this;
+            return true;
+        }
+        return false;
     }
 };
-
-const size_t NUM_TRANSACTIONS = 10;
-const size_t DMA_BUFFER_SIZE = 320 * 8 * sizeof(uint16_t);
 
 /*
 We will have a queue of SPI transactions that can be pulled from. We'll allocate these at the start and queue them up.
@@ -126,7 +161,6 @@ In the post-transmit callback we will return the buffer to the queue and the tra
 ST7789::ST7789(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
     : width(width), height(height), rotation(3), mosi(mosi), clk(clk), cs(cs), dc(dc), rst(rst), bl(bl), spi(nullptr)
 {
-
     gpio_set_direction(rst, GPIO_MODE_OUTPUT);
     gpio_set_direction(dc, GPIO_MODE_OUTPUT);
     if (bl != GPIO_NUM_NC)
@@ -177,7 +211,7 @@ ST7789::ST7789(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gp
     transactionQueue = xQueueCreate(NUM_TRANSACTIONS, sizeof(SPITransactionInfo *));
     for (int i = 0; i < NUM_TRANSACTIONS; i++)
     {
-        SPITransactionInfo *transaction = new SPITransactionInfo(DMA_BUFFER_SIZE);
+        SPITransactionInfo *transaction = new SPITransactionInfo();
         if (!transaction)
         {
             Serial.println("Failed to allocate transaction");
@@ -226,6 +260,7 @@ ST7789::~ST7789()
 void IRAM_ATTR ST7789::spi_post_transfer_callback(spi_transaction_t *trans)
 {
     SPITransactionInfo *transaction = (SPITransactionInfo *)trans->user;
+    transaction->freeBuffer();
     xQueueSendFromISR(transaction->display->transactionQueue, &transaction, nullptr);
 }
 

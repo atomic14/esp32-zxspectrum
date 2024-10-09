@@ -31,9 +31,6 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   ZXSpectrum *machine = emulatorScreen->machine;
 
   tft.startWrite();
-#ifdef USE_DMA
-  tft.dmaWait();
-#endif
   // do the border
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
@@ -97,7 +94,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
           dirty = true;
           *(pixelBaseCopy + 32 * scan + col) = row;
         }
-        uint16_t *pixelAddress = emulatorScreen->dmaBuffer1 + 256 * y + attrX * 8;
+        uint16_t *pixelAddress = emulatorScreen->pixelBuffer + 256 * y + attrX * 8;
         for (int x = 0; x <8; x++)
         {
           if (row & 128)
@@ -115,12 +112,6 @@ void drawScreen(EmulatorScreen *emulatorScreen)
     }
     if (dirty || emulatorScreen->firstDraw)
     {
-// push out this block of pixels 256 * 8
-#ifdef USE_DMA
-      tft.dmaWait();
-      tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
-      tft.pushPixelsDMA(emulatorScreen->dmaBuffer1, 256 * 8);
-#else
 #ifdef SCALE_SCREEN
       // scale the buffer by 1.5 times (repeat every other pixel horizontally and vertically)
       int dstY = 0;
@@ -149,18 +140,10 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       tft.pushPixels(scaledBuffer, 384 * 12);
 #else
       tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
-      tft.pushPixels(emulatorScreen->dmaBuffer1, 256 * 8);
+      tft.pushPixels(emulatorScreen->pixelBuffer, 256 * 8);
 #endif
-#endif
-      // swap the DMA buffers
-      uint16_t *temp = emulatorScreen->dmaBuffer1;
-      emulatorScreen->dmaBuffer1 = emulatorScreen->dmaBuffer2;
-      emulatorScreen->dmaBuffer2 = temp;
     }
   }
-  #ifdef USE_DMA
-    tft.dmaWait();
-  #endif
   tft.endWrite();
   emulatorScreen->firstDraw = false;
 }
@@ -209,8 +192,7 @@ void z80Runner(void *pvParameter)
 
 EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
-  dmaBuffer1 = (uint16_t *)heap_caps_malloc(screenWidth * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
-  dmaBuffer2 = (uint16_t *)heap_caps_malloc(screenWidth * 8 * sizeof(uint16_t), MALLOC_CAP_DMA);
+  pixelBuffer = (uint16_t *)malloc(screenWidth * 8 * sizeof(uint16_t));
   screenBuffer = (uint8_t *)malloc(6912);
   if (screenBuffer == NULL)
   {
@@ -223,8 +205,7 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 void EmulatorScreen::run(std::string snaPath)
 {
   // audioFile = fopen("/fs/audio.raw", "wb");
-  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
-  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
@@ -240,8 +221,7 @@ void EmulatorScreen::run(std::string snaPath)
 }
 
 void EmulatorScreen::run48K() {
-  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
-  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
@@ -256,8 +236,7 @@ void EmulatorScreen::run48K() {
 }
 
 void EmulatorScreen::run128K() {
-  memset(dmaBuffer1, 0, screenWidth * 8 * sizeof(uint16_t));
-  memset(dmaBuffer2, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
