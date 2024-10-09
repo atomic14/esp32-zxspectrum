@@ -20,7 +20,7 @@
 #define ST7789_CMD_RASET 0x2B
 #define ST7789_CMD_RAMWR 0x2C
 
-const size_t NUM_TRANSACTIONS = 10;
+const size_t NUM_TRANSACTIONS = 20;
 const size_t DMA_BUFFER_SIZE = 320 * 8 * sizeof(uint16_t);
 
 
@@ -65,6 +65,7 @@ public:
     {
         memset(&transaction, 0, sizeof(transaction));
         transaction.user = this;
+        buffer = heap_caps_malloc(DMA_BUFFER_SIZE, MALLOC_CAP_DMA);
     }
 
     void setCommand(uint8_t cmd)
@@ -77,37 +78,10 @@ public:
         transaction.user = this;
     }
 
-    bool ensureBuffer(int len) {
-        if (buffer) {
-            buffer = heap_caps_realloc(buffer, len, MALLOC_CAP_DMA);
-        } else {
-            buffer = heap_caps_malloc(len, MALLOC_CAP_DMA);
-        }
-        if (!buffer)
-        {
-            bufferSize = 0;
-            return false;
-        }
-        bufferSize = len;
-        return true;
-    }
-
     bool copyData(const uint8_t *data, int len)
     {
-        if (ensureBuffer(len)) {
-            memcpy(buffer, data, len);
-            return true;
-        }
-        return false;
-    }
-
-    void freeBuffer() {
-        if (buffer)
-        {
-            heap_caps_free(buffer);
-            buffer = nullptr;
-            bufferSize = 0;
-        }
+        memcpy(buffer, data, len);
+        return true;
     }
 
     bool setData(const uint8_t *data, int len)
@@ -130,20 +104,17 @@ public:
 
     bool setColor(uint16_t color, int numPixels)
     {
-        if (ensureBuffer(numPixels * 2)) {
-            uint16_t *pixels = (uint16_t *)buffer;
-            for (int i = 0; i < numPixels; i++)
-            {
-                pixels[i] = color;
-            }
-            memset(&transaction, 0, sizeof(transaction));
-            isCommand = false;
-            transaction.length = numPixels * 16; // Data length in bits
-            transaction.tx_buffer = buffer;
-            transaction.user = this;
-            return true;
+        uint16_t *pixels = (uint16_t *)buffer;
+        for (int i = 0; i < numPixels; i++)
+        {
+            pixels[i] = color;
         }
-        return false;
+        memset(&transaction, 0, sizeof(transaction));
+        isCommand = false;
+        transaction.length = numPixels * 16; // Data length in bits
+        transaction.tx_buffer = buffer;
+        transaction.user = this;
+        return true;
     }
 };
 
@@ -260,7 +231,6 @@ ST7789::~ST7789()
 void IRAM_ATTR ST7789::spi_post_transfer_callback(spi_transaction_t *trans)
 {
     SPITransactionInfo *transaction = (SPITransactionInfo *)trans->user;
-    transaction->freeBuffer();
     xQueueSendFromISR(transaction->display->transactionQueue, &transaction, nullptr);
 }
 
@@ -296,18 +266,22 @@ void ST7789::sendCmd(uint8_t cmd)
 
 void ST7789::sendPixels(const uint16_t *data, int numPixels)
 {
-    SPITransactionInfo *trans;
-    if (xQueueReceive(transactionQueue, &trans, portMAX_DELAY) == pdTRUE)
-    {
-        trans->setPixels(data, numPixels);
-        if (spi_device_queue_trans(spi, &trans->transaction, portMAX_DELAY) != ESP_OK)
+    int bytes = numPixels * 2;
+    for(uint32_t i = 0; i < bytes; i += DMA_BUFFER_SIZE) {
+        uint32_t len = std::min(DMA_BUFFER_SIZE, bytes - i);
+        SPITransactionInfo *trans;
+        if (xQueueReceive(transactionQueue, &trans, portMAX_DELAY) == pdTRUE)
         {
-            Serial.println("Failed to queue transaction");
+            trans->setPixels(data + i / 2, len / 2);
+            if (spi_device_queue_trans(spi, &trans->transaction, portMAX_DELAY) != ESP_OK)
+            {
+                Serial.println("Failed to queue transaction");
+            }
         }
-    }
-    else
-    {
-        Serial.println("Failed to get transaction");
+        else
+        {
+            Serial.println("Failed to get transaction");
+        }
     }
 }
 

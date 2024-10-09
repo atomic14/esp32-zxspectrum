@@ -6,6 +6,7 @@
 #include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
 #include "font.h"
+#include "rainbow_image.h"
 
 class TFTDisplay;
 class ScrollingList;
@@ -155,13 +156,8 @@ public:
       m_tft.drawString(m_items[itemIndex]->getTitle().c_str(), 20, 10 + i * 30);
     }
     // draw the spectrum flash
-    for (int y = 0; y < TFT_WIDTH; y++)
-    {
-      m_tft.drawFastHLine(TFT_HEIGHT - 57 + y / 4, y, 12, TFT_RED);
-      m_tft.drawFastHLine(TFT_HEIGHT - 45 + y / 4, y, 10, TFT_YELLOW);
-      m_tft.drawFastHLine(TFT_HEIGHT - 35 + y / 4, y, 11, TFT_GREEN);
-      m_tft.drawFastHLine(TFT_HEIGHT - 24 + y / 4, y, 10, TFT_CYAN);
-    }
+    m_tft.setWindow(TFT_HEIGHT - rainbowImageWidth, TFT_WIDTH - rainbowImageHeight, TFT_HEIGHT - 1, TFT_WIDTH - 1);
+    m_tft.pushPixels((uint16_t *) rainbowImageData, rainbowImageWidth * rainbowImageHeight);
     m_tft.endWrite();
   }
 };

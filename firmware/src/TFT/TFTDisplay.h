@@ -2,6 +2,8 @@
 
 #include <TFT_eSPI.h>
 
+#define SWAPBYTES(i) ((i >> 8) | (i << 8))
+
 class TFTDisplay {
 public:
   TFTDisplay() {};

@@ -55,7 +55,7 @@ void BuzzerOutput::write(uint8_t *samples, int count)
       // no room in the second buffer so wait for the first buffer to be emptied
       xSemaphoreGive(mBufferSemaphore);
     }
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
