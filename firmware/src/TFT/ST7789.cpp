@@ -20,9 +20,33 @@
 #define ST7789_CMD_RASET 0x2B
 #define ST7789_CMD_RAMWR 0x2C
 
+
+// helper functions
 inline uint16_t swapBytes(uint16_t val)
 {
     return (val >> 8) | (val << 8);
+}
+
+uint32_t swapEndian32(uint32_t val)
+{
+    return ((val >> 24) & 0x000000FF) |
+           ((val >> 8) & 0x0000FF00) |
+           ((val << 8) & 0x00FF0000) |
+           ((val << 24) & 0xFF000000);
+}
+
+int32_t readInt32(const uint8_t *data)
+{
+    int32_t val = *((int32_t *)data);
+    val = (int32_t)swapEndian32((uint32_t)val);
+    return val;
+}
+
+uint32_t readUInt32(const uint8_t *data)
+{
+    uint32_t val = *((uint32_t *)data);
+    val = (uint32_t)swapEndian32((uint32_t)val);
+    return val;
 }
 
 class SPITransactionInfo
@@ -345,9 +369,17 @@ void ST7789::fillScreen(uint16_t color)
     fillRect(0, 0, width, height, swapBytes(color));
 }
 
-void ST7789::loadFont(const uint8_t *font)
+void ST7789::loadFont(const uint8_t *fontData)
 {
-    fontPtr = (uint8_t *)font;
+    currentFont.fontData = fontData;
+    // Read font metadata with endianness correction
+    currentFont.gCount = readUInt32(fontData);
+    uint32_t version = readUInt32(fontData + 4);
+    uint32_t fontSize = readUInt32(fontData + 8);
+    uint32_t mboxY = readUInt32(fontData + 12);
+    currentFont.ascent = readUInt32(fontData + 16);
+    currentFont.descent = readUInt32(fontData + 20);
+    Serial.printf("Font loaded: %d glyphs, %d points, %d ascent, %d descent\n", currentFont.gCount, fontSize, currentFont.ascent, currentFont.descent);
 }
 
 void ST7789::setTextColor(uint16_t color, uint16_t bgColor)
@@ -392,33 +424,107 @@ void ST7789::setRotation(uint8_t m)
     sendData(&madctl, 1);
 }
 
+Glyph ST7789::getGlyphData(uint32_t unicode)
+{
+    const uint8_t *fontPtr = currentFont.fontData + 24;
+    const uint8_t *bitmapPtr = currentFont.fontData + 24 + currentFont.gCount * 28;
 
-void ST7789::drawString(const char *string, int16_t x, int16_t y) {
-    // we can handle 0x20–0x7F by using the ZX Spectrum character set from the ROM
-    uint16_t characterBuffer[16 * 24];
-    uint8_t *charSetPtr = ZXSpectrum_48_rom + 0x3D00;
+    for (uint32_t i = 0; i < currentFont.gCount; i++)
+    {
+        uint32_t glyphUnicode = readUInt32(fontPtr);
+        uint32_t height = readUInt32(fontPtr + 4);
+        uint32_t width = readUInt32(fontPtr + 8);
+        int32_t gxAdvance = readInt32(fontPtr + 12);
+        int32_t dY = readInt32(fontPtr + 16);
+        int32_t dX = readInt32(fontPtr + 20);
 
-    // go through each character in the string
-    for(int i = 0; i < strlen(string); i++) {
-        uint8_t character = string[i];
-        // check if the character is in the range of the ZX Spectrum character set
-        if(character >= 0x20 && character <= 0x7F) {
-            // get the character from the ROM
-            uint8_t *charPtr = charSetPtr + (character - 0x20) * 8;
-            // convert the character to a 8x8 pixel buffer
-            for(int row = 0; row < 8; row++) {
-                uint8_t charRow = charPtr[row];
-                for(int col = 0; col < 8; col++) {
-                    for(int dx = 0; dx < 2; dx++) {
-                        for(int dy = 0; dy < 3; dy++) {
-                            characterBuffer[(row * 3 + dy) * 16 + col * 2 + dx] = (charRow & (1 << (7 - col))) ? textcolor : textbgcolor;
-                        }
-                    }
-                }
-            }
-            // draw the character
-            setWindow(x + i * 16, y, x + i * 16 + 15, y + 23);
-            sendPixels(characterBuffer, 16 * 24);
+        if (glyphUnicode == unicode)
+        {
+            Glyph glyph;
+            glyph.unicode = glyphUnicode;
+            glyph.width = width;
+            glyph.height = height;
+            glyph.gxAdvance = gxAdvance;
+            glyph.dX = dX;
+            glyph.dY = dY;
+            glyph.bitmap = bitmapPtr;
+            return glyph;
         }
+
+        // Move to next glyph (28 bytes for metadata + bitmap size)
+        fontPtr += 28;
+        bitmapPtr += width * height;
+    }
+
+    // Return default glyph if not found
+    Serial.printf("Glyph not found: %c\n", unicode);
+    return getGlyphData(' ');
+}
+
+void ST7789::drawPixel(uint16_t color, int x, int y)
+{
+    if (x < 0 || x >= width || y < 0 || y >= height)
+    {
+        return;
+    }
+    setWindow(x, y, x, y);
+    sendPixel(swapBytes(color));
+}
+
+void ST7789::drawGlyph(const Glyph &glyph, int x, int y)
+{
+    // Iterate over each pixel in the glyph's bitmap
+    const uint8_t *bitmap = glyph.bitmap;
+    uint16_t pixelBuffer[glyph.width * glyph.height] = {textbgcolor};
+    for (int j = 0; j < glyph.height; j++)
+    {
+        for (int i = 0; i < glyph.width; i++)
+        {
+            // Get the alpha value for the current pixel (1 byte per pixel)
+            uint8_t alpha = bitmap[j * glyph.width + i];
+            if (alpha > 0)
+            {
+                // blend between the text color and the background color
+                uint16_t fg = textcolor;
+                uint16_t bg = textbgcolor;
+                // extract the red, green and blue
+                uint8_t fgRed = (fg >> 11) & 0x1F;
+                uint8_t fgGreen = (fg >> 5) & 0x3F;
+                uint8_t fgBlue = fg & 0x1F;
+
+                uint8_t bgRed = (bg >> 11) & 0x1F;
+                uint8_t bgGreen = (bg >> 5) & 0x3F;
+                uint8_t bgBlue = bg & 0x1F;
+
+                uint8_t red = ((fgRed * alpha) + (bgRed * (255 - alpha))) / 255;
+                uint8_t green = ((fgGreen * alpha) + (bgGreen * (255 - alpha))) / 255;
+                uint8_t blue = ((fgBlue * alpha) + (bgBlue * (255 - alpha))) / 255;
+
+                uint16_t color = (red << 11) | (green << 5) | blue;
+                pixelBuffer[i + j * glyph.width] = swapBytes(color);
+            }
+        }
+    }
+    setWindow(x + glyph.dX, y - glyph.dY, x + glyph.dX + glyph.width - 1, y + glyph.dY + glyph.height - 1);
+    sendPixels(pixelBuffer, glyph.width * glyph.height);
+}
+
+void ST7789::drawString(const char *text, int16_t x, int16_t y)
+{
+    int cursorX = x;
+    int cursorY = y;
+
+    while (*text)
+    {
+        char c = *text++;
+
+        // Get the glyph data for the character
+        Glyph glyph = getGlyphData((uint32_t)c);
+
+        // Draw the glyph bitmap at the current cursor position
+        drawGlyph(glyph, cursorX, cursorY + currentFont.ascent);
+
+        // Move the cursor to the right by the glyph's gxAdvance value
+        cursorX += glyph.gxAdvance;
     }
 }

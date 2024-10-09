@@ -6,6 +6,25 @@
 #include "freertos/semphr.h"
 #include "TFTDisplay.h"
 
+struct Glyph {
+    uint32_t unicode;       // Unicode value of the glyph
+    int width;              // Width of the glyph bitmap bounding box
+    int height;             // Height of the glyph bitmap bounding box
+    int gxAdvance;          // Cursor advance after drawing this glyph
+    int dX;                 // Distance from cursor to the left side of the glyph bitmap
+    int dY;                 // Distance from the baseline to the top of the glyph bitmap
+    const uint8_t* bitmap;  // Pointer to the glyph bitmap data
+};
+
+// Font data
+struct Font {
+    uint32_t gCount;        // Number of glyphs
+    uint32_t ascent;        // Ascent in pixels from baseline to top of "d"
+    uint32_t descent;       // Descent in pixels from baseline to bottom of "p"
+    const uint8_t* fontData;  // Pointer to the raw VLW font data
+};
+
+
 class ST7789: public TFTDisplay {
 public:
     QueueHandle_t transactionQueue;
@@ -48,6 +67,10 @@ private:
     void sendColor(uint16_t color, int numPixels);
     void waitDMA();
     void setRotation(uint8_t m);
+    // Text rendering
+    Glyph getGlyphData(uint32_t unicode);
+    void drawPixel(uint16_t color, int x, int y);
+    void drawGlyph(const Glyph& glyph, int x, int y);
 
     static void IRAM_ATTR spi_post_transfer_callback(spi_transaction_t *trans);
     static void IRAM_ATTR spi_pre_transfer_callback(spi_transaction_t *trans);
@@ -60,7 +83,9 @@ private:
     gpio_num_t bl;
     spi_device_handle_t spi;
 
-    uint8_t *fontPtr = nullptr;
     uint16_t textcolor;
     uint16_t textbgcolor;
+
+    // The current font
+    Font currentFont;
 };
