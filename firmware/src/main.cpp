@@ -106,7 +106,7 @@ void setup(void)
   audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
 #endif
 #ifdef PDM_GPIO_NUM
-  i2s speaker pins
+  // i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_PIN_NO_CHANGE,
       .ws_io_num = GPIO_NUM_0,
