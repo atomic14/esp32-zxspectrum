@@ -157,10 +157,10 @@ void VideoPlayerScreen::framePlayerTask()
       vTaskDelay(10 / portTICK_PERIOD_MS);
       continue;
     }
-    // frameTimes.push_back(millis());
-    // while(frameTimes.size() > 0 && frameTimes.back() - frameTimes.front() > 5000) {
-    //   frameTimes.pop_front();
-    // }
+    frameTimes.push_back(millis());
+    while(frameTimes.size() > 0 && frameTimes.back() - frameTimes.front() > 5000) {
+      frameTimes.pop_front();
+    }
     m_tft.startWrite();
     if (mJpeg.openRAM(jpegBuffer, jpegLength, _doDraw))
     {
@@ -176,7 +176,6 @@ void VideoPlayerScreen::framePlayerTask()
     #if CORE_DEBUG_LEVEL > 0
     m_tft.drawFPS(frameTimes.size() / 5);
     #endif
-    // m_tft.drawString(("FPS: " + String(frameTimes.size() / 5)).c_str(), 0, 0);
     m_tft.endWrite();
   }
 }

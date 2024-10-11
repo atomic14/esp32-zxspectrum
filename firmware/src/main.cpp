@@ -106,11 +106,11 @@ void setup(void)
   audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
 #endif
 #ifdef PDM_GPIO_NUM
-  // i2s speaker pins
+  i2s speaker pins
   i2s_pin_config_t i2s_speaker_pins = {
       .bck_io_num = I2S_PIN_NO_CHANGE,
       .ws_io_num = GPIO_NUM_0,
-      .data_out_num = PDM_GPIO_NUM,
+      .data_out_num = BUZZER_GPIO_NUM,
       .data_in_num = I2S_PIN_NO_CHANGE};
   audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
 #endif
@@ -342,6 +342,7 @@ void setup(void)
   // activeScreen->didAppear();
   // load manic.sna
   // emulatorScreen->run("/fs/manic.sna");
+  Serial.println("Running on core: " + String(xPortGetCoreID()));
 }
 
 unsigned long frame_millis;

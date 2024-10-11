@@ -59,7 +59,7 @@ void BuzzerOutput::write(uint8_t *samples, int count)
   }
 }
 
-bool BuzzerOutput::onTimer()
+bool IRAM_ATTR BuzzerOutput::onTimer()
 {
   // output a sample from the buffer if we have one
   if (mCurrentIndex < mBufferLength)

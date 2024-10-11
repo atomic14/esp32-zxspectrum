@@ -24,9 +24,14 @@ struct Font {
     const uint8_t* fontData;  // Pointer to the raw VLW font data
 };
 
+struct SPITransactionInfo;
+
 class ST7789: public TFTDisplay {
 public:
-    QueueHandle_t transactionQueue;
+    // queue of transaction with a DMA buffer allocated
+    QueueHandle_t bigTransactionQueue;
+    // queue of transactions with no DMA buffer (they use the tx_data field)
+    QueueHandle_t smallTransactionQueue;
 
     int width;
     int height;
@@ -66,6 +71,10 @@ private:
     void sendColor(uint16_t color, int numPixels);
     void waitDMA();
     void setRotation(uint8_t m);
+
+    bool getTransaction(SPITransactionInfo **trans, int len);
+    void sendTransaction(SPITransactionInfo *trans);
+
     // Text rendering
     Glyph getGlyphData(uint32_t unicode);
     void drawPixel(uint16_t color, int x, int y);
