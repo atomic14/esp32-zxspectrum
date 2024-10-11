@@ -306,6 +306,48 @@ void ST7789::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
     fillRect(x, y, w, 1, swapBytes(color));
 }
 
+void ST7789::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
+{
+    fillRect(x, y, 1, h, swapBytes(color));
+}
+
+void ST7789::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
+    // make sure that the line is always drawn from left to right
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+    int16_t dx = abs(x1 - x0);
+    int16_t dy = abs(y1 - y0);
+    int16_t sx = (x0 < x1) ? 1 : -1;
+    int16_t sy = (y0 < y1) ? 1 : -1;
+    int16_t err = dx - dy;
+    int16_t e2;
+
+    while (true) {
+        // Draw the current pixel
+        drawPixel(color, x0, y0);
+
+        // If we've reached the end of the line, break out of the loop
+        if (x0 == x1 && y0 == y1) {
+            break;
+        }
+
+        e2 = err * 2;
+
+        if (e2 > -dy) {  // Horizontal step
+            err -= dy;
+            x0 += sx;
+        }
+
+        if (e2 < dx) {  // Vertical step
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+
+
 void ST7789::fillScreen(uint16_t color)
 {
     fillRect(0, 0, width, height, swapBytes(color));

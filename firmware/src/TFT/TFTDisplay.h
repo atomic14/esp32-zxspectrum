@@ -19,6 +19,8 @@ public:
   virtual void loadFont(const uint8_t *font) = 0;
   virtual void setTextColor(uint16_t color, uint16_t bgColor) = 0;
   virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) = 0;
+  virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) = 0;
+  virtual void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) = 0;
   virtual uint16_t color565(uint8_t r, uint8_t g, uint8_t b) { 
     // Convert 8-8-8 RGB to 5-6-5 RGB
     uint16_t r2 = r >> 3;
