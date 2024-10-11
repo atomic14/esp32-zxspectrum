@@ -298,22 +298,7 @@ void ST7789::sendPixel(uint16_t color)
 void ST7789::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
     setWindow(x, y, x + w - 1, y + h - 1);
-    // quick path - where the width x height is smaller than our DMA buffer
-    if (w * h < DMA_BUFFER_SIZE / 2)
-    {
-        sendColor(color, w * h);
-    }
-    else
-    {
-        // work out how many lines we can send at once
-        int linesPerTransaction = DMA_BUFFER_SIZE / (w * 2);
-        int linesToSend = h;
-        while (linesToSend > 0)
-        {
-            sendColor(color, w * std::min(linesPerTransaction, linesToSend));
-            linesToSend -= linesPerTransaction;
-        }
-    }
+    sendColor(color, w * h);
 }
 
 void ST7789::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
