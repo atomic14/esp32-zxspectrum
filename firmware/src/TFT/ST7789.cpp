@@ -22,10 +22,6 @@
 
 // max buffer size that we support - larger transfers will be split accross multiple transactions
 const size_t DMA_BUFFER_SIZE = 320 * 8 * sizeof(uint16_t);
-// transactions that use a DMA buffer
-const size_t NUM_BIG_TRANSACTIONS = 1;
-// transactions that can fit the data in the tx_data field
-const size_t NUM_SMALL_TRANSACTIONS = 1;
 
 // helper functions
 inline uint16_t swapBytes(uint16_t val)
@@ -173,9 +169,7 @@ ST7789::ST7789(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gp
         .input_delay_ns = 0,
         .spics_io_num = cs, // CS pin
         .flags = SPI_DEVICE_NO_DUMMY,
-        .queue_size = NUM_BIG_TRANSACTIONS, // Queue 7 transactions at a time
-        // .pre_cb = spi_pre_transfer_callback,
-        // .post_cb = spi_post_transfer_callback,
+        .queue_size = 1,
         .pre_cb = nullptr,
         .post_cb = nullptr
 
@@ -184,35 +178,9 @@ ST7789::ST7789(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gp
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
     ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &devcfg, &spi));
 
-    // setup the transaction queue
-    bigTransactionQueue = xQueueCreate(NUM_BIG_TRANSACTIONS, sizeof(SPITransactionInfo *));
-    for (int i = 0; i < NUM_BIG_TRANSACTIONS; i++)
-    {
-        SPITransactionInfo *transaction = new SPITransactionInfo(DMA_BUFFER_SIZE);
-        if (!transaction)
-        {
-            Serial.println("Failed to allocate transaction");
-        }
-        else
-        {
-            transaction->display = this;
-            xQueueSendToBack(bigTransactionQueue, &transaction, portMAX_DELAY);
-        }
-    }
-    smallTransactionQueue = xQueueCreate(NUM_SMALL_TRANSACTIONS, sizeof(SPITransactionInfo *));
-    for (int i = 0; i < NUM_SMALL_TRANSACTIONS; i++)
-    {
-        SPITransactionInfo *transaction = new SPITransactionInfo(0);
-        if (!transaction)
-        {
-            Serial.println("Failed to allocate transaction");
-        }
-        else
-        {
-            transaction->display = this;
-            xQueueSendToBack(smallTransactionQueue, &transaction, portMAX_DELAY);
-        }
-    }
+    spi_device_acquire_bus(spi, portMAX_DELAY);
+
+    _transaction = new SPITransactionInfo(DMA_BUFFER_SIZE);
     Serial.println("Created SPI transactions");
     // Reset the display
     gpio_set_level(rst, 0);
@@ -248,56 +216,15 @@ ST7789::~ST7789()
 {
 }
 
-void IRAM_ATTR ST7789::spi_post_transfer_callback(spi_transaction_t *trans)
-{
-    // SPITransactionInfo *transaction = (SPITransactionInfo *)trans->user;
-    // if (trans->length <= 32) {
-    //     xQueueSendFromISR(transaction->display->smallTransactionQueue, &transaction, nullptr);
-    // } else {
-    //     xQueueSendFromISR(transaction->display->bigTransactionQueue, &transaction, nullptr);
-    // }
-}
-
-void IRAM_ATTR ST7789::spi_pre_transfer_callback(spi_transaction_t *trans)
-{
-    // SPITransactionInfo *transaction = (SPITransactionInfo *)trans->user;
-    // if (transaction->isCommand)
-    // {
-    //     gpio_set_level(transaction->display->dc, 0); // Command mode
-    // }
-    // else
-    // {
-    //     gpio_set_level(transaction->display->dc, 1); // Data mode
-    // }
-}
-
 void ST7789::sendCmd(uint8_t cmd)
 {
-    SPITransactionInfo *trans;
-    if (xQueueReceive(smallTransactionQueue, &trans, portMAX_DELAY) == pdTRUE)
-    {
-        trans->setCommand(cmd);
-        sendTransaction(trans);
-    }
-    else
-    {
-        Serial.println("Failed to get transaction");
-    }
-}
-
-bool ST7789::getTransaction(SPITransactionInfo **trans, int len)
-{
-    if (len <= 4)
-    {
-        return xQueueReceive(smallTransactionQueue, trans, portMAX_DELAY);
-    }
-    else
-    {
-        return xQueueReceive(bigTransactionQueue, trans, portMAX_DELAY);
-    }
+    dmaWait();
+    _transaction->setCommand(cmd);
+    sendTransaction(_transaction);
 }
 
 void ST7789::sendTransaction(SPITransactionInfo *trans) {
+    isBusy = true;
     if (trans->isCommand)
     {
         gpio_set_level(dc, 0); // Command mode
@@ -306,16 +233,7 @@ void ST7789::sendTransaction(SPITransactionInfo *trans) {
     {
         gpio_set_level(dc, 1); // Data mode
     }
-    spi_device_polling_transmit(spi, &trans->transaction);
-    if (trans->transaction.length <= 32) {
-        xQueueSendToBack(smallTransactionQueue, &trans, portMAX_DELAY);
-    } else {
-        xQueueSendToBack(bigTransactionQueue, &trans, portMAX_DELAY);
-    }
-    // if (spi_device_queue_trans(spi, &trans->transaction, portMAX_DELAY) != ESP_OK)
-    // {
-    //     Serial.println("Failed to queue transaction");
-    // }
+    spi_device_polling_start(spi, &trans->transaction, portMAX_DELAY);
 }
 
 void ST7789::sendPixels(const uint16_t *data, int numPixels)
@@ -323,50 +241,29 @@ void ST7789::sendPixels(const uint16_t *data, int numPixels)
     int bytes = numPixels * 2;
     for(uint32_t i = 0; i < bytes; i += DMA_BUFFER_SIZE) {
         uint32_t len = std::min(DMA_BUFFER_SIZE, bytes - i);
-        SPITransactionInfo *trans;
-        if (getTransaction(&trans, len))
-        {
-            trans->setPixels(data + i / 2, len / 2);
-            sendTransaction(trans);
-        }
-        else
-        {
-            Serial.println("Failed to get transaction");
-        }
+        dmaWait();
+        _transaction->setPixels(data + i / 2, len / 2);
+        sendTransaction(_transaction);
     }
 }
 
 void ST7789::sendData(const uint8_t *data, int length)
 {
-    SPITransactionInfo *trans;
     for(uint32_t i = 0; i < length; i += DMA_BUFFER_SIZE) {
         uint32_t len = std::min(DMA_BUFFER_SIZE, length - i);
-        if (getTransaction(&trans, len))
-        {
-            trans->setData(data + i, len);
-            sendTransaction(trans);
-        }
-        else
-        {
-            Serial.println("Failed to get transaction");
-        }
+        dmaWait();
+        _transaction->setData(data + i, len);
+        sendTransaction(_transaction);
     }
 }
 
 void ST7789::sendColor(uint16_t color, int numPixels)
 {
-    SPITransactionInfo *trans;
     for(int i = 0; i<numPixels; i+= DMA_BUFFER_SIZE >> 1) {
         int len = std::min(numPixels - i, int(DMA_BUFFER_SIZE >> 1));
-        if (getTransaction(&trans, len * 2))
-        {
-            trans->setColor(color, len);
-            sendTransaction(trans);
-        }
-        else
-        {
-            Serial.println("Failed to get transaction");
-        }
+        dmaWait();
+        _transaction->setColor(color, len);
+        sendTransaction(_transaction);
     }
 }
 
@@ -448,9 +345,13 @@ void ST7789::setTextColor(uint16_t color, uint16_t bgColor)
     textbgcolor = bgColor;
 }
 
-void ST7789::waitDMA()
+void ST7789::dmaWait()
 {
-    // nothing to do here
+    if (isBusy)
+    {
+        spi_device_polling_end(spi, portMAX_DELAY);
+        isBusy = false;
+    }
 }
 
 void ST7789::setRotation(uint8_t m)

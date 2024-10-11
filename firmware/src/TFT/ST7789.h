@@ -24,7 +24,7 @@ struct Font {
     const uint8_t* fontData;  // Pointer to the raw VLW font data
 };
 
-struct SPITransactionInfo;
+class SPITransactionInfo;
 
 class ST7789: public TFTDisplay {
 public:
@@ -41,10 +41,13 @@ public:
     ~ST7789();
 
    void startWrite(){
-        spi_device_acquire_bus(spi, portMAX_DELAY);
+        // we now just aquire the bus forever
+        // spi_device_acquire_bus(spi, portMAX_DELAY);
     }
     void endWrite(){
-        spi_device_release_bus(spi);
+        dmaWait();
+        // TODO - this seems to be crashing - dmaWait is not waiting for the transaction to finish - which is weird...
+        // spi_device_release_bus(spi);
     }
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
@@ -54,9 +57,7 @@ public:
     void pushPixelsDMA(uint16_t *data, uint32_t len) {
         sendPixels(data, len);
     }
-    void dmaWait() {
-        waitDMA();
-    }
+    void dmaWait();
     void drawString(const char *string, int16_t x, int16_t y);
     void fillScreen(uint16_t color);
     void loadFont(const uint8_t *font);
@@ -69,19 +70,16 @@ private:
     void sendPixel(uint16_t color);
     void sendPixels(const uint16_t *data, int numPixels);
     void sendColor(uint16_t color, int numPixels);
-    void waitDMA();
     void setRotation(uint8_t m);
 
-    bool getTransaction(SPITransactionInfo **trans, int len);
+    volatile bool isBusy = false;
+    SPITransactionInfo *_transaction;
     void sendTransaction(SPITransactionInfo *trans);
 
     // Text rendering
     Glyph getGlyphData(uint32_t unicode);
     void drawPixel(uint16_t color, int x, int y);
     void drawGlyph(const Glyph& glyph, int x, int y);
-
-    static void IRAM_ATTR spi_post_transfer_callback(spi_transaction_t *trans);
-    static void IRAM_ATTR spi_pre_transfer_callback(spi_transaction_t *trans);
 
     gpio_num_t mosi;
     gpio_num_t clk;

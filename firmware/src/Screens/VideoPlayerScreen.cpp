@@ -174,7 +174,7 @@ void VideoPlayerScreen::framePlayerTask()
       mJpeg.close();
     }
     #if CORE_DEBUG_LEVEL > 0
-    m_tft.drawFPS(frameTimes.size() / 5);
+    m_tft.drawString(("FPS: " + String(frameTimes.size() / 5)).c_str(), 0, 0);
     #endif
     m_tft.endWrite();
   }
