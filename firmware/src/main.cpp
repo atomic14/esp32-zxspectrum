@@ -48,6 +48,7 @@ public:
   std::string getTitle() const { return title; }
   // callback for when the item is selected
   std::function<void()> onSelect;
+
 private:
   std::string title;
 };
@@ -129,21 +130,29 @@ void setup(void)
 #endif
 #ifdef TOUCH_KEYBOARD
   touchKeyboard = new TouchKeyboard(
-    [&](SpecKeys key, bool down) {
-    {
-      activeScreen->updatekey(key, down);
-    }
-  });
+      [&](SpecKeys key, bool down)
+      {
+        {
+          activeScreen->updatekey(key, down);
+        }
+      });
   touchKeyboard->calibrate();
   touchKeyboard->start();
 #endif
 #ifdef TOUCH_KEYBOARD_V2
   touchKeyboard = new TouchKeyboardV2(
-    [&](SpecKeys key, bool down) {
-    {
-      activeScreen->updatekey(key, down);
-    }
-  });
+      [&](SpecKeys key, bool down)
+      {
+        {
+          activeScreen->updatekey(key, down);
+        }
+      },
+      [&](SpecKeys key)
+      {
+        {
+          activeScreen->pressKey(key);
+        }
+      });
   touchKeyboard->start();
 #endif
   audioOutput->start(15625);
@@ -152,49 +161,50 @@ void setup(void)
   // Files
 #ifdef USE_SDCARD
 #ifdef SD_CARD_PWR
-    if (SD_CARD_PWR != GPIO_NUM_NC)
-    {
-      pinMode(SD_CARD_PWR, OUTPUT);
-      digitalWrite(SD_CARD_PWR, SD_CARD_PWR_ON);
-    }
+  if (SD_CARD_PWR != GPIO_NUM_NC)
+  {
+    pinMode(SD_CARD_PWR, OUTPUT);
+    digitalWrite(SD_CARD_PWR, SD_CARD_PWR_ON);
+  }
 #endif
 #ifdef USE_SDIO
-    SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-    files = new Files<SDCard>(fileSystem);
+  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
+  files = new Files<SDCard>(fileSystem);
 #else
-    SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
-    files = new Files<SDCard>(fileSystem);
+  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+  files = new Files<SDCard>(fileSystem);
 #endif
 #else
-    Flash *fileSystem = new Flash(MOUNT_POINT);
-    files = new Files<Flash>(fileSystem);
+  Flash *fileSystem = new Flash(MOUNT_POINT);
+  files = new Files<Flash>(fileSystem);
 #endif
-  
+
   // Main menu
   MenuItemVector menuItems = {
-    std::make_shared<MenuItem>("48K ZX Spectrum", [&]() {
+      std::make_shared<MenuItem>("48K ZX Spectrum", [&]()
+                                 {
       emulatorScreen->run48K();
       activeScreen = emulatorScreen;
-      #ifdef TOUCH_KEYBOARD
+#ifdef TOUCH_KEYBOARD
       if (touchKeyboard)
       {
         touchKeyboard->setToggleMode(true);
       }
-      #endif
-      activeScreen->didAppear();
-    }),
-    std::make_shared<MenuItem>("128K ZX Spectrum", [&]() {
+#endif
+      activeScreen->didAppear(); }),
+      std::make_shared<MenuItem>("128K ZX Spectrum", [&]()
+                                 {
       emulatorScreen->run128K();
       activeScreen = emulatorScreen;
-      #ifdef TOUCH_KEYBOARD
+#ifdef TOUCH_KEYBOARD
       if (touchKeyboard)
       {
         touchKeyboard->setToggleMode(true);
       }
-      #endif
-      activeScreen->didAppear();
-    }),
-    std::make_shared<MenuItem>("Games", [&]() {
+#endif
+      activeScreen->didAppear(); }),
+      std::make_shared<MenuItem>("Games", [&]()
+                                 {
       if (files->isAvailable())
       {
         // feed in the alphabetically grouped files to the alphabet picker
@@ -213,9 +223,9 @@ void setup(void)
       {
         activeScreen = loadSDCardScreen;
       }
-      activeScreen->didAppear();
-    }),
-    std::make_shared<MenuItem>("Video Player", [&]() {
+      activeScreen->didAppear(); }),
+      std::make_shared<MenuItem>("Video Player", [&]()
+                                 {
       if (files->isAvailable())
       {
         // feed in the alphabetically grouped files to the alphabet picker
@@ -234,108 +244,110 @@ void setup(void)
       {
         activeScreen = loadSDCardScreen;
       }
-      activeScreen->didAppear();
-    }),
+      activeScreen->didAppear(); }),
   };
   // wire everythign up
   loadSDCardScreen = new ErrorScreen(
-    *tft, 
-    audioOutput,
-    { "No SD Card", "Insert an SD Card", "to load games" },
-    [&]() {
-    // go back to the mode picker
-    activeScreen = menuPicker;
-    activeScreen->didAppear();
-  });
+      *tft,
+      audioOutput,
+      {"No SD Card", "Insert an SD Card", "to load games"},
+      [&]()
+      {
+        // go back to the mode picker
+        activeScreen = menuPicker;
+        activeScreen->didAppear();
+      });
   noGamesScreen = new ErrorScreen(
-    *tft, 
-    audioOutput,
-    { "No games found", "on the SD Card", "add Z80 or SNA files" },
-    [&]() {
-    // go back to the mode picker
-    activeScreen = menuPicker;
-    activeScreen->didAppear();
-  });
+      *tft,
+      audioOutput,
+      {"No games found", "on the SD Card", "add Z80 or SNA files"},
+      [&]()
+      {
+        // go back to the mode picker
+        activeScreen = menuPicker;
+        activeScreen->didAppear();
+      });
   emulatorScreen = new EmulatorScreen(*tft, audioOutput);
-  videoPlayerScreen = new VideoPlayerScreen(*tft, audioOutput, [&]() {
+  videoPlayerScreen = new VideoPlayerScreen(*tft, audioOutput, [&]()
+                                            {
     // go back to the mode picker
     activeScreen = menuPicker;
-    activeScreen->didAppear();
-  });
-  menuPicker = new PickerScreen<MenuItemPtr>(*tft, audioOutput, [&](MenuItemPtr mode, int index) {
-    mode->onSelect();
-  }, [&]() {
-    // nothing to do here - we're at the top level
-  });
+    activeScreen->didAppear(); });
+  menuPicker = new PickerScreen<MenuItemPtr>(*tft, audioOutput, [&](MenuItemPtr mode, int index)
+                                             { mode->onSelect(); }, [&]()
+                                             {
+                                               // nothing to do here - we're at the top level
+                                             });
   // game picking
-  gameAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
+  gameAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index)
+                                                            {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
     gameFilePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), gameValidExtensions));
-    activeScreen = gameFilePickerScreen;
-  }, [&]() {
+    activeScreen = gameFilePickerScreen; }, [&]()
+                                                            {
     // go back to the mode picker
     activeScreen = menuPicker;
-    activeScreen->didAppear();
-  });
-  gameFilePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
+    activeScreen->didAppear(); });
+  gameFilePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index)
+                                                       {
     // a file was picked - load it into the emulator
     Serial.printf("Loading snapshot: %s\n", file->getPath().c_str());
-    // switch the touch keyboard to non toggle - we don't want shift and sym-shift to be sticky
-    #ifdef TOUCH_KEYBOARD
+// switch the touch keyboard to non toggle - we don't want shift and sym-shift to be sticky
+#ifdef TOUCH_KEYBOARD
     if (touchKeyboard)
     {
       touchKeyboard->setToggleMode(false);
     }
-    #endif
+#endif
     emulatorScreen->run(file->getPath());
-    activeScreen = emulatorScreen;
-  }, [&]() {
+    activeScreen = emulatorScreen; }, [&]()
+                                                       {
     // go back to the alphabet picker
     activeScreen = gameAlphabetPicker;
-    activeScreen->didAppear();
-  });
+    activeScreen->didAppear(); });
   // video picking - TODO - can we combine this with the game picking code?
-  videoAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index) {
+  videoAlphabetPicker = new PickerScreen<FileLetterCountPtr>(*tft, audioOutput, [&](FileLetterCountPtr entry, int index)
+                                                             {
     // a letter was picked - show the files for that letter
     Serial.printf("Picked letter: %s\n", entry->getLetter().c_str()), 
     videoFilePickerScreen->setItems(files->getFileStartingWithPrefix("/", entry->getLetter().c_str(), videoValidExtensions));
-    activeScreen = videoFilePickerScreen;
-  }, [&]() {
+    activeScreen = videoFilePickerScreen; }, [&]()
+                                                             {
     // go back to the mode picker
     activeScreen = menuPicker;
-    activeScreen->didAppear();
-  });
-  videoFilePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index) {
-    // a file was picked - load it into the emulator
-    Serial.printf("Loading video: %s\n", file->getPath().c_str());
-    activeScreen = videoPlayerScreen;
-    videoPlayerScreen->play(file->getPath().c_str());
-    
-  }, [&]() {
+    activeScreen->didAppear(); });
+  videoFilePickerScreen = new PickerScreen<FileInfoPtr>(*tft, audioOutput, [&](FileInfoPtr file, int index)
+                                                        {
+                                                          // a file was picked - load it into the emulator
+                                                          Serial.printf("Loading video: %s\n", file->getPath().c_str());
+                                                          activeScreen = videoPlayerScreen;
+                                                          videoPlayerScreen->play(file->getPath().c_str());
+                                                        },
+                                                        [&]()
+                                                        {
     // go back to the alphabet picker
     activeScreen = gameAlphabetPicker;
-    activeScreen->didAppear();
-  });
+    activeScreen->didAppear(); });
   // set the mode picker to show the emulator modes
   menuPicker->setItems(menuItems);
   // start off the keyboard and feed keys into the active scene
-  keyboard = new SerialKeyboard([&](SpecKeys key, bool down) {
+  keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
+                                {
     if (activeScreen)
     {
       activeScreen->updatekey(key, down);
-    }
-  });
+    } });
 
-  // start up the nunchuk controller and feed events into the active screen
-  #ifdef NUNCHUK_CLOCK
-  nunchuck = new Nunchuck([&](SpecKeys key, bool down) {
+// start up the nunchuk controller and feed events into the active screen
+#ifdef NUNCHUK_CLOCK
+  nunchuck = new Nunchuck([&](SpecKeys key, bool down)
+                          {
     if (activeScreen)
     {
       activeScreen->updatekey(key, down);
-    }
-  }, NUNCHUK_CLOCK, NUNCHUK_DATA);
-  #endif
+    } }, NUNCHUK_CLOCK, NUNCHUK_DATA);
+#endif
   // start off on the file picker screen
   activeScreen = menuPicker;
   // activeScreen = emulatorScreen;

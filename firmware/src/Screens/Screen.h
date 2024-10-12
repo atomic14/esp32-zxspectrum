@@ -13,7 +13,8 @@ class Screen {
   public:
   Screen(TFTDisplay &tft, AudioOutput *audioOutput) : m_tft(tft), m_audioOutput(audioOutput) {}
   // input
-  virtual void updatekey(SpecKeys key, uint8_t state) = 0;
+  virtual void updatekey(SpecKeys key, uint8_t state) {};
+  virtual void pressKey(SpecKeys key) {};
   // lifecycle
   virtual void didAppear() {}
 };

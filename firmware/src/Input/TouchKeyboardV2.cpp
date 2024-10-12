@@ -7,6 +7,7 @@ void TouchKeyboardV2::keyboardTask(void *arg)
   TouchKeyboardV2 *touchKeyboard = (TouchKeyboardV2 *)arg;
   while (true)
   {
+    unsigned long timeNow = millis();
     for (int row = 0; row < 8; row++)
     {
       digitalWrite(14, (row & 1) ? HIGH : LOW);
@@ -24,19 +25,36 @@ void TouchKeyboardV2::keyboardTask(void *arg)
         {
           // touch detected
           // only send the key event if it's not already pressed
-          if (touchKeyboard->isKeyPressed[keyCode] == false)
+          if (touchKeyboard->isKeyPressed[keyCode] == 0)
           {
-            touchKeyboard->isKeyPressed[keyCode] = true;
+            // the repease time for the key
+            touchKeyboard->isKeyPressed[keyCode] = timeNow;
+            // the key is down
             touchKeyboard->m_keyEvent(keyCode, true);
+            // initial key press
+            touchKeyboard->m_keyPressedEvent(keyCode);
+          }
+          else
+          {
+            // key is being held down - should we repeat it?
+            unsigned long timeSinceLastPress = timeNow - touchKeyboard->isKeyPressed[keyCode];
+            if (timeSinceLastPress > 500)
+            {
+              // are we doing fast repeat? e.g. the key has been held down for more than 500ms
+              // we'll repeat the key every 100ms. To detect this we'll set the last press time to now - 400ms
+              // that way, next time we check, we'll repeat the key
+              touchKeyboard->isKeyPressed[keyCode] = timeNow - 400;
+              touchKeyboard->m_keyPressedEvent(keyCode);
+            }
           }
         }
         else
         {
           // touch not detected
           // was the key previously pressed?
-          if (touchKeyboard->isKeyPressed[keyCode] == true)
+          if (touchKeyboard->isKeyPressed[keyCode] != 0)
           {
-            touchKeyboard->isKeyPressed[keyCode] = false;
+            touchKeyboard->isKeyPressed[keyCode] = 0;
             touchKeyboard->m_keyEvent(keyCode, false);
           }
         }
