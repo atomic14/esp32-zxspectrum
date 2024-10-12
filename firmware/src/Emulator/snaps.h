@@ -37,6 +37,8 @@ bool LoadSNA(ZXSpectrum *speccy, const char *filename);
 bool LoadZ80(ZXSpectrum *speccy, const char *filename);
 // int Load_SCR (ZXSpectrum *speccy, const char *filename);
 
+bool saveZ80(ZXSpectrum *speccy, const char *filename);
+
 // uint8_t SaveSP  (ZXSpectrum *speccy, FILE *);
 // uint8_t SaveSNA (ZXSpectrum *speccy, FILE *);
 // uint8_t SaveZ80 (ZXSpectrum *speccy, FILE *);

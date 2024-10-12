@@ -18,10 +18,14 @@ public:
   ErrorScreen(
       TFTDisplay &tft,
       AudioOutput *audioOutput,
-      std::vector<std::string> messages,
-      BackCallback backCallback) : Screen(tft, audioOutput), m_messages(messages), m_backCallback(backCallback)
+      BackCallback backCallback) : Screen(tft, audioOutput), m_backCallback(backCallback)
   {
     m_tft.loadFont(GillSans_30_vlw);
+  }
+
+  void setMessages(std::vector<std::string> messages)
+  {
+    m_messages = messages;
   }
 
   void didAppear()
@@ -42,9 +46,12 @@ public:
     m_tft.startWrite();
     m_tft.fillScreen(TFT_RED);
     m_tft.setTextColor(TFT_WHITE, TFT_RED);
+    int startY = (m_tft.height() - 40 * m_messages.size())/2;
     for(int i = 0; i < m_messages.size(); i++)
     {
-      m_tft.drawString(m_messages[i].c_str(), 20, 50 + (i * 40));
+      int width = m_tft.measureString(m_messages[i].c_str()).x;
+      int startX = (m_tft.width() - width) / 2;
+      m_tft.drawString(m_messages[i].c_str(), startX, startY + (i * 40));
     }
     m_tft.endWrite();
   }

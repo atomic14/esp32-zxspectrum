@@ -20,7 +20,8 @@ public:
   virtual void pushPixels(uint16_t *data, uint32_t len) = 0;
   virtual void pushPixelsDMA(uint16_t *data, uint32_t len) = 0;
   virtual void dmaWait() = 0;
-  virtual void drawString(const char *string, int16_t x, int16_t y);
+  virtual void drawString(const char *string, int16_t x, int16_t y) = 0;
+  virtual Point measureString(const char *string) = 0;
   virtual void fillScreen(uint16_t color) = 0;
   virtual void loadFont(const uint8_t *font) = 0;
   virtual void setTextColor(uint16_t color, uint16_t bgColor) = 0;

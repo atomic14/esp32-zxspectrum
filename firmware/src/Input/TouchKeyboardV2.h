@@ -166,4 +166,5 @@ public:
         0);
 #endif
   }
+  void setToggleMode(bool toggle) {}
 };

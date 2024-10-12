@@ -63,10 +63,11 @@ PickerScreen<FileInfoPtr> *gameFilePickerScreen = nullptr;
 PickerScreen<FileLetterCountPtr> *gameAlphabetPicker = nullptr;
 PickerScreen<FileInfoPtr> *videoFilePickerScreen = nullptr;
 PickerScreen<FileLetterCountPtr> *videoAlphabetPicker = nullptr;
+PickerScreen<FileLetterCountPtr> *snapshotAlphabetPicket = nullptr;
+PickerScreen<FileInfoPtr> *snapshotFilePickerScreen = nullptr;
 EmulatorScreen *emulatorScreen = nullptr;
 VideoPlayerScreen *videoPlayerScreen = nullptr;
-ErrorScreen *loadSDCardScreen = nullptr;
-ErrorScreen *noGamesScreen = nullptr;
+ErrorScreen *errorScreen = nullptr;
 Screen *activeScreen = nullptr;
 #ifdef USE_SDCARD
 Files<SDCard> *files = nullptr;
@@ -178,6 +179,8 @@ void setup(void)
   Flash *fileSystem = new Flash(MOUNT_POINT);
   files = new Files<Flash>(fileSystem);
 #endif
+  // create the directory structure
+  files->createDirectory("/snapshots");
 
   // Main menu
   MenuItemVector menuItems = {
@@ -185,23 +188,13 @@ void setup(void)
                                  {
       emulatorScreen->run48K();
       activeScreen = emulatorScreen;
-#ifdef TOUCH_KEYBOARD
-      if (touchKeyboard)
-      {
-        touchKeyboard->setToggleMode(true);
-      }
-#endif
+      touchKeyboard->setToggleMode(true);
       activeScreen->didAppear(); }),
       std::make_shared<MenuItem>("128K ZX Spectrum", [&]()
                                  {
       emulatorScreen->run128K();
       activeScreen = emulatorScreen;
-#ifdef TOUCH_KEYBOARD
-      if (touchKeyboard)
-      {
-        touchKeyboard->setToggleMode(true);
-      }
-#endif
+      touchKeyboard->setToggleMode(true);
       activeScreen->didAppear(); }),
       std::make_shared<MenuItem>("Games", [&]()
                                  {
@@ -212,7 +205,8 @@ void setup(void)
         gameAlphabetPicker->setItems(fileLetterCounts);
         if (fileLetterCounts.size() == 0)
         {
-          activeScreen = noGamesScreen;
+          activeScreen = errorScreen;
+          errorScreen->setMessages({"No games found", "on the SD Card", "add Z80 or SNA files"});
         }
         else
         {
@@ -221,7 +215,31 @@ void setup(void)
       }
       else
       {
-        activeScreen = loadSDCardScreen;
+        activeScreen = errorScreen;
+        errorScreen->setMessages({"No SD Card", "Insert an SD Card", "to load games"});
+      }
+      activeScreen->didAppear(); }),
+      std::make_shared<MenuItem>("Snapshots", [&]()
+                                 {
+      if (files->isAvailable())
+      {
+        // feed in the alphabetically grouped files to the alphabet picker
+        FileLetterCountVector fileLetterCounts = files->getFileLetters("/snapshots", gameValidExtensions);
+        snapshotAlphabetPicket->setItems(fileLetterCounts);
+        if (fileLetterCounts.size() == 0)
+        {
+          activeScreen = errorScreen;
+          errorScreen->setMessages({"No snapshots found", "on the SD Card", "save some snapshots", "during game play"});
+        }
+        else
+        {
+          activeScreen = snapshotAlphabetPicket;
+        }
+      }
+      else
+      {
+        activeScreen = errorScreen;
+        errorScreen->setMessages({"No SD Card", "Insert an SD Card", "to load games"});
       }
       activeScreen->didAppear(); }),
       std::make_shared<MenuItem>("Video Player", [&]()
@@ -233,7 +251,8 @@ void setup(void)
         videoAlphabetPicker->setItems(fileLetterCounts);
         if (fileLetterCounts.size() == 0)
         {
-          activeScreen = noGamesScreen;
+          activeScreen = errorScreen;
+          errorScreen->setMessages({"No videos found", "on the SD Card", "copy some AVI files", "onto the card"});
         }
         else
         {
@@ -242,25 +261,15 @@ void setup(void)
       }
       else
       {
-        activeScreen = loadSDCardScreen;
+        activeScreen = errorScreen;
+        errorScreen->setMessages({"No SD Card", "Insert an SD Card", "to load games"});
       }
       activeScreen->didAppear(); }),
   };
   // wire everythign up
-  loadSDCardScreen = new ErrorScreen(
+  errorScreen = new ErrorScreen(
       *tft,
       audioOutput,
-      {"No SD Card", "Insert an SD Card", "to load games"},
-      [&]()
-      {
-        // go back to the mode picker
-        activeScreen = menuPicker;
-        activeScreen->didAppear();
-      });
-  noGamesScreen = new ErrorScreen(
-      *tft,
-      audioOutput,
-      {"No games found", "on the SD Card", "add Z80 or SNA files"},
       [&]()
       {
         // go back to the mode picker

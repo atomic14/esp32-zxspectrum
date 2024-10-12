@@ -207,6 +207,25 @@ public:
     return fileSystem->isMounted();
   }
 
+  void createDirectory(const char *folder)
+  {
+    if (!fileSystem->isMounted()) {
+      return;
+    }
+    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
+    // check to see if the folder exists
+    struct stat st;
+    if (stat(full_path.c_str(), &st) == -1)
+    {
+      Serial.printf("Creating folder %s\n", full_path.c_str());
+      mkdir(full_path.c_str(), 0777);
+    } 
+    else 
+    {
+      Serial.printf("Folder %s already exists\n", full_path.c_str());
+    }
+  }
+
   FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions)
   {
     FileLetterCountVector fileLetters;

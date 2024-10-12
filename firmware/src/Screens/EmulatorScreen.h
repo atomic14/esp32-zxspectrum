@@ -27,7 +27,8 @@ class EmulatorScreen : public Screen
     void run(std::string filename);
     void run48K();
     void run128K();
-    void stop();
+    void pause();
+    void resume();
     friend void drawDisplay(void *pvParameters);
     friend void drawScreen(EmulatorScreen *emulatorScreen);
     friend void z80Runner(void *pvParameter);

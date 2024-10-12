@@ -8,11 +8,11 @@
 
 struct Glyph {
     uint32_t unicode;       // Unicode value of the glyph
-    int width;              // Width of the glyph bitmap bounding box
-    int height;             // Height of the glyph bitmap bounding box
-    int gxAdvance;          // Cursor advance after drawing this glyph
-    int dX;                 // Distance from cursor to the left side of the glyph bitmap
-    int dY;                 // Distance from the baseline to the top of the glyph bitmap
+    int16_t width;              // Width of the glyph bitmap bounding box
+    int16_t height;             // Height of the glyph bitmap bounding box
+    int16_t gxAdvance;          // Cursor advance after drawing this glyph
+    int16_t dX;                 // Distance from cursor to the left side of the glyph bitmap
+    int16_t dY;                 // Distance from the baseline to the top of the glyph bitmap
     const uint8_t* bitmap;  // Pointer to the glyph bitmap data
 };
 
@@ -60,6 +60,7 @@ public:
     }
     void dmaWait();
     void drawString(const char *string, int16_t x, int16_t y);
+    Point measureString(const char *string);
     void fillScreen(uint16_t color);
     void loadFont(const uint8_t *font);
     void setTextColor(uint16_t color, uint16_t bgColor);

@@ -21,7 +21,7 @@
 #define ST7789_CMD_RAMWR 0x2C
 
 // max buffer size that we support - larger transfers will be split accross multiple transactions
-const size_t DMA_BUFFER_SIZE = 320 * 8 * sizeof(uint16_t);
+const size_t DMA_BUFFER_SIZE = 32768;
 
 // helper functions
 inline uint16_t swapBytes(uint16_t val)
@@ -410,7 +410,7 @@ void ST7789::drawFilledPolygon(const std::vector<Point>& vertices, uint16_t colo
 
 void ST7789::fillScreen(uint16_t color)
 {
-    fillRect(0, 0, width, height, swapBytes(color));
+    fillRect(0, 0, width, height, color);
 }
 
 void ST7789::loadFont(const uint8_t *fontData)
@@ -530,27 +530,24 @@ void ST7789::drawGlyph(const Glyph &glyph, int x, int y)
         {
             // Get the alpha value for the current pixel (1 byte per pixel)
             uint8_t alpha = bitmap[j * glyph.width + i];
-            if (alpha > 0)
-            {
-                // blend between the text color and the background color
-                uint16_t fg = textcolor;
-                uint16_t bg = textbgcolor;
-                // extract the red, green and blue
-                uint8_t fgRed = (fg >> 11) & 0x1F;
-                uint8_t fgGreen = (fg >> 5) & 0x3F;
-                uint8_t fgBlue = fg & 0x1F;
+            // blend between the text color and the background color
+            uint16_t fg = textcolor;
+            uint16_t bg = textbgcolor;
+            // extract the red, green and blue
+            uint8_t fgRed = (fg >> 11) & 0x1F;
+            uint8_t fgGreen = (fg >> 5) & 0x3F;
+            uint8_t fgBlue = fg & 0x1F;
 
-                uint8_t bgRed = (bg >> 11) & 0x1F;
-                uint8_t bgGreen = (bg >> 5) & 0x3F;
-                uint8_t bgBlue = bg & 0x1F;
+            uint8_t bgRed = (bg >> 11) & 0x1F;
+            uint8_t bgGreen = (bg >> 5) & 0x3F;
+            uint8_t bgBlue = bg & 0x1F;
 
-                uint8_t red = ((fgRed * alpha) + (bgRed * (255 - alpha))) / 255;
-                uint8_t green = ((fgGreen * alpha) + (bgGreen * (255 - alpha))) / 255;
-                uint8_t blue = ((fgBlue * alpha) + (bgBlue * (255 - alpha))) / 255;
+            uint8_t red = ((fgRed * alpha) + (bgRed * (255 - alpha))) / 255;
+            uint8_t green = ((fgGreen * alpha) + (bgGreen * (255 - alpha))) / 255;
+            uint8_t blue = ((fgBlue * alpha) + (bgBlue * (255 - alpha))) / 255;
 
-                uint16_t color = (red << 11) | (green << 5) | blue;
-                pixelBuffer[i + j * glyph.width] = swapBytes(color);
-            }
+            uint16_t color = (red << 11) | (green << 5) | blue;
+            pixelBuffer[i + j * glyph.width] = swapBytes(color);
         }
     }
     setWindow(x + glyph.dX, y - glyph.dY, x + glyph.dX + glyph.width - 1, y + glyph.dY + glyph.height - 1);
@@ -575,4 +572,23 @@ void ST7789::drawString(const char *text, int16_t x, int16_t y)
         // Move the cursor to the right by the glyph's gxAdvance value
         cursorX += glyph.gxAdvance;
     }
+}
+
+Point ST7789::measureString(const char *string) {
+    Point result = {0, 0};
+    int cursorX = 0;
+    int cursorY = 0;
+    while (*string)
+    {
+        char c = *string++;
+
+        // Get the glyph data for the character
+        Glyph glyph = getGlyphData((uint32_t)c);
+
+        // Move the cursor to the right by the glyph's gxAdvance value
+        cursorX += glyph.gxAdvance;
+        result.y = std::max(result.y, glyph.height);
+    }
+    result.x = cursorX;
+    return result;
 }

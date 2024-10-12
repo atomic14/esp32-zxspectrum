@@ -35,7 +35,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
   uint16_t tftColor = specpal565[borderColor];
   // swap the byte order
-  // tftColor = (tftColor >> 8) | (tftColor << 8);
+  tftColor = (tftColor >> 8) | (tftColor << 8);
   if (tftColor != lastBorderColor)
   {
     // do the border with some simple rects - no need to push pixels for a solid color
@@ -182,6 +182,15 @@ void z80Runner(void *pvParameter)
       xSemaphoreGive(emulatorScreen->m_displaySemaphore);
       // uint32_t evt = 0;
       // xQueueSend(emulatorScreen->frameRenderTimerQueue, &evt, 0);
+      if (digitalRead(0) == LOW)
+      {
+        if (emulatorScreen->isRunning)
+        {
+          Serial.println("Button pressed - take snapshot!");
+          saveZ80(emulatorScreen->machine, "/fs/snapshots/test.z80");
+          emulatorScreen->pause();
+        }
+      }
     }
     else
     {
@@ -200,6 +209,8 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
   }
   memset(screenBuffer, 0, 6912);
   m_displaySemaphore = xSemaphoreCreateBinary();
+
+  pinMode(0, INPUT_PULLUP);
 }
 
 void EmulatorScreen::run(std::string snaPath)
@@ -250,9 +261,14 @@ void EmulatorScreen::run128K() {
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
-void EmulatorScreen::stop()
+void EmulatorScreen::pause()
 {
   isRunning = false;
+}
+
+void EmulatorScreen::resume()
+{
+  isRunning = true;
 }
 
 void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
