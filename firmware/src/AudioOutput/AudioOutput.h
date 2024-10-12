@@ -37,4 +37,7 @@ public:
     }
     mVolume--;
   }
+  int getVolume() {
+    return mVolume;
+  }
 };

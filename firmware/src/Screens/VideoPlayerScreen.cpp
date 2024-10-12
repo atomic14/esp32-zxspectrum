@@ -117,6 +117,7 @@ void VideoPlayerScreen::framePlayerTask()
   size_t jpegLength = 0;
   // used for calculating frame rate
   std::list<int> frameTimes;
+  unsigned long startTime = millis();
   while (true)
   {
     if (mState == VideoPlayerState::STOPPED || mState == VideoPlayerState::PAUSED)
@@ -176,9 +177,35 @@ void VideoPlayerScreen::framePlayerTask()
     #if CORE_DEBUG_LEVEL > 0
     m_tft.drawString(("FPS: " + String(frameTimes.size() / 5)).c_str(), 0, 0);
     #endif
+    // volume control
+    unsigned long currentTime = millis();
+    unsigned long elapsed = currentTime - startTime;
+    startTime = currentTime;
+    if (volumeVisible > 0)
+    {
+      volumeVisible -= elapsed;
+      int centerX = m_tft.width() / 2;
+      int centerY = m_tft.height() / 2;
+      int width = m_tft.width()*0.8;
+      m_tft.fillRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_BLACK);
+      m_tft.fillRect(centerX - width/2, m_tft.height() - 40, m_audioOutput->getVolume() * width / 10, 20, 0x0340);
+      m_tft.drawRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_GREEN);
+    }
     m_tft.endWrite();
   }
 }
+
+void VideoPlayerScreen::pressKey(SpecKeys key) {
+  // keep the volume visible for 1 second
+  volumeVisible = 1000;
+  if (key == SpecKeys::SPECKEY_7) {
+    m_audioOutput->volumeUp();
+  }
+  if (key == SpecKeys::SPECKEY_6) {
+    m_audioOutput->volumeDown();
+  }
+}
+
 
 void VideoPlayerScreen::audioPlayerTask()
 {

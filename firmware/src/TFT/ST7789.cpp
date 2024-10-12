@@ -298,8 +298,17 @@ void ST7789::sendPixel(uint16_t color)
 void ST7789::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
     setWindow(x, y, x + w - 1, y + h - 1);
-    sendColor(color, w * h);
+    sendColor(SWAPBYTES(color), w * h);
 }
+
+void ST7789::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
+    color = SWAPBYTES(color);
+    drawFastHLine(x, y, w, color);
+    drawFastHLine(x, y + h - 1, w, color);
+    drawFastVLine(x, y, h, color);
+    drawFastVLine(x + w - 1, y, h, color);
+}
+
 
 void ST7789::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
 {

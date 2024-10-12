@@ -40,6 +40,9 @@ private:
   void stop();
   void pause();
   void playStatic();
+
+  // volume controls
+  int volumeVisible = 0;
 public:
   VideoPlayerScreen(
       TFTDisplay &tft,
@@ -47,9 +50,6 @@ public:
       BackCallback backCallback) : Screen(tft, audioOutput), m_backCallback(backCallback)
   {
   }
-  virtual void updatekey(SpecKeys key, uint8_t state) {
-    stop();
-    m_backCallback();
-  }
   void play(const char *aviFilename);
+  void pressKey(SpecKeys key);
 };

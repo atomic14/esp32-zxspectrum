@@ -15,6 +15,7 @@ public:
   virtual void startWrite() = 0;
   virtual void endWrite() = 0;
   virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) = 0;
+  virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) = 0;
   virtual void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1) = 0;
   virtual void pushPixels(uint16_t *data, uint32_t len) = 0;
   virtual void pushPixelsDMA(uint16_t *data, uint32_t len) = 0;
@@ -35,6 +36,6 @@ public:
     uint16_t b2 = b >> 3;
     return (r2 << 11) | (g2 << 5) | b2;
   }
-  virtual int width() { return TFT_WIDTH;}
-  virtual int height() { return TFT_HEIGHT; }
+  virtual int width() { return TFT_HEIGHT;}
+  virtual int height() { return TFT_WIDTH; }
 };

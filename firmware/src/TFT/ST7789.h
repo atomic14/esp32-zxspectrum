@@ -50,6 +50,7 @@ public:
         // spi_device_release_bus(spi);
     }
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+    void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
     void pushPixels(uint16_t *data, uint32_t len){
         sendPixels(data, len);
