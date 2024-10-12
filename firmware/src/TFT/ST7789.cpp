@@ -347,6 +347,57 @@ void ST7789::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t c
     }
 }
 
+void ST7789::drawPolygon(const std::vector<Point>& vertices, uint16_t color) {
+    if (vertices.size() < 3) {
+        return; // Not a polygon
+    }
+    for (size_t i = 0; i < vertices.size(); i++) {
+        const Point& v1 = vertices[i];
+        const Point& v2 = vertices[(i + 1) % vertices.size()];
+        drawLine(v1.x, v1.y, v2.x, v2.y, color);
+    }
+}
+
+void ST7789::drawFilledPolygon(const std::vector<Point>& vertices, uint16_t color) {
+    if (vertices.size() < 3) {
+        return; // Not a polygon
+    }
+
+    // Find the bounding box of the polygon
+    int16_t minY = vertices[0].y;
+    int16_t maxY = vertices[0].y;
+    for (const auto& vertex : vertices) {
+        minY = std::min(minY, vertex.y);
+        maxY = std::max(maxY, vertex.y);
+    }
+
+    // Scanline fill algorithm
+    for (int16_t y = minY; y <= maxY; y++) {
+        std::vector<int16_t> nodeX;
+
+        // Find intersections of the scanline with polygon edges
+        for (size_t i = 0; i < vertices.size(); i++) {
+            Point v1 = vertices[i];
+            Point v2 = vertices[(i + 1) % vertices.size()];
+
+            if ((v1.y < y && v2.y >= y) || (v2.y < y && v1.y >= y)) {
+                int16_t x = v1.x + (y - v1.y) * (v2.x - v1.x) / (v2.y - v1.y);
+                nodeX.push_back(x);
+            }
+        }
+
+        // Sort the intersection points
+        std::sort(nodeX.begin(), nodeX.end());
+
+        // Draw horizontal lines between pairs of intersections
+        for (size_t i = 0; i < nodeX.size(); i += 2) {
+            if (i + 1 < nodeX.size()) {
+                drawFastHLine(nodeX[i], y, nodeX[i + 1] - nodeX[i] + 1, color);
+            }
+        }
+    }
+}
+
 
 void ST7789::fillScreen(uint16_t color)
 {

@@ -65,6 +65,8 @@ public:
     void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
     void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
     void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
+    void drawPolygon(const std::vector<Point>& vertices, uint16_t color);
+    void drawFilledPolygon(const std::vector<Point>& vertices, uint16_t color);
 private:
     void init();
     void sendCmd(uint8_t cmd);
