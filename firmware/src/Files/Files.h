@@ -279,7 +279,7 @@ public:
 
     for (DirectoryIterator it(full_path, prefix, extensions); it != DirectoryIterator(); ++it)
     {
-      files.push_back(FileInfoPtr(new FileInfo(upcase(it->d_name), full_path + it->d_name)));
+      files.push_back(FileInfoPtr(new FileInfo(upcase(it->d_name), full_path + "/" + it->d_name)));
     }
     // sort the files - is this needed? Maybe they are already alphabetically sorted
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)

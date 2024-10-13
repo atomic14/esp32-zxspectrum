@@ -155,9 +155,11 @@ int getZ80Version(uint8_t *buffer)
 {
   if (buffer[6] != 0 || buffer[7] != 0)
   {
+    Serial.printf("getZ80Version: PC: %x\n", buffer[6] + (buffer[7] << 8));
     return 1;
   }
   int ahb_len = buffer[30] + (buffer[31] << 8);
+  Serial.printf("AHB: %x\n", ahb_len);
   if (ahb_len == 23)
   {
     return 2;
@@ -257,7 +259,7 @@ models_enum getHardwareModel(uint8_t *buffer, int version)
       return SPECMDL_48K; // + if1
     // if (mch == 2) z80_arch = "SAMRAM";
     if (mch == 3)
-      return SPECMDL_48K; // + mgt
+      return SPECMDL_128K; // + mgt
     if (mch == 4)
       return SPECMDL_128K;
     if (mch == 5)
@@ -316,7 +318,8 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
   {
     int length = fgetc(fp) + (fgetc(fp) << 8);
     int page = fgetc(fp);
-    dataOffset += 3 + length;
+    int actualLength = length == 0xFFFF ? 0x4000 : length;
+    dataOffset += 3 + actualLength;
     Serial.printf("Got page %d, length %d\n", page, length);
     if (pageMap[page] == NULL)
     {
@@ -327,9 +330,8 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
     // if the data is compressed, we need to uncompress it
     if (length == 0xFFFF)
     {
-      length = 0x4000;
       Serial.printf("Reading page %d\n", page);
-      fread(pageMap[page], length, 1, fp);
+      fread(pageMap[page], actualLength, 1, fp);
     } else {
       Serial.printf("Decompressing page %d\n", page);
       decompressZ80BlockV2orV3(fp, length, pageMap[page], 0x4000);
@@ -357,7 +359,7 @@ bool LoadZ80(ZXSpectrum *speccy, const char *filename)
   FILE *fp = fopen(filename, "rb");
   if (!fp)
   {
-    Serial.println("Algo fallo cargando el SNA\n");
+    Serial.println("Could not open file\n");
     return false;
   }
   // read in the header
@@ -367,6 +369,7 @@ bool LoadZ80(ZXSpectrum *speccy, const char *filename)
     buffer[12] = 1; /*as told in CSS FAQ / .z80 section */
   bool res = false;
   int version = getZ80Version(buffer);
+  Serial.printf("Z80 version %d\n", version);
   switch (version)
   {
   case 1:
@@ -389,14 +392,24 @@ bool LoadZ80(ZXSpectrum *speccy, const char *filename)
 bool saveZ80(ZXSpectrum *speccy, const char *filename)
 {
   FILE *fp = fopen(filename, "wb");
-  uint8_t header[30+23] = {0};
-  // Fill the header with the Z80 register data
+  if (!fp)
+  {
+    Serial.println("Failed to open file for writing");
+    return false;
+  }
+
+  // Version 3 header has 30 + 54 + 2 bytes
+  uint8_t header[30 + 54 + 2] = {0};
+
+  // Fill the first 30 bytes of the header with the Z80 register data
   header[0] = speccy->z80Regs->AF.B.h;
   header[1] = speccy->z80Regs->AF.B.l;
   header[2] = speccy->z80Regs->BC.B.l;
   header[3] = speccy->z80Regs->BC.B.h;
   header[4] = speccy->z80Regs->HL.B.l;
   header[5] = speccy->z80Regs->HL.B.h;
+  header[6] = 0; // PC is stored separately in the header
+  header[7] = 0;
   header[8] = speccy->z80Regs->SP.B.l;
   header[9] = speccy->z80Regs->SP.B.h;
   header[10] = speccy->z80Regs->I;
@@ -419,9 +432,13 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
   header[27] = speccy->z80Regs->IFF1;
   header[28] = speccy->z80Regs->IFF2;
   header[29] = speccy->z80Regs->IM & 0x03;
-  header[30] = 23; // Number of additional bytes for the version 2/3 header
+
+  // Version 3 header (starting from byte 30)
+  header[30] = 54; // Number of additional bytes for version 3 header
   header[32] = speccy->z80Regs->PC.B.l;
   header[33] = speccy->z80Regs->PC.B.h;
+
+  // Hardware model (48K or 128K)
   if (speccy->hwopt.hw_model == SPECMDL_48K)
   {
     header[34] = 0;
@@ -429,38 +446,41 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
   else if (speccy->hwopt.hw_model == SPECMDL_128K)
   {
     header[34] = 3;
+    header[35] = speccy->mem.hwBank; // Current memory page
   }
-  models_enum hwmodel = speccy->hwopt.hw_model;
-  if (hwmodel == SPECMDL_128K) {
-    header[35] = speccy->mem.hwBank;
-  }
+
+  // Fill the rest of the version 3 header fields as necessary
+  // e.g., include additional data like the interrupt mode or border color as needed.
+
   fwrite(header, sizeof(header), 1, fp);
 
-  // Now write the memory pages, uncompressed.
+  // Write the memory pages, uncompressed
   uint8_t *pageMap[16] = {0};
 
-  if (hwmodel == SPECMDL_48K)
+  // Map pages based on 48K or 128K model
+  if (speccy->hwopt.hw_model == SPECMDL_48K)
   {
-      pageMap[4] = speccy->mem.banks[2];
-      pageMap[5] = speccy->mem.banks[0];
-      pageMap[8] = speccy->mem.banks[5];
+    pageMap[4] = speccy->mem.banks[2];
+    pageMap[5] = speccy->mem.banks[0];
+    pageMap[8] = speccy->mem.banks[5];
   }
-  else if (hwmodel == SPECMDL_128K)
+  else if (speccy->hwopt.hw_model == SPECMDL_128K)
   {
-      pageMap[3] = speccy->mem.banks[0];
-      pageMap[4] = speccy->mem.banks[1];
-      pageMap[5] = speccy->mem.banks[2];
-      pageMap[6] = speccy->mem.banks[3];
-      pageMap[7] = speccy->mem.banks[4];
-      pageMap[8] = speccy->mem.banks[5];
-      pageMap[9] = speccy->mem.banks[6];
-      pageMap[10] = speccy->mem.banks[7];
+    pageMap[3] = speccy->mem.banks[0];
+    pageMap[4] = speccy->mem.banks[1];
+    pageMap[5] = speccy->mem.banks[2];
+    pageMap[6] = speccy->mem.banks[3];
+    pageMap[7] = speccy->mem.banks[4];
+    pageMap[8] = speccy->mem.banks[5];
+    pageMap[9] = speccy->mem.banks[6];
+    pageMap[10] = speccy->mem.banks[7];
   }
 
   for (int page = 0; page < 16; ++page)
   {
       if (pageMap[page] != NULL)
       {
+          Serial.printf("Writing page: %d\n", page);
           // Write uncompressed page
           uint16_t length = 0xFFFF; // Indicates uncompressed block
           fputc(length & 0xFF, fp); // low byte
@@ -469,6 +489,7 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
           fwrite(pageMap[page], 0x4000, 1, fp); // Write full 16KB page
       }
   }
+  fclose(fp);
   return true;
 }
 
