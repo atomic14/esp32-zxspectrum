@@ -19,6 +19,8 @@ class EmulatorScreen : public Screen
     uint16_t *pixelBuffer = nullptr;
     // copy of the screen so we can track changes
     uint8_t *screenBuffer = nullptr;
+    uint8_t *currentScreenBuffer = nullptr;
+    bool drawReady = true;
     bool firstDraw = false;
     FILE *audioFile = nullptr;
   public:

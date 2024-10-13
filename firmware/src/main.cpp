@@ -154,7 +154,7 @@ void setup(void)
   Serial.println("Running on core: " + String(xPortGetCoreID()));
   // just keep running
   while(true) {
-    vTaskDelay(1000);
+    vTaskDelay(10000);
   }
 }
 

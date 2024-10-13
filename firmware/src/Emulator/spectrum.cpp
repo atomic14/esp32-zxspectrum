@@ -65,7 +65,7 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
   // And a complete frame is (64+192+56)*224=69888 tstates long
   for (int i = 0; i < 312; i++)
   {
-    // handle port FF for the border
+    // handle port FF for the border - is this actually doing anything useful?
     if (i < 64 || i >= 192 + 64)
     {
       hwopt.portFF = 0xFF;

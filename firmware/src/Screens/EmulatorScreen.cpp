@@ -49,8 +49,8 @@ void drawScreen(EmulatorScreen *emulatorScreen)
     lastBorderColor = tftColor;
   }
   // do the pixels
-  uint8_t *attrBase = machine->mem.currentScreen + 0x1800;
-  uint8_t *pixelBase = machine->mem.currentScreen;
+  uint8_t *attrBase = emulatorScreen->currentScreenBuffer + 0x1800;
+  uint8_t *pixelBase = emulatorScreen->currentScreenBuffer;
   uint8_t *attrBaseCopy = emulatorScreen->screenBuffer + 0x1800;
   uint8_t *pixelBaseCopy = emulatorScreen->screenBuffer;
   for (int attrY = 0; attrY < 192 / 8; attrY++)
@@ -148,6 +148,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
     }
   }
   tft.endWrite();
+  emulatorScreen->drawReady = true;
   emulatorScreen->firstDraw = false;
 }
 
@@ -181,15 +182,33 @@ void drawDisplay(void *pvParameters)
 void z80Runner(void *pvParameter)
 {
   EmulatorScreen *emulatorScreen = (EmulatorScreen *)pvParameter;
+  unsigned long lastTime = millis();
   while (1)
   {
     if (emulatorScreen->isRunning)
     {
       emulatorScreen->cycleCount += emulatorScreen->machine->runForFrame(emulatorScreen->m_audioOutput, emulatorScreen->audioFile);
-      // draw a frame
-      xSemaphoreGive(emulatorScreen->m_displaySemaphore);
+      // make a copy of the current screen
+      if (emulatorScreen->drawReady) {
+        emulatorScreen->drawReady = false;
+        memcpy(emulatorScreen->currentScreenBuffer, emulatorScreen->machine->mem.currentScreen, 6912);
+        xSemaphoreGive(emulatorScreen->m_displaySemaphore);
+      }
       // uint32_t evt = 0;
       // xQueueSend(emulatorScreen->frameRenderTimerQueue, &evt, 0);
+      // drawDisplay(emulatorScreen);
+      // log out some stats
+      unsigned long currentTime = millis();
+      unsigned long elapsed = currentTime - lastTime;
+      if (elapsed > 1000)
+      {
+        lastTime = currentTime;
+        float cycles = emulatorScreen->cycleCount / (elapsed * 1000.0);
+        float fps = emulatorScreen->frameCount / (elapsed / 1000.0);
+        Serial.printf("Executed at %.3FMHz cycles, frame rate=%.2f\n", cycles, fps);
+        emulatorScreen->frameCount = 0;
+        emulatorScreen->cycleCount = 0;
+      }
     }
     else
     {
@@ -207,6 +226,12 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
     Serial.println("Failed to allocate screen buffer");
   }
   memset(screenBuffer, 0, 6912);
+  currentScreenBuffer = (uint8_t *)malloc(6912);
+  if (currentScreenBuffer == NULL)
+  {
+    Serial.println("Failed to allocate current screen buffer");
+  }
+  memset(currentScreenBuffer, 0, 6912);
   m_displaySemaphore = xSemaphoreCreateBinary();
 
   pinMode(0, INPUT_PULLUP);
