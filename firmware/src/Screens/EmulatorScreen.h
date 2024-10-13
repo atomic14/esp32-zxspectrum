@@ -29,6 +29,10 @@ class EmulatorScreen : public Screen
     void run128K();
     void pause();
     void resume();
+    void showSaveSnapshotScreen();
+    void didAppear() {
+      resume();
+    }
     friend void drawDisplay(void *pvParameters);
     friend void drawScreen(EmulatorScreen *emulatorScreen);
     friend void z80Runner(void *pvParameter);

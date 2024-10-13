@@ -2,6 +2,12 @@
 
 #include <stdint.h>
 #include "Emulator/keyboard_defs.h"
+#include "AudioOutput/AudioOutput.h"
+#include "sounds/bell.h"
+#include "sounds/error.h"
+#include "sounds/click.h"
+#include "images/busy.h"
+#include "../TFT/TFTDisplay.h"
 
 class TFTDisplay;
 class AudioOutput;
@@ -17,6 +23,28 @@ class Screen {
   // input
   virtual void updatekey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};
+  void playKeyClick() {
+    uint8_t click[] = { 50, 50, 50, 0 };
+    m_audioOutput->write(click, 4);
+  }
+  void playErrorBeep() {
+    m_audioOutput->write(fatal_error_raw, fatal_error_raw_len);
+  }
+  void playSuccessBeep() {
+    m_audioOutput->write(bell_raw, bell_raw_len);
+  }
+  void drawBusy() {
+    m_tft.fillRect(m_tft.width() / 2 - busyImageWidth /2 - 2,
+      m_tft.height() / 2 - busyImageHeight /2 - 2,
+      m_tft.width() / 2 + busyImageWidth /2 + 4 - 1,
+      m_tft.height() / 2 + busyImageHeight /2 + 4 - 1, TFT_BLACK);
+    m_tft.setWindow(
+      m_tft.width() / 2 - busyImageWidth /2,
+      m_tft.height() / 2 - busyImageHeight /2,
+      m_tft.width() / 2 + busyImageWidth /2 - 1,
+      m_tft.height() / 2 + busyImageHeight /2 - 1);
+    m_tft.pushPixels((uint16_t *) busyImageData, busyImageWidth * busyImageHeight);
+  }
   // lifecycle
   virtual void didAppear() {}
   virtual void willDisappear() {}

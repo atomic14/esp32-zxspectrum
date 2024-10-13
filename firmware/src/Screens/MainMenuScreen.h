@@ -87,6 +87,7 @@ public:
       m_navigationStack->push(errorScreen);
       return;
     }
+    drawBusy();
     FileLetterCountVector fileLetterCounts = m_files->getFileLetters(path.c_str(), extensions);
     if (fileLetterCounts.size() == 0)
     {

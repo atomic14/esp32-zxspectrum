@@ -4,6 +4,8 @@
 #include "../Emulator/snaps.h"
 #include "../AudioOutput/AudioOutput.h"
 #include "EmulatorScreen.h"
+#include "NavigationStack.h"
+#include "SaveSnapshotScreen.h"
 
 const int screenWidth = TFT_HEIGHT;
 const int screenHeight = TFT_WIDTH;
@@ -36,7 +38,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   uint16_t tftColor = specpal565[borderColor];
   // swap the byte order
   tftColor = (tftColor >> 8) | (tftColor << 8);
-  if (tftColor != lastBorderColor)
+  if (tftColor != lastBorderColor || emulatorScreen->firstDraw)
   {
     // do the border with some simple rects - no need to push pixels for a solid color
     tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
@@ -167,6 +169,11 @@ void drawDisplay(void *pvParameters)
         flashTimer = 0;
       }
     }
+    if (emulatorScreen->isRunning && digitalRead(0) == LOW)
+    {
+      emulatorScreen->pause();
+      emulatorScreen->showSaveSnapshotScreen();
+    }
   }
 }
 
@@ -182,15 +189,6 @@ void z80Runner(void *pvParameter)
       xSemaphoreGive(emulatorScreen->m_displaySemaphore);
       // uint32_t evt = 0;
       // xQueueSend(emulatorScreen->frameRenderTimerQueue, &evt, 0);
-      if (digitalRead(0) == LOW)
-      {
-        if (emulatorScreen->isRunning)
-        {
-          Serial.println("Button pressed - take snapshot!");
-          saveZ80(emulatorScreen->machine, "/fs/snapshots/test.z80");
-          emulatorScreen->pause();
-        }
-      }
     }
     else
     {
@@ -268,6 +266,9 @@ void EmulatorScreen::pause()
 
 void EmulatorScreen::resume()
 {
+  // trigger a complete screen redraw
+  firstDraw = true;
+  // start running again
   isRunning = true;
 }
 
@@ -283,4 +284,8 @@ void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
   if (isRunning) {
     machine->updatekey(key, state);
   }
+}
+
+void EmulatorScreen::showSaveSnapshotScreen() {
+  m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine));
 }

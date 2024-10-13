@@ -31,7 +31,15 @@ void TouchKeyboardV2::keyboardTask(void *arg)
             touchKeyboard->isKeyPressed[keyCode] = timeNow;
             // the key is down
             touchKeyboard->m_keyEvent(keyCode, true);
-            // initial key press
+            // special key handling for DEL and BREAK
+            if (keyCode == SPECKEY_0 && touchKeyboard->isKeyPressed[SPECKEY_SHIFT] != 0)
+            {
+              keyCode = SPECKEY_DEL;
+            }
+            if (keyCode == SPECKEY_SPACE && touchKeyboard->isKeyPressed[SPECKEY_SHIFT] != 0)
+            {
+              keyCode = SPECKEY_BREAK;
+            }
             touchKeyboard->m_keyPressedEvent(keyCode);
           }
           else
@@ -44,6 +52,15 @@ void TouchKeyboardV2::keyboardTask(void *arg)
               // we'll repeat the key every 100ms. To detect this we'll set the last press time to now - 400ms
               // that way, next time we check, we'll repeat the key
               touchKeyboard->isKeyPressed[keyCode] = timeNow - 400;
+              // special key handling for DEL and BREAK
+              if (keyCode == SPECKEY_0 && touchKeyboard->isKeyPressed[SPECKEY_SHIFT] != 0)
+              {
+                keyCode = SPECKEY_DEL;
+              }
+              if (keyCode == SPECKEY_SPACE && touchKeyboard->isKeyPressed[SPECKEY_SHIFT] != 0)
+              {
+                keyCode = SPECKEY_BREAK;
+              }
               touchKeyboard->m_keyPressedEvent(keyCode);
             }
           }

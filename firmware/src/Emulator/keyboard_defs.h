@@ -50,6 +50,9 @@ enum SpecKeys
   JOYK_LEFT,
   JOYK_RIGHT,
   JOYK_FIRE,
+  // special pseudo keys
+  SPECKEY_DEL,
+  SPECKEY_BREAK,
 };
 
 const std::unordered_map<SpecKeys, char> specKeyToLetter = {

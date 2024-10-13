@@ -6,7 +6,7 @@
 #include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
 #include "fonts/GillSans_30_vlw.h"
-#include "rainbow_image.h"
+#include "images/rainbow_image.h"
 
 class TFTDisplay;
 class ScrollingList;
@@ -55,6 +55,7 @@ public:
     case SPECKEY_7:
       if (m_selectedItem > 0)
       {
+        playKeyClick();
         m_selectedItem--;
         updateDisplay();
       }
@@ -64,6 +65,7 @@ public:
     case SPECKEY_6:
       if (m_selectedItem < m_items.size() - 1)
       {
+        playKeyClick();
         m_selectedItem++;
         updateDisplay();
       }
@@ -73,11 +75,13 @@ public:
     case SPECKEY_5:
     {
       onBack();
+      playKeyClick();
       isHandled = true;
       break;
     }
     case JOYK_FIRE:
     case SPECKEY_ENTER:
+      playKeyClick();
       onItemSelect(m_items[m_selectedItem], m_selectedItem);
       break;
     }

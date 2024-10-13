@@ -40,14 +40,11 @@ public:
     ST7789(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width = 240, int height = 320);
     ~ST7789();
 
-   void startWrite(){
-        // we now just aquire the bus forever
-        // spi_device_acquire_bus(spi, portMAX_DELAY);
+    void startWrite(){
+        // nothing to do
     }
     void endWrite(){
-        dmaWait();
-        // TODO - this seems to be crashing - dmaWait is not waiting for the transaction to finish - which is weird...
-        // spi_device_release_bus(spi);
+        // nothing to do
     }
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
