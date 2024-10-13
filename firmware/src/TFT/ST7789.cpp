@@ -415,6 +415,10 @@ void ST7789::fillScreen(uint16_t color)
 
 void ST7789::loadFont(const uint8_t *fontData)
 {
+    if (currentFont.fontData == fontData)
+    {
+        return;
+    }
     currentFont.fontData = fontData;
     // Read font metadata with endianness correction
     currentFont.gCount = readUInt32(fontData);
@@ -423,7 +427,6 @@ void ST7789::loadFont(const uint8_t *fontData)
     uint32_t mboxY = readUInt32(fontData + 12);
     currentFont.ascent = readUInt32(fontData + 16);
     currentFont.descent = readUInt32(fontData + 20);
-    Serial.printf("Font loaded: %d glyphs, %d points, %d ascent, %d descent\n", currentFont.gCount, fontSize, currentFont.ascent, currentFont.descent);
 }
 
 void ST7789::setTextColor(uint16_t color, uint16_t bgColor)
@@ -521,7 +524,7 @@ void ST7789::drawPixel(uint16_t color, int x, int y)
 
 void ST7789::drawGlyph(const Glyph &glyph, int x, int y)
 {
-    // Iterate over each pixel in the glyph's bitmap
+   // Iterate over each pixel in the glyph's bitmap
     const uint8_t *bitmap = glyph.bitmap;
     uint16_t pixelBuffer[glyph.width * glyph.height] = {textbgcolor};
     for (int j = 0; j < glyph.height; j++)
@@ -592,3 +595,4 @@ Point ST7789::measureString(const char *string) {
     result.x = cursorX;
     return result;
 }
+

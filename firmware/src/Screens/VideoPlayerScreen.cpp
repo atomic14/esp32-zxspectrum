@@ -2,6 +2,7 @@
 #include "VideoPlayer/VideoSource.h"
 #include "AudioOutput/AudioOutput.h"
 #include "../TFT/TFTDisplay.h"
+#include "fonts/GillSans_15_vlw.h"
 #include <list>
 
 void VideoPlayerScreen::_framePlayerTask(void *param)
@@ -156,42 +157,47 @@ void VideoPlayerScreen::framePlayerTask()
     {
       // no frame ready yet
       vTaskDelay(10 / portTICK_PERIOD_MS);
-      continue;
     }
-    frameTimes.push_back(millis());
-    while(frameTimes.size() > 0 && frameTimes.back() - frameTimes.front() > 5000) {
-      frameTimes.pop_front();
-    }
-    m_tft.startWrite();
-    if (mJpeg.openRAM(jpegBuffer, jpegLength, _doDraw))
+    else
     {
-      mJpeg.setUserPointer(this);
-      #ifdef LED_MATRIX
-      mJpeg.setPixelType(RGB565_LITTLE_ENDIAN);
-      #else
-      mJpeg.setPixelType(RGB565_BIG_ENDIAN);
+      frameTimes.push_back(millis());
+      while(frameTimes.size() > 0 && frameTimes.back() - frameTimes.front() > 5000) {
+        frameTimes.pop_front();
+      }
+      m_tft.startWrite();
+      if (mJpeg.openRAM(jpegBuffer, jpegLength, _doDraw))
+      {
+        mJpeg.setUserPointer(this);
+        #ifdef LED_MATRIX
+        mJpeg.setPixelType(RGB565_LITTLE_ENDIAN);
+        #else
+        mJpeg.setPixelType(RGB565_BIG_ENDIAN);
+        #endif
+        mJpeg.decode(0, 0, 0);
+        mJpeg.close();
+      }
+      #if CORE_DEBUG_LEVEL > 0
       #endif
-      mJpeg.decode(0, 0, 0);
-      mJpeg.close();
+      // volume control
+      unsigned long currentTime = millis();
+      unsigned long elapsed = currentTime - startTime;
+      startTime = currentTime;
+      if (volumeVisible > 0)
+      {
+        m_tft.loadFont(GillSans_15_vlw);
+        m_tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        m_tft.drawString(("FPS: " + String(frameTimes.size() / 5)).c_str(), 0, 0);
+        volumeVisible -= elapsed;
+        int centerX = m_tft.width() / 2;
+        int centerY = m_tft.height() / 2;
+        int width = m_tft.width()*0.8;
+        m_tft.drawString(("VOLUME: " + String(m_audioOutput->getVolume())).c_str(), centerX - width/2, m_tft.height() - 55);
+        m_tft.fillRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_BLACK);
+        m_tft.fillRect(centerX - width/2, m_tft.height() - 40, m_audioOutput->getVolume() * width / 10, 20, 0x0340);
+        m_tft.drawRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_GREEN);
+      }
+      m_tft.endWrite();
     }
-    #if CORE_DEBUG_LEVEL > 0
-    m_tft.drawString(("FPS: " + String(frameTimes.size() / 5)).c_str(), 0, 0);
-    #endif
-    // volume control
-    unsigned long currentTime = millis();
-    unsigned long elapsed = currentTime - startTime;
-    startTime = currentTime;
-    if (volumeVisible > 0)
-    {
-      volumeVisible -= elapsed;
-      int centerX = m_tft.width() / 2;
-      int centerY = m_tft.height() / 2;
-      int width = m_tft.width()*0.8;
-      m_tft.fillRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_BLACK);
-      m_tft.fillRect(centerX - width/2, m_tft.height() - 40, m_audioOutput->getVolume() * width / 10, 20, 0x0340);
-      m_tft.drawRect(centerX - width/2, m_tft.height() - 40, width, 20, TFT_GREEN);
-    }
-    m_tft.endWrite();
   }
 }
 

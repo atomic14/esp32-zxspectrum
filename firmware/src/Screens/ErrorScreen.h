@@ -2,7 +2,7 @@
 
 #include "Screen.h"
 #include "../TFT/TFTDisplay.h"
-#include "font.h"
+#include "fonts/GillSans_30_vlw.h"
 
 class TFTDisplay;
 
@@ -17,7 +17,6 @@ public:
       TFTDisplay &tft,
       AudioOutput *audioOutput) : m_messages(messages), Screen(tft, audioOutput)
   {
-    m_tft.loadFont(GillSans_30_vlw);
   }
 
   void didAppear()
@@ -35,6 +34,7 @@ public:
 
   void updateDisplay()
   {
+    m_tft.loadFont(GillSans_30_vlw);
     m_tft.startWrite();
     m_tft.fillScreen(TFT_RED);
     m_tft.setTextColor(TFT_WHITE, TFT_RED);

@@ -5,7 +5,7 @@
 #include "Screen.h"
 #include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
-#include "font.h"
+#include "fonts/GillSans_30_vlw.h"
 #include "rainbow_image.h"
 
 class TFTDisplay;
@@ -24,7 +24,6 @@ public:
       AudioOutput *audioOutput
   ) : Screen(tft, audioOutput)
   {
-    m_tft.loadFont(GillSans_30_vlw);
   }
 
   void setItems(std::vector<ItemT> items)
@@ -103,6 +102,7 @@ public:
 
   void updateDisplay()
   {
+    m_tft.loadFont(GillSans_30_vlw);
     m_tft.startWrite();
     int linesPerPage = (TFT_WIDTH - 10) / 30;
     int page = m_selectedItem / linesPerPage;
