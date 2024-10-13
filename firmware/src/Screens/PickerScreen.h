@@ -11,11 +11,17 @@
 class TFTDisplay;
 class ScrollingList;
 
+bool starts_with(const std::string& str, const std::string& prefix) {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+
 template <class ItemT>
 class PickerScreen : public Screen
 {
 private:
   std::vector<ItemT> m_items;
+  std::string searchPrefix;
+  int lastSearchPrefix = 0;
   int m_selectedItem = 0;
   int m_lastPageDrawn = -1;
 public:
@@ -91,9 +97,15 @@ public:
       if (specKeyToLetter.find(key) != specKeyToLetter.end())
       {
         char letter = specKeyToLetter.at(key);
+        if (millis() - lastSearchPrefix > 500)
+        {
+          searchPrefix = "";
+        }
+        searchPrefix += letter;
+        lastSearchPrefix = millis();
         for (int i = 0; i < m_items.size(); i++)
         {
-          if (m_items[i]->getTitle()[0] == letter)
+          if (starts_with(m_items[i]->getTitle(), searchPrefix))
           {
             m_selectedItem = i;
             updateDisplay();
