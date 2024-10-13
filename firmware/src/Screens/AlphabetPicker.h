@@ -12,8 +12,8 @@ class AlphabetPicker : public PickerScreen<FileLetterCountPtr>
     std::string m_path;
     std::vector<std::string> m_extensions;
   public:
-    AlphabetPicker(Files_T *files, TFTDisplay &tft, AudioOutput *audioOutput, std::string path, std::vector<std::string> extensions) 
-      : m_files(files), PickerScreen(tft, audioOutput), m_path(path), m_extensions(extensions)
+    AlphabetPicker(std::string title, Files_T *files, TFTDisplay &tft, AudioOutput *audioOutput, std::string path, std::vector<std::string> extensions) 
+      : m_files(files), PickerScreen(title, tft, audioOutput), m_path(path), m_extensions(extensions)
     {
     }
     void onItemSelect(FileLetterCountPtr item, int index) override

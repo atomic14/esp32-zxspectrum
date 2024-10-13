@@ -6,6 +6,7 @@
 #include "../TFT/TFTDisplay.h"
 #include "../Emulator/spectrum.h"
 #include "fonts/GillSans_30_vlw.h"
+#include "fonts/GillSans_15_vlw.h"
 #include "images/rainbow_image.h"
 
 class TFTDisplay;
@@ -21,14 +22,16 @@ class PickerScreen : public Screen
 private:
   std::vector<ItemT> m_items;
   std::string searchPrefix;
+  std::string title;
   int lastSearchPrefix = 0;
   int m_selectedItem = 0;
   int m_lastPageDrawn = -1;
 public:
   PickerScreen(
+      std::string title,
       TFTDisplay &tft,
       AudioOutput *audioOutput
-  ) : Screen(tft, audioOutput)
+  ) : title(title), Screen(tft, audioOutput)
   {
   }
 
@@ -118,15 +121,18 @@ public:
 
   void updateDisplay()
   {
-    m_tft.loadFont(GillSans_30_vlw);
     m_tft.startWrite();
-    int linesPerPage = (TFT_WIDTH - 10) / 30;
+    int linesPerPage = (m_tft.height() - 10 - 15)/30;
     int page = m_selectedItem / linesPerPage;
     if (page != m_lastPageDrawn)
     {
       m_tft.fillScreen(TFT_BLACK);
       m_lastPageDrawn = page;
     }
+    m_tft.loadFont(GillSans_15_vlw);
+    m_tft.drawString((title + " - 5: Back, 6: Down, 7: Up, ENTER: Pick").c_str(), 0, 0);
+    m_tft.drawFastHLine(0, 15, m_tft.width() - 1, TFT_WHITE);
+    m_tft.loadFont(GillSans_30_vlw);
     for (int i = 0; i < linesPerPage; i++)
     {
       int itemIndex = page * linesPerPage + i;
@@ -135,7 +141,7 @@ public:
         break;
       }
       m_tft.setTextColor(itemIndex == m_selectedItem ? TFT_GREEN : TFT_WHITE, TFT_BLACK);
-      m_tft.drawString(m_items[itemIndex]->getTitle().c_str(), 20, 10 + i * 30);
+      m_tft.drawString(m_items[itemIndex]->getTitle().c_str(), 20, 10 + 15 + i * 30);
     }
     // draw the spectrum flash
     m_tft.setWindow(TFT_HEIGHT - rainbowImageWidth, TFT_WIDTH - rainbowImageHeight, TFT_HEIGHT - 1, TFT_WIDTH - 1);

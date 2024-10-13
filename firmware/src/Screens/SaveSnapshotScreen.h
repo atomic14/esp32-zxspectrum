@@ -89,31 +89,33 @@ public:
 
   void updateDisplay()
   {
+    const int yMargin = 100;
+    const int xMargin = 76;
     m_tft.loadFont(GillSans_30_vlw);
     m_tft.startWrite();
-    m_tft.fillRect(25, 25, m_tft.width() - 50, m_tft.height() - 50, TFT_BLACK);
-    m_tft.drawRect(25, 25, m_tft.width() - 50, m_tft.height() - 50, TFT_WHITE);
+    m_tft.fillRect(xMargin/2, yMargin/2, m_tft.width() - xMargin, m_tft.height() - yMargin, TFT_BLACK);
+    m_tft.drawRect(xMargin/2, yMargin/2, m_tft.width() - xMargin, m_tft.height() - yMargin, TFT_WHITE);
     m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
     auto size = m_tft.measureString("Enter Filename");
-    m_tft.drawString("Enter Filename", (m_tft.width() - size.x)/2, 50);
+    m_tft.drawString("Enter Filename", (m_tft.width() - size.x)/2, yMargin/2 + 15);
 
     int centerX = m_tft.width() / 2;
     int centerY = m_tft.height() / 2;
 
     // filename textbox
-    m_tft.fillRect(centerX - 4*30, centerY-20, 8*30, 40, 0x2020);
-    m_tft.drawRect(centerX - 4*30, centerY-20, 8*30, 40, TFT_WHITE);
+    m_tft.fillRect(centerX - 4*25, centerY-20, 8*25, 40, 0x2020);
+    m_tft.drawRect(centerX - 4*25, centerY-20, 8*25, 40, TFT_WHITE);
 
     m_tft.setTextColor(TFT_WHITE, 0x2020);
     auto textSize = m_tft.measureString(filename.c_str());
     m_tft.drawString(filename.c_str(), centerX - textSize.x/2, centerY - textSize.y/2);
 
     // draw a cursor on the end of the filename (let's just use a white rectangle)
-    m_tft.fillRect(centerX + textSize.x/2, centerY-15, 15, 30, TFT_WHITE);
+    m_tft.fillRect(centerX + textSize.x/2, centerY-15, 3, 30, TFT_WHITE);
 
     m_tft.loadFont(GillSans_15_vlw);
     auto instructionsSize = m_tft.measureString("Press ENTER to save, BREAK to exit");
-    m_tft.drawString("Press ENTER to save, BREAK to exit", centerX - instructionsSize.x/2, m_tft.height() - 50 - instructionsSize.y);
+    m_tft.drawString("Press ENTER to save, BREAK to exit", centerX - instructionsSize.x/2, centerY + 40);
 
     m_tft.endWrite();
   }

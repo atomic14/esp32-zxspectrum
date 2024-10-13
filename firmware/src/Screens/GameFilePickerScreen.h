@@ -8,7 +8,7 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
 {
   public:
       GameFilePickerScreen(TFTDisplay &tft, AudioOutput *audioOutput)
-      : PickerScreen(tft, audioOutput) {}
+      : PickerScreen("Games", tft, audioOutput) {}
       void onItemSelect(FileInfoPtr item, int index) {
         drawBusy();
         EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);

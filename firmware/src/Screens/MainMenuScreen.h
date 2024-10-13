@@ -33,7 +33,7 @@ private:
   Files_T *m_files;
 
 public:
-  MainMenuScreen(TFTDisplay &tft, AudioOutput *audioOutput, Files_T *files) : m_files(files), PickerScreen(tft, audioOutput)
+  MainMenuScreen(TFTDisplay &tft, AudioOutput *audioOutput, Files_T *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
   {
     // Main menu
     MenuItemVector menuItems = {
@@ -72,6 +72,7 @@ public:
   }
 
   template <class FilterPickerScreen_T> void showAlphabetPicker(
+    std::string title,
     std::vector<std::string> no_sd_card_error,
     std::vector<std::string> no_files_error,
     std::string path,
@@ -98,7 +99,7 @@ public:
       m_navigationStack->push(errorScreen);
       return;
     }
-    AlphabetPicker<Files_T, FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<Files_T, FilterPickerScreen_T>(m_files,  m_tft, m_audioOutput, path, extensions);
+    AlphabetPicker<Files_T, FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<Files_T, FilterPickerScreen_T>(title, m_files,  m_tft, m_audioOutput, path, extensions);
     alphabetPicker->setItems(fileLetterCounts);
     m_navigationStack->push(alphabetPicker);
   }
@@ -106,6 +107,7 @@ public:
   void showGames()
   {
     showAlphabetPicker<GameFilePickerScreen>(
+      "Games",
       {"No SD Card", "Insert an SD Card", "to load games"},
       {"No games found", "on the SD Card", "add Z80 or SNA files"},
       "/",
@@ -116,6 +118,7 @@ public:
   void showSnapshots()
   {
     showAlphabetPicker<GameFilePickerScreen>(
+      "Snapshots",
       {"No SD Card", "Insert an SD Card", "to load games"},
       {"No snapshots found", "on the SD Card", "save some snapshots", "during game play"},
       "/snapshots",
@@ -126,6 +129,7 @@ public:
   void showVideos()
   {
     showAlphabetPicker<VideoFilePickerScreen>(
+      "Videos",
       {"No SD Card", "Insert an SD Card", "to load games"},
       {"No videos found", "on the SD Card", "copy some AVI files", "onto the card"},
       "/",

@@ -7,7 +7,7 @@ class VideoFilePickerScreen : public PickerScreen<FileInfoPtr>
 {
   public:
       VideoFilePickerScreen(TFTDisplay &tft, AudioOutput *audioOutput)
-      : PickerScreen(tft, audioOutput) {}
+      : PickerScreen("Videos", tft, audioOutput) {}
       void onItemSelect(FileInfoPtr item, int index) {
         VideoPlayerScreen *playerScreen = new VideoPlayerScreen(m_tft, m_audioOutput);
         playerScreen->play(item->getPath().c_str());

@@ -36,8 +36,8 @@ class Screen {
   void drawBusy() {
     m_tft.fillRect(m_tft.width() / 2 - busyImageWidth /2 - 2,
       m_tft.height() / 2 - busyImageHeight /2 - 2,
-      m_tft.width() / 2 + busyImageWidth /2 + 4 - 1,
-      m_tft.height() / 2 + busyImageHeight /2 + 4 - 1, TFT_BLACK);
+      busyImageWidth /2 + 4,
+      busyImageHeight /2 + 4, TFT_BLACK);
     m_tft.setWindow(
       m_tft.width() / 2 - busyImageWidth /2,
       m_tft.height() / 2 - busyImageHeight /2,
