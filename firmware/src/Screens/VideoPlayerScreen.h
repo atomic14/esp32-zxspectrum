@@ -17,7 +17,7 @@ private:
   VideoPlayerState mState = VideoPlayerState::STOPPED;
 
   // video playing
-  JPEGDEC mJpeg;
+  JPEGDEC *mJpeg = new JPEGDEC();
 
   // video source
   VideoSource *mVideoSource = NULL;

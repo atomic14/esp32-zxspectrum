@@ -1,2 +1,2 @@
-extern unsigned char bell_raw[];
-extern unsigned int bell_raw_len;
+extern const unsigned char bell_raw[];
+extern const unsigned int bell_raw_len;

@@ -165,16 +165,16 @@ void VideoPlayerScreen::framePlayerTask()
         frameTimes.pop_front();
       }
       m_tft.startWrite();
-      if (mJpeg.openRAM(jpegBuffer, jpegLength, _doDraw))
+      if (mJpeg->openRAM(jpegBuffer, jpegLength, _doDraw))
       {
-        mJpeg.setUserPointer(this);
+        mJpeg->setUserPointer(this);
         #ifdef LED_MATRIX
         mJpeg.setPixelType(RGB565_LITTLE_ENDIAN);
         #else
-        mJpeg.setPixelType(RGB565_BIG_ENDIAN);
+        mJpeg->setPixelType(RGB565_BIG_ENDIAN);
         #endif
-        mJpeg.decode(0, 0, 0);
-        mJpeg.close();
+        mJpeg->decode(0, 0, 0);
+        mJpeg->close();
       }
       #if CORE_DEBUG_LEVEL > 0
       #endif

@@ -111,7 +111,7 @@ class Memory {
         mappedMemory[memoryBank][bankAddress] = value;
       }
     }
-    void loadRom(uint8_t *rom_data, int rom_len) {
+    void loadRom(const uint8_t *rom_data, int rom_len) {
       Serial.printf("Loading ROM %d", rom_len);
       int romCount = rom_len / 0x4000;
       for (int i = 0; i < romCount; i++) {

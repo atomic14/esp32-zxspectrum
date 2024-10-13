@@ -21,7 +21,7 @@ void I2SBase::stop()
   i2s_driver_uninstall(m_i2s_port);
 }
 
-void I2SBase::write(uint8_t *samples, int count)
+void I2SBase::write(const uint8_t *samples, int count)
 {
   int sample_index = 0;
   while (sample_index < count)

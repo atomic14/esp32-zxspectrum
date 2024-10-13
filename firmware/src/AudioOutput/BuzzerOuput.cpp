@@ -33,7 +33,7 @@ void BuzzerOutput::start(uint32_t sample_rate)
   ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
 }
 
-void BuzzerOutput::write(uint8_t *samples, int count)
+void BuzzerOutput::write(const uint8_t *samples, int count)
 {
   while (true)
   {
