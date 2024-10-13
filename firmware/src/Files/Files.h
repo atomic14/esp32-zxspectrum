@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <algorithm>
 #include <memory>
+#include <map>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -14,23 +15,43 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-std::string upcase(const std::string &str)
+class StringUtils
 {
-  std::string result = str;
-  std::transform(result.begin(), result.end(), result.begin(),
-                 [](unsigned char c)
-                 { return std::toupper(c); });
-  return result;
-}
+public:
+  static std::string upcase(const std::string &str)
+  {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c)
+                   { return std::toupper(c); });
+    return result;
+  }
 
-std::string downcase(const std::string &str)
+  static std::string downcase(const std::string &str)
+  {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c)
+                   { return std::tolower(c); });
+    return result;
+  }
+};
+
+class BusyLight
 {
-  std::string result = str;
-  std::transform(result.begin(), result.end(), result.begin(),
-                 [](unsigned char c)
-                 { return std::tolower(c); });
-  return result;
-}
+public:
+  BusyLight()
+  {
+    pinMode(GPIO_NUM_1, OUTPUT);
+    digitalWrite(GPIO_NUM_1, HIGH);
+    Serial.printf("Busy light on: %ld\n", millis());
+  }
+  ~BusyLight()
+  {
+    digitalWrite(GPIO_NUM_1, LOW);
+    Serial.printf("Busy light off: %ld\n", millis());
+  }
+};
 
 // Iterator for directory entries with optional file extension and prefix filter
 class DirectoryIterator
@@ -124,13 +145,13 @@ private:
       return false; // Hidden file
     }
 
-    std::string lowerCaseFilename = downcase(filename);
+    std::string lowerCaseFilename = StringUtils::downcase(filename);
     if (extensions.size() > 0)
     {
       bool validExtension = false;
       for (const std::string &extension : extensions)
       {
-        std::string lowerCaseExtension = downcase(extension);
+        std::string lowerCaseExtension = StringUtils::downcase(extension);
         if (lowerCaseFilename.length() >= lowerCaseExtension.length() &&
             lowerCaseFilename.substr(lowerCaseFilename.length() - lowerCaseExtension.length()) == lowerCaseExtension)
         {
@@ -145,7 +166,7 @@ private:
     }
     if (prefix != nullptr)
     {
-      std::string lowerCasePrefix = downcase(prefix);
+      std::string lowerCasePrefix = StringUtils::downcase(prefix);
       if (lowerCaseFilename.length() < lowerCasePrefix.length() ||
           lowerCaseFilename.substr(0, lowerCasePrefix.length()) != lowerCasePrefix)
       {
@@ -201,6 +222,7 @@ class Files
 {
 private:
   FileSystemT *fileSystem;
+
 public:
   Files(FileSystemT *fileSystem) : fileSystem(fileSystem)
   {
@@ -213,7 +235,9 @@ public:
 
   void createDirectory(const char *folder)
   {
-    if (!fileSystem->isMounted()) {
+    auto bl = BusyLight();
+    if (!fileSystem->isMounted())
+    {
       return;
     }
     std::string full_path = std::string(fileSystem->mountPoint()) + folder;
@@ -223,8 +247,8 @@ public:
     {
       Serial.printf("Creating folder %s\n", full_path.c_str());
       mkdir(full_path.c_str(), 0777);
-    } 
-    else 
+    }
+    else
     {
       Serial.printf("Folder %s already exists\n", full_path.c_str());
     }
@@ -232,8 +256,10 @@ public:
 
   FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions)
   {
+    auto bl = BusyLight();
     FileLetterCountVector fileLetters;
-    if (!fileSystem->isMounted()) {
+    if (!fileSystem->isMounted())
+    {
       return fileLetters;
     }
     std::string full_path = std::string(fileSystem->mountPoint()) + folder;
@@ -244,9 +270,9 @@ public:
     for (DirectoryIterator it(full_path, nullptr, extensions); it != DirectoryIterator(); ++it)
     {
       std::string filename = it->d_name;
-      std::string lowerCaseFilename = downcase(filename);
+      std::string lowerCaseFilename = StringUtils::downcase(filename);
       // get the first letter
-      auto name = upcase(filename);
+      auto name = StringUtils::upcase(filename);
       auto letter = name.substr(0, 1);
       if (fileCountByLetter.find(letter) == fileCountByLetter.end())
       {
@@ -266,8 +292,10 @@ public:
 
   FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions)
   {
+    auto bl = BusyLight();
     FileInfoVector files;
-    if (!fileSystem->isMounted()) {
+    if (!fileSystem->isMounted())
+    {
       return files;
     }
     std::string full_path = std::string(fileSystem->mountPoint()) + folder;
@@ -279,7 +307,7 @@ public:
 
     for (DirectoryIterator it(full_path, prefix, extensions); it != DirectoryIterator(); ++it)
     {
-      files.push_back(FileInfoPtr(new FileInfo(upcase(it->d_name), full_path + "/" + it->d_name)));
+      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), full_path + "/" + it->d_name)));
     }
     // sort the files - is this needed? Maybe they are already alphabetically sorted
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)

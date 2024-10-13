@@ -83,9 +83,9 @@ public:
     case JOYK_LEFT:
     case SPECKEY_5:
     {
-      onBack();
       playKeyClick();
       isHandled = true;
+      onBack();
       break;
     }
     case JOYK_FIRE:
@@ -99,6 +99,7 @@ public:
       // does the speckey map onto a letter - look in the mapping table
       if (specKeyToLetter.find(key) != specKeyToLetter.end())
       {
+        playKeyClick();
         char letter = specKeyToLetter.at(key);
         if (millis() - lastSearchPrefix > 500)
         {

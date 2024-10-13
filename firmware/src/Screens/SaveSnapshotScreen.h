@@ -34,6 +34,7 @@ public:
     case JOYK_FIRE:
     case SPECKEY_ENTER:
     if (filename.length() > 0) {
+        auto bl = BusyLight();
         drawBusy();
         saveZ80(machine, ("/fs/snapshots/" + filename + ".Z80").c_str());
         playSuccessBeep();

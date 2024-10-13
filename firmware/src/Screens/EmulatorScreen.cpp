@@ -3,6 +3,7 @@
 #include "../Emulator/spectrum.h"
 #include "../Emulator/snaps.h"
 #include "../AudioOutput/AudioOutput.h"
+#include "../Files/Files.h"
 #include "EmulatorScreen.h"
 #include "NavigationStack.h"
 #include "SaveSnapshotScreen.h"
@@ -213,6 +214,7 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 
 void EmulatorScreen::run(std::string snaPath)
 {
+    auto bl = BusyLight();
   // audioFile = fopen("/fs/audio.raw", "wb");
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);

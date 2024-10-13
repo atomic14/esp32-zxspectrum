@@ -13,6 +13,8 @@ class TFTDisplay;
 class AudioOutput;
 class NavigationStack;
 
+const uint8_t click[] = { 50, 50, 50, 0 };
+
 class Screen {
   protected:
     NavigationStack *m_navigationStack = nullptr;
@@ -24,7 +26,6 @@ class Screen {
   virtual void updatekey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};
   void playKeyClick() {
-    uint8_t click[] = { 50, 50, 50, 0 };
     m_audioOutput->write(click, 4);
   }
   void playErrorBeep() {
