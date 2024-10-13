@@ -11,6 +11,8 @@
 #include <iostream>
 #include "SDCard.h"
 #include "Flash.h"
+#include <sys/stat.h>
+#include <unistd.h>
 
 std::string upcase(const std::string &str)
 {
