@@ -26,6 +26,9 @@ class NavigationStack
       screen->didAppear();
     }
     void pop() {
+      if (stack.size() <= 1) {
+        return;
+      }
       Screen *top = getTop();
       if (top) {
         top->willDisappear();

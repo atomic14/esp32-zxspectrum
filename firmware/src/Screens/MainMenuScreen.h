@@ -51,10 +51,6 @@ public:
     setItems(menuItems);
   }
 
-  void onBack()
-  {
-    // do nothing - we're at the top level here
-  }
   void onItemSelect(MenuItemPtr item, int index)
   {
     item->onSelect();

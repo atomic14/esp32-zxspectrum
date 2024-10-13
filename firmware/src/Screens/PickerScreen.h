@@ -42,7 +42,9 @@ public:
     updateDisplay();
   }
 
-  virtual void onBack() = 0;
+  virtual void onBack() {
+    m_navigationStack->pop();
+  }
   virtual void onItemSelect(ItemT item, int index) = 0;
 
   void pressKey(SpecKeys key)

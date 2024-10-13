@@ -13,8 +13,5 @@ class VideoFilePickerScreen : public PickerScreen<FileInfoPtr>
         playerScreen->play(item->getPath().c_str());
         m_navigationStack->push(playerScreen);
       }
-      void onBack() {
-        m_navigationStack->pop();
-      }
 };
 
