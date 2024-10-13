@@ -5,9 +5,11 @@
 
 class TFTDisplay;
 class AudioOutput;
+class NavigationStack;
 
 class Screen {
   protected:
+    NavigationStack *m_navigationStack = nullptr;
     TFTDisplay &m_tft;
     AudioOutput *m_audioOutput;
   public:
@@ -17,4 +19,8 @@ class Screen {
   virtual void pressKey(SpecKeys key) {};
   // lifecycle
   virtual void didAppear() {}
+  virtual void willDisappear() {}
+  void setNavigationStack(NavigationStack *navigationStack) {
+    m_navigationStack = navigationStack;
+  }
 };

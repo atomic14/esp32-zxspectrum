@@ -18,19 +18,11 @@ private:
   std::vector<ItemT> m_items;
   int m_selectedItem = 0;
   int m_lastPageDrawn = -1;
-  // select callback
-  using SelectItemCallback = std::function<void(ItemT item, int itemIndex)>;
-  SelectItemCallback m_selectItemCallback;
-  // back callback
-  using BackCallback = std::function<void()>;
-  BackCallback m_backCallback;
-
 public:
   PickerScreen(
       TFTDisplay &tft,
-      AudioOutput *audioOutput,
-      SelectItemCallback selectItem,
-      BackCallback backCallback) : Screen(tft, audioOutput), m_selectItemCallback(selectItem), m_backCallback(backCallback)
+      AudioOutput *audioOutput
+  ) : Screen(tft, audioOutput)
   {
     m_tft.loadFont(GillSans_30_vlw);
   }
@@ -49,7 +41,10 @@ public:
     m_lastPageDrawn=-1;
     updateDisplay();
   }
-  
+
+  virtual void onBack() = 0;
+  virtual void onItemSelect(ItemT item, int index) = 0;
+
   void pressKey(SpecKeys key)
   {
     bool isHandled = false;
@@ -76,13 +71,13 @@ public:
     case JOYK_LEFT:
     case SPECKEY_5:
     {
-      m_backCallback();
+      onBack();
       isHandled = true;
       break;
     }
     case JOYK_FIRE:
     case SPECKEY_ENTER:
-      m_selectItemCallback(m_items[m_selectedItem], m_selectedItem);
+      onItemSelect(m_items[m_selectedItem], m_selectedItem);
       break;
     }
     if (!isHandled)

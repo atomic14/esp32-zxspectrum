@@ -9,23 +9,15 @@ class TFTDisplay;
 class ErrorScreen : public Screen
 {
 private:
-  // back callback
-  using BackCallback = std::function<void()>;
-  BackCallback m_backCallback;
   std::vector<std::string> m_messages;
 
 public:
   ErrorScreen(
+      std::vector<std::string> messages,
       TFTDisplay &tft,
-      AudioOutput *audioOutput,
-      BackCallback backCallback) : Screen(tft, audioOutput), m_backCallback(backCallback)
+      AudioOutput *audioOutput) : m_messages(messages), Screen(tft, audioOutput)
   {
     m_tft.loadFont(GillSans_30_vlw);
-  }
-
-  void setMessages(std::vector<std::string> messages)
-  {
-    m_messages = messages;
   }
 
   void didAppear()
@@ -37,7 +29,7 @@ public:
   {
     if (state == 1)
     {
-        m_backCallback();
+        m_navigationStack->pop();
     }
   }
 

@@ -33,9 +33,6 @@ private:
 
   friend int _doDraw(JPEGDRAW *pDraw);
 
-  using BackCallback = std::function<void()>;
-  BackCallback m_backCallback;
-
   void start();
   void stop();
   void pause();
@@ -46,8 +43,7 @@ private:
 public:
   VideoPlayerScreen(
       TFTDisplay &tft,
-      AudioOutput *audioOutput,
-      BackCallback backCallback) : Screen(tft, audioOutput), m_backCallback(backCallback)
+      AudioOutput *audioOutput) : Screen(tft, audioOutput)
   {
   }
   void play(const char *aviFilename);
