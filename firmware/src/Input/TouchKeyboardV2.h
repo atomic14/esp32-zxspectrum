@@ -25,7 +25,7 @@ private:
   uint32_t calibrations[8][5] = {0};
 #ifdef TOUCH_KEYBOARD_V2
   // all the touch pads we are using
-  touch_pad_t touchPads[5] = {TOUCH_PAD_NUM13, TOUCH_PAD_NUM12, TOUCH_PAD_NUM11, TOUCH_PAD_NUM10, TOUCH_PAD_NUM9};
+  const touch_pad_t touchPads[5] = {TOUCH_PAD_NUM13, TOUCH_PAD_NUM12, TOUCH_PAD_NUM11, TOUCH_PAD_NUM10, TOUCH_PAD_NUM9};
 #endif
 
   void setupTouchPad()
@@ -83,7 +83,7 @@ private:
 public:
   // mapping from address to bit to spectrum key
   // we have 8 addresses and 5 bits per address
-  SpecKeys rows[8][5] = {
+  const SpecKeys rows[8][5] = {
       // FEFE
       {SPECKEY_SHIFT, SPECKEY_Z, SPECKEY_X, SPECKEY_C, SPECKEY_V},
       // FBFE
