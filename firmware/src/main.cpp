@@ -38,7 +38,6 @@
 #include "Input/TouchKeyboardV2.h"
 #endif
 
-
 const char *MOUNT_POINT = "/fs";
 
 void setup(void)
@@ -98,19 +97,10 @@ void setup(void)
 #endif
 #ifdef TOUCH_KEYBOARD_V2
   TouchKeyboardV2 *touchKeyboard = new TouchKeyboardV2(
-      [&](SpecKeys key, bool down)
-      {
-        {
-          navigationStack->updatekey(key, down);
-        }
-      },
+      [&](SpecKeys key, bool down) 
+      { navigationStack->updatekey(key, down); },
       [&](SpecKeys key)
-      {
-        {
-          navigationStack->pressKey(key);
-        }
-      }
-    );
+      { navigationStack->pressKey(key); });
   touchKeyboard->start();
 #endif
   audioOutput->start(15625);
@@ -141,19 +131,21 @@ void setup(void)
   MainMenuScreen menuPicker(*tft, audioOutput, files);
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
-  SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down) {
-    navigationStack->updatekey(key, down);
-  });
+  SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
+                                                { navigationStack->updatekey(key, down); });
 
 // start up the nunchuk controller and feed events into the active screen
 #ifdef NUNCHUK_CLOCK
-  Nunchuck *nunchuck = new Nunchuck([&](SpecKeys key, bool down) {
-      navigationStack->updatekey(key, down);
-  }, NUNCHUK_CLOCK, NUNCHUK_DATA);
+  Nunchuck *nunchuck = new Nunchuck([&](SpecKeys key, bool down)
+                                    { navigationStack->updatekey(key, down); },
+                                    [&](SpecKeys key)
+                                    { navigationStack->pressKey(key); },
+                                    NUNCHUK_CLOCK, NUNCHUK_DATA);
 #endif
   Serial.println("Running on core: " + String(xPortGetCoreID()));
   // just keep running
-  while(true) {
+  while (true)
+  {
     vTaskDelay(10000);
   }
 }
