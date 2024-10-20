@@ -43,11 +43,11 @@ const char *MOUNT_POINT = "/fs";
 void setup(void)
 {
   Serial.begin(115200);
-  // for(int i = 0; i<5; i++)
-  // {
-  //   Serial.print(".");
-  //   delay(1000);
-  // }
+  #ifdef POWER_PIN
+  pinMode(POWER_PIN, OUTPUT);
+  digitalWrite(POWER_PIN, POWER_PIN_ON);
+  vTaskDelay(100);
+  #endif
   Serial.println("Starting up");
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack();
@@ -104,17 +104,11 @@ void setup(void)
   touchKeyboard->start();
 #endif
   audioOutput->start(15625);
-  #ifdef POWER_PIN
-  pinMode(POWER_PIN, OUTPUT);
-  digitalWrite(POWER_PIN, POWER_PIN_ON);
-  vTaskDelay(100);
-  #endif
   #ifdef TFT_ST7789
-  TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
-  // TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 280, 240);
+  TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
   #ifdef TFT_ILI9341
-  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
+  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
   // Files
 #ifdef USE_SDCARD

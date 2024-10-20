@@ -8,13 +8,53 @@
 #define TFT_RED 0xF800
 #define TFT_GREEN 0x07E0
 
-#define CMD_MADCTL 0x36
-#define MADCTL_MY 0x80
-#define MADCTL_MX 0x40
-#define MADCTL_MV 0x20
-#define MADCTL_ML 0x10
-#define MADCTL_RGB 0x00
-#define MADCTL_BGR 0x08
+#define TFT_NOP     0x00
+#define TFT_SWRST   0x01
+
+#define TFT_SLPIN   0x10
+#define TFT_SLPOUT  0x11
+#define TFT_NORON   0x13
+
+#define TFT_INVOFF  0x20
+#define TFT_INVON   0x21
+#define TFT_DISPOFF 0x28
+#define TFT_DISPON  0x29
+#define TFT_CASET   0x2A
+#define TFT_PASET   0x2B
+#define TFT_RAMWR   0x2C
+#define TFT_RAMRD   0x2E
+#define TFT_MADCTL  0x36
+#define TFT_COLMOD  0x3A
+
+// Flags for TFT_MADCTL
+#define TFT_MAD_MY  0x80
+#define TFT_MAD_MX  0x40
+#define TFT_MAD_MV  0x20
+#define TFT_MAD_ML  0x10
+#define TFT_MAD_RGB 0x00
+#define TFT_MAD_BGR 0x08
+#define TFT_MAD_MH  0x04
+#define TFT_MAD_SS  0x02
+#define TFT_MAD_GS  0x01
+
+
+#define TFT_NOP     0x00
+#define TFT_SWRST   0x01
+
+#define TFT_SLPIN   0x10
+#define TFT_SLPOUT  0x11
+#define TFT_NORON   0x13
+
+#define TFT_INVOFF  0x20
+#define TFT_INVON   0x21
+#define TFT_DISPOFF 0x28
+#define TFT_DISPON  0x29
+#define TFT_CASET   0x2A
+#define TFT_PASET   0x2B
+#define TFT_RAMWR   0x2C
+#define TFT_RAMRD   0x2E
+#define TFT_MADCTL  0x36
+#define TFT_COLMOD  0x3A
 
 #define SEND_CMD_DATA(cmd, data...)        \
 {                                          \
@@ -88,7 +128,7 @@ public:
   void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
   void drawPolygon(const std::vector<Point> &vertices, uint16_t color);
   void drawFilledPolygon(const std::vector<Point> &vertices, uint16_t color);
-  virtual uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
+  static uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
   {
     // Convert 8-8-8 RGB to 5-6-5 RGB
     uint16_t r2 = r >> 3;

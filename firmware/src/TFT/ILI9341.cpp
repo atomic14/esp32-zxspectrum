@@ -63,14 +63,6 @@
 #define ILI9341_GMCTRP1 0xE0
 #define ILI9341_GMCTRN1 0xE1
 
-#define ILI9341_MADCTL_MY 0x80
-#define ILI9341_MADCTL_MX 0x40
-#define ILI9341_MADCTL_MV 0x20
-#define ILI9341_MADCTL_ML 0x10
-#define ILI9341_MADCTL_RGB 0x00
-#define ILI9341_MADCTL_BGR 0x08
-#define ILI9341_MADCTL_MH 0x04
-
 ILI9341::ILI9341(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
     : TFTDisplay(mosi, clk, cs, dc, rst, bl, width, height)
 {
@@ -132,7 +124,7 @@ ILI9341::ILI9341(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, 
     SEND_CMD_DATA(ILI9341_PWCTR2, 0x10);                                                                                      // Power control, SAP[2:0], BT[3:0]
     SEND_CMD_DATA(ILI9341_VMCTR1, 0x3E, 0x28);                                                                                // VCM control
     SEND_CMD_DATA(ILI9341_VMCTR2, 0x86);                                                                                      // VCM control2
-    SEND_CMD_DATA(ILI9341_MADCTL, ILI9341_MADCTL_MX | ILI9341_MADCTL_RGB);                                                    // Rotation 0 (portrait mode)
+    SEND_CMD_DATA(ILI9341_MADCTL, TFT_MAD_MX | TFT_MAD_RGB);                                                    // Rotation 0 (portrait mode)
     SEND_CMD_DATA(ILI9341_PIXFMT, 0x55);                                                                                      // Pixel Format Set
     SEND_CMD_DATA(ILI9341_FRMCTR1, 0x00, 0x13);                                                                               // Frame Rate Control (100Hz)
     SEND_CMD_DATA(ILI9341_DFUNCTR, 0x08, 0x82, 0x27);                                                                         // Display Function Control
@@ -140,7 +132,7 @@ ILI9341::ILI9341(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, 
     SEND_CMD_DATA(ILI9341_GAMMASET, 0x01);                                                                                    // Gamma curve selected
     SEND_CMD_DATA(ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00); // Set Gamma
     SEND_CMD_DATA(ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F); // Set Gamma
-    SEND_CMD_DATA(CMD_MADCTL, MADCTL_ML | MADCTL_MV | MADCTL_BGR);
+    SEND_CMD_DATA(TFT_MADCTL, TFT_MAD_ML | TFT_MAD_MV | TFT_MAD_BGR);
     SEND_CMD_DATA(0x11); // Exit Sleep
     delay(120);
     SEND_CMD_DATA(0x29); // Display on

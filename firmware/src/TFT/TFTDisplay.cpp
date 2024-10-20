@@ -113,14 +113,17 @@ public:
 TFTDisplay::TFTDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
     : _width(width), _height(height), mosi(mosi), clk(clk), cs(cs), dc(dc), rst(rst), bl(bl), spi(nullptr)
 {
-  gpio_set_direction(rst, GPIO_MODE_OUTPUT);
-  gpio_set_direction(dc, GPIO_MODE_OUTPUT);
+  pinMode(rst, OUTPUT);
+  pinMode(dc, OUTPUT);
+  // gpio_set_direction(rst, GPIO_MODE_OUTPUT);
+  // gpio_set_direction(dc, GPIO_MODE_OUTPUT);
   if (bl != GPIO_NUM_NC)
   {
     gpio_set_direction(bl, GPIO_MODE_OUTPUT);
     gpio_set_level(bl, 1); // Turn on backlight
   }
   _transaction = new SPITransactionInfo(DMA_BUFFER_SIZE);
+  Serial.println("TFTDisplay created");
 }
 
 void TFTDisplay::sendCmd(uint8_t cmd)
@@ -135,11 +138,13 @@ void TFTDisplay::sendTransaction(SPITransactionInfo *trans)
   isBusy = true;
   if (trans->isCommand)
   {
-    gpio_set_level(dc, 0); // Command mode
+    digitalWrite(dc, LOW);
+    // gpio_set_level(dc, 0); // Command mode
   }
   else
   {
-    gpio_set_level(dc, 1); // Data mode
+    digitalWrite(dc, HIGH);
+    // gpio_set_level(dc, 1); // Data mode
   }
   spi_device_polling_start(spi, &trans->transaction, portMAX_DELAY);
 }
@@ -181,6 +186,10 @@ void TFTDisplay::sendColor(uint16_t color, int numPixels)
 void TFTDisplay::setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
   uint8_t data[4];
+  #ifdef TFT_X_OFFSET
+  x0+=TFT_X_OFFSET;
+  x1+=TFT_X_OFFSET;
+  #endif
 
   sendCmd(ST7789_CMD_CASET); // Column address set
   data[0] = (x0 >> 8) & 0xFF;

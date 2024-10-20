@@ -146,7 +146,7 @@ public:
       m_tft.drawString(m_items[itemIndex]->getTitle().c_str(), 20, 10 + 15 + i * 30);
     }
     // draw the spectrum flash
-    m_tft.setWindow(TFT_HEIGHT - rainbowImageWidth, TFT_WIDTH - rainbowImageHeight, TFT_HEIGHT - 1, TFT_WIDTH - 1);
+    m_tft.setWindow(m_tft.width() - rainbowImageWidth, m_tft.height() - rainbowImageHeight, m_tft.width() - 1, m_tft.height() - 1);
     m_tft.pushPixels((uint16_t *) rainbowImageData, rainbowImageWidth * rainbowImageHeight);
     m_tft.endWrite();
   }
