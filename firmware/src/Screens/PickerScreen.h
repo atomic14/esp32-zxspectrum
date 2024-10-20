@@ -131,6 +131,7 @@ public:
       m_lastPageDrawn = page;
     }
     m_tft.loadFont(GillSans_15_vlw);
+    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
     m_tft.drawString((title + " - 5: Back, 6: Down, 7: Up, ENTER: Pick").c_str(), 0, 0);
     m_tft.drawFastHLine(0, 15, m_tft.width() - 1, TFT_WHITE);
     m_tft.loadFont(GillSans_30_vlw);

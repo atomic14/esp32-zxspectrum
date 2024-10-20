@@ -65,6 +65,10 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_nu
 {
   m_mountPoint = mountPoint;
   m_host.max_freq_khz = SDMMC_FREQ_52M;
+  // only enable on ESP32 
+  #ifdef SD_CARD_SPI_HOST
+  m_host.slot = SD_CARD_SPI_HOST;
+  #endif
   esp_err_t ret;
   // Options for mounting the filesystem.
   // If format_if_mount_failed is set to true, SD card will be partitioned and

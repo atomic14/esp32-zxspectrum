@@ -42,14 +42,16 @@ class BusyLight
 public:
   BusyLight()
   {
-    pinMode(GPIO_NUM_1, OUTPUT);
-    digitalWrite(GPIO_NUM_1, HIGH);
-    Serial.printf("Busy light on: %ld\n", millis());
+    #ifdef LED_GPIO
+    pinMode(LED_GPIO, OUTPUT);
+    digitalWrite(LED_GPIO, HIGH);
+    #endif
   }
   ~BusyLight()
   {
-    digitalWrite(GPIO_NUM_1, LOW);
-    Serial.printf("Busy light off: %ld\n", millis());
+    #ifdef LED_GPIO
+    digitalWrite(LED_GPIO, LOW);
+    #endif
   }
 };
 

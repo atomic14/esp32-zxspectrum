@@ -1,42 +1,135 @@
 #pragma once
+#include "driver/spi_master.h"
+#include "driver/gpio.h"
 #include <vector>
-#include <TFT_eSPI.h>
+
+#define TFT_WHITE 0xFFFF
+#define TFT_BLACK 0x0000
+#define TFT_RED 0xF800
+#define TFT_GREEN 0x07E0
+
+#define CMD_MADCTL 0x36
+#define MADCTL_MY 0x80
+#define MADCTL_MX 0x40
+#define MADCTL_MV 0x20
+#define MADCTL_ML 0x10
+#define MADCTL_RGB 0x00
+#define MADCTL_BGR 0x08
+
+#define SEND_CMD_DATA(cmd, data...)        \
+{                                          \
+    const uint8_t c = cmd, x[] = {data};   \
+    sendCmd(c);                            \
+    if (sizeof(x))                         \
+        sendData(x, sizeof(x));            \
+}
 
 #define SWAPBYTES(i) ((i >> 8) | (i << 8))
 
-struct Point {
-    int16_t x;
-    int16_t y;
+struct Point
+{
+  int16_t x;
+  int16_t y;
 };
 
-class TFTDisplay {
+struct Glyph
+{
+  uint32_t unicode;      // Unicode value of the glyph
+  int16_t width;         // Width of the glyph bitmap bounding box
+  int16_t height;        // Height of the glyph bitmap bounding box
+  int16_t gxAdvance;     // Cursor advance after drawing this glyph
+  int16_t dX;            // Distance from cursor to the left side of the glyph bitmap
+  int16_t dY;            // Distance from the baseline to the top of the glyph bitmap
+  const uint8_t *bitmap; // Pointer to the glyph bitmap data
+};
+
+// Font data
+struct Font
+{
+  uint32_t gCount;         // Number of glyphs
+  uint32_t ascent;         // Ascent in pixels from baseline to top of "d"
+  uint32_t descent;        // Descent in pixels from baseline to bottom of "p"
+  const uint8_t *fontData; // Pointer to the raw VLW font data
+};
+
+class SPITransactionInfo;
+
+class TFTDisplay
+{
 public:
-  TFTDisplay() {};
-  virtual void startWrite() = 0;
-  virtual void endWrite() = 0;
-  virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) = 0;
-  virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) = 0;
-  virtual void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1) = 0;
-  virtual void pushPixels(uint16_t *data, uint32_t len) = 0;
-  virtual void pushPixelsDMA(uint16_t *data, uint32_t len) = 0;
-  virtual void dmaWait() = 0;
-  virtual void drawString(const char *string, int16_t x, int16_t y) = 0;
-  virtual Point measureString(const char *string) = 0;
-  virtual void fillScreen(uint16_t color) = 0;
-  virtual void loadFont(const uint8_t *font) = 0;
-  virtual void setTextColor(uint16_t color, uint16_t bgColor) = 0;
-  virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) = 0;
-  virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) = 0;
-  virtual void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) = 0;
-  virtual void drawPolygon(const std::vector<Point>& vertices, uint16_t color) = 0;
-  virtual void drawFilledPolygon(const std::vector<Point>& vertices, uint16_t color) = 0;
-  virtual uint16_t color565(uint8_t r, uint8_t g, uint8_t b) { 
+  TFTDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height);
+  void startWrite()
+  {
+    // nothing to do
+  }
+  void endWrite()
+  {
+    // nothing to do
+  }
+  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+  void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+  void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
+  void pushPixels(uint16_t *data, uint32_t len)
+  {
+    sendPixels(data, len);
+  }
+  void pushPixelsDMA(uint16_t *data, uint32_t len)
+  {
+    sendPixels(data, len);
+  }
+  void dmaWait();
+  void drawString(const char *string, int16_t x, int16_t y);
+  Point measureString(const char *string);
+  void fillScreen(uint16_t color);
+  void loadFont(const uint8_t *font);
+  void setTextColor(uint16_t color, uint16_t bgColor);
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
+  void drawPolygon(const std::vector<Point> &vertices, uint16_t color);
+  void drawFilledPolygon(const std::vector<Point> &vertices, uint16_t color);
+  virtual uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
+  {
     // Convert 8-8-8 RGB to 5-6-5 RGB
     uint16_t r2 = r >> 3;
     uint16_t g2 = g >> 2;
     uint16_t b2 = b >> 3;
     return (r2 << 11) | (g2 << 5) | b2;
   }
-  virtual int width() { return TFT_HEIGHT;}
-  virtual int height() { return TFT_WIDTH; }
+  virtual int width() { return _width; }
+  virtual int height() { return _height; }
+
+protected:
+  int _width;
+  int _height;
+
+  void init();
+  void sendCmd(uint8_t cmd);
+  void sendData(const uint8_t *data, int len);
+  void sendPixel(uint16_t color);
+  void sendPixels(const uint16_t *data, int numPixels);
+  void sendColor(uint16_t color, int numPixels);
+
+  volatile bool isBusy = false;
+  SPITransactionInfo *_transaction;
+  void sendTransaction(SPITransactionInfo *trans);
+
+  // Text rendering
+  Glyph getGlyphData(uint32_t unicode);
+  void drawPixel(uint16_t color, int x, int y);
+  void drawGlyph(const Glyph &glyph, int x, int y);
+
+  gpio_num_t mosi;
+  gpio_num_t clk;
+  gpio_num_t cs;
+  gpio_num_t dc;
+  gpio_num_t rst;
+  gpio_num_t bl;
+  spi_device_handle_t spi;
+
+  uint16_t textcolor;
+  uint16_t textbgcolor;
+
+  // The current font
+  Font currentFont;
 };

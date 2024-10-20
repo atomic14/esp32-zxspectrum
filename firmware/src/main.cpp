@@ -29,8 +29,8 @@
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
 #include "TFT/TFTDisplay.h"
-#include "TFT/TFTeSPIWrapper.h"
 #include "TFT/ST7789.h"
+#include "TFT/ILI9341.h"
 #ifdef TOUCH_KEYBOARD
 #include "Input/TouchKeyboard.h"
 #endif
@@ -104,17 +104,20 @@ void setup(void)
   touchKeyboard->start();
 #endif
   audioOutput->start(15625);
+  #ifdef POWER_PIN
+  pinMode(POWER_PIN, OUTPUT);
+  digitalWrite(POWER_PIN, POWER_PIN_ON);
+  vTaskDelay(100);
+  #endif
+  #ifdef TFT_ST7789
   TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
-  // tft = new TFTeSPIWrapper();
+  // TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 280, 240);
+  #endif
+  #ifdef TFT_ILI9341
+  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, 320, 240);
+  #endif
   // Files
 #ifdef USE_SDCARD
-#ifdef SD_CARD_PWR
-  if (SD_CARD_PWR != GPIO_NUM_NC)
-  {
-    pinMode(SD_CARD_PWR, OUTPUT);
-    digitalWrite(SD_CARD_PWR, SD_CARD_PWR_ON);
-  }
-#endif
 #ifdef USE_SDIO
   SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
   Files<SDCard> *files = new Files<SDCard>(fileSystem);
@@ -132,7 +135,7 @@ void setup(void)
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
   SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
-                                                { navigationStack->updatekey(key, down); });
+                                                { navigationStack->updatekey(key, down); if (down) { navigationStack->pressKey(key); } });
 
 // start up the nunchuk controller and feed events into the active screen
 #ifdef NUNCHUK_CLOCK
