@@ -8,8 +8,8 @@
 #include "NavigationStack.h"
 #include "SaveSnapshotScreen.h"
 
-const int screenWidth = TFT_HEIGHT;
-const int screenHeight = TFT_WIDTH;
+const int screenWidth = TFT_WIDTH;
+const int screenHeight = TFT_HEIGHT;
 #ifdef SCALE_SCREEN
 // scale the screen by 1.5 times
 const int borderWidth = (screenWidth - 384) / 2;
