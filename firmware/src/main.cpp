@@ -43,6 +43,11 @@ const char *MOUNT_POINT = "/fs";
 void setup(void)
 {
   Serial.begin(115200);
+  // for(int i = 0; i < 5; i++) {
+  //   BusyLight bl;
+  //   vTaskDelay(pdMS_TO_TICKS(1000));
+  //   Serial.println("Booting...");
+  // }
   #ifdef POWER_PIN
   pinMode(POWER_PIN, OUTPUT);
   digitalWrite(POWER_PIN, POWER_PIN_ON);
@@ -52,10 +57,6 @@ void setup(void)
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack();
   // Audio output
-#ifdef SPK_MODE
-  pinMode(SPK_MODE, OUTPUT);
-  digitalWrite(SPK_MODE, HIGH);
-#endif
 #ifdef USE_DAC_AUDIO
   AudioOutput *audioOutput = new DACOutput(I2S_NUM_0);
 #endif

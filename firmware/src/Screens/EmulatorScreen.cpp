@@ -239,7 +239,7 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 
 void EmulatorScreen::run(std::string snaPath)
 {
-    auto bl = BusyLight();
+  auto bl = BusyLight();
   // audioFile = fopen("/fs/audio.raw", "wb");
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
@@ -301,13 +301,16 @@ void EmulatorScreen::resume()
 
 void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
 {
-  // if (audioFile) {
-  //   isRunning = false;
-  //   vTaskDelay(1000 / portTICK_PERIOD_MS);
-  //   fclose(audioFile);
-  //   audioFile = NULL;
-  //   Serial.printf("Audio file closed\n");
-  // }
+  if (key == SPECKEY_0)
+  {
+    if (audioFile) {
+      isRunning = false;
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      fclose(audioFile);
+      audioFile = NULL;
+      Serial.printf("Audio file closed\n");
+    }
+  }
   if (isRunning) {
     machine->updatekey(key, state);
   }

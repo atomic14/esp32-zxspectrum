@@ -65,10 +65,16 @@ bool IRAM_ATTR BuzzerOutput::onTimer()
   if (mCurrentIndex < mBufferLength)
   {
     mCount++;
-    // get the first sample from the buffer
+    // get the first sample from the buffer - shift it up to 9 bits for max resolution
     uint16_t sample = mBuffer[mCurrentIndex];
+    sample = sample * mVolume / 10;
+    // limit to 80% of the max volume - our speaker is 8ohm, 2W
+    // 5 volts * 0.8 = 4 volts
+    // P = V^2 / R
+    // 4^2 / 8 = 2W
+    sample = sample * 80 / 100;
     mCurrentIndex++;
-    ledcWrite(0, sample * mVolume / 10);
+    ledcWrite(0, sample);
   }
   if(mCurrentIndex >= mBufferLength)
   {

@@ -30,7 +30,7 @@ void I2SBase::write(const uint8_t *samples, int count)
     for (int i = 0; i < NUM_FRAMES_TO_SEND && sample_index < count; i++)
     {
       // shift up to 16 bit samples
-      int sample = process_sample((samples[sample_index] * mVolume / 10) << 8);
+      int sample = process_sample(((samples[sample_index] - 128) * mVolume / 10) << 7);
       m_tmp_frames[i * 2] = sample;
       m_tmp_frames[i * 2 + 1] = sample;
       samples_to_send++;

@@ -128,7 +128,7 @@ class ZXSpectrum
 public:
   Z80Regs *z80Regs;
   Memory mem;
-  tipo_hwopt hwopt;
+  tipo_hwopt hwopt = {0};
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
 

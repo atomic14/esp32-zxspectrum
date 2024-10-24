@@ -56,6 +56,29 @@ void ZXSpectrum::runForCycles(int cycles)
   Z80Run(z80Regs, cycles);
 }
 
+typedef float REAL;
+#define NBQ 4
+REAL biquada[]={0.9998380079498859,-1.9996254961162483,0.9987226842352888,-1.998510171954402,0.9915562184741177,-1.9913436697006053,-0.9854172919732774};
+REAL biquadb[]={0.9999999999999998,-1.9997906555550162,0.9999999999999999,-1.9998054508889258,1,-1.9998831022849304,-1};
+REAL gain=1.0123741492041554;
+REAL xyv[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+REAL applyfilter(REAL v)
+{
+	int i,b,xp=0,yp=3,bqp=0;
+	REAL out=v/gain;
+	for (i=14; i>0; i--) {xyv[i]=xyv[i-1];}
+	for (b=0; b<NBQ; b++)
+	{
+		int len=(b==NBQ-1)?1:2;
+		xyv[xp]=out;
+		for(i=0; i<len; i++) { out+=xyv[xp+len-i]*biquadb[bqp+i]-xyv[yp+len-i]*biquada[bqp+i]; }
+		bqp+=len;
+		xyv[yp]=out;
+		xp=yp; yp+=len+1;
+	}
+	return out;
+}
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
   uint8_t audioBuffer[312];
@@ -81,11 +104,7 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     runForCycles(224);
     if (hwopt.SoundBits != 0)
     {
-      #ifdef BUZZER_DEFAULT_VOLUME
-      audioBuffer[i] = BUZZER_DEFAULT_VOLUME;
-      #else
       audioBuffer[i] = 0xFF;
-      #endif
     }
     else
     {
@@ -98,18 +117,32 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
   if (hwopt.hw_model == SPECMDL_128K)
   {
     AySound::gen_sound(312, 0);
-    // merge the AY sound with the audio buffer
-    for (int i = 0; i < 312; i++)
+  }
+  // merge the AY sound with the audio buffer
+  for (int i = 0; i < 312; i++)
+  {
+    float sample = audioBuffer[i]/255.0f;
+    if (hwopt.hw_model == SPECMDL_128K)
     {
-      audioBuffer[i] = std::max(0, std::min(255, audioBuffer[i] + AySound::SamplebufAY[i]));
+      sample += int8_t(AySound::SamplebufAY[i]) / 64.0f;
     }
+    sample = applyfilter(sample);
+    sample = tanh(sample);
+    // if (audioBuffer[i] != 0)
+    // {
+    //   sample = std::max(1.0f, sample);
+    // }
+    audioBuffer[i] = std::max(0.0f, std::min(255.0f, sample * 127.0f + 128.0f));
+  }
+  if (audioFile != NULL) {
+    fwrite(audioBuffer, 1, 312, audioFile);
+    //fwrite(AySound::SamplebufAY, 1, 312, audioFile);
+  }
+  if (audioFile != NULL) {
+    fflush(audioFile);
   }
   // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
   audioOutput->write(audioBuffer, 312);
-  if (audioFile != NULL) {
-    fwrite(audioBuffer, 1, 312, audioFile);
-    fflush(audioFile);
-  }
   return c;
 }
 
@@ -286,7 +319,7 @@ bool ZXSpectrum::init_48k()
   hwopt.tstate_border_right = 72;
   hwopt.hw_model = SPECMDL_48K;
   hwopt.int_type = NORMAL;
-  hwopt.SoundBits = 1;
+  hwopt.SoundBits = 0;
   mem.page(32, true);
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
   return true;
@@ -315,7 +348,7 @@ bool ZXSpectrum::init_16k()
   hwopt.tstate_border_right = 72;
   hwopt.hw_model = SPECMDL_16K;
   hwopt.int_type = NORMAL;
-  hwopt.SoundBits = 1;
+  hwopt.SoundBits = 0;
   // treat it like a 48K
   mem.page(32, true);
   mem.loadRom(ZXSpectrum_48_rom, ZXSpectrum_48_rom_len);
@@ -345,7 +378,7 @@ bool ZXSpectrum::init_128k()
   hwopt.tstate_border_right = 80;
   hwopt.hw_model = SPECMDL_128K;
   hwopt.int_type = NORMAL;
-  hwopt.SoundBits = 1;
+  hwopt.SoundBits = 0;
   mem.page(0, true);
   mem.loadRom(ZXSpectrum_128_rom, ZXSpectrum_128_rom_len);
 
