@@ -47,6 +47,10 @@ public:
                                    { this->showSnapshots(); }),
         std::make_shared<MenuItem>("Video Player", [&]()
                                    { this->showVideos(); }),
+#ifdef ENABLE_MSC && USE_SDCARD
+        std::make_shared<MenuItem>("Mount SD Card", [&]()
+                                  { this->mountSDCard(); }),
+#endif
     };
     setItems(menuItems);
   }
@@ -135,5 +139,10 @@ public:
       "/",
       videoValidExtensions
     );
+  }
+
+  void mountSDCard()
+  {
+    startMSC();
   }
 };

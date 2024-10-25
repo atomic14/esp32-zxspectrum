@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "Serial.h"
 #include "SerialKeyboard.h"
 
 SerialKeyboard::SerialKeyboard(KeyEventType keyEvent) : m_keyEvent(keyEvent)

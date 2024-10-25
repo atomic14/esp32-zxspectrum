@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "Serial.h"
 #include "ILI9341.h"
 #include "esp_log.h"
 

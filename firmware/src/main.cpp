@@ -12,6 +12,7 @@
  * Compile as ESP32 Wrover Module
  *======================================================================
  */
+#include "Serial.h"
 #include <esp_err.h>
 #include <map>
 #include <vector>
@@ -42,7 +43,17 @@ const char *MOUNT_POINT = "/fs";
 
 void setup(void)
 {
-  Serial.begin(115200);
+    // Files
+#ifdef USE_SDCARD
+#ifdef USE_SDIO
+  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
+  Files<SDCard> *files = new Files<SDCard>(fileSystem);
+  setupUSB(fileSystem);
+#else
+  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+  Files<SDCard> *files = new Files<SDCard>(fileSystem);
+#endif
+  // Serial.begin(115200);
   // for(int i = 0; i < 5; i++) {
   //   BusyLight bl;
   //   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -111,15 +122,6 @@ void setup(void)
   #ifdef TFT_ILI9341
   TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
-  // Files
-#ifdef USE_SDCARD
-#ifdef USE_SDIO
-  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-  Files<SDCard> *files = new Files<SDCard>(fileSystem);
-#else
-  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
-  Files<SDCard> *files = new Files<SDCard>(fileSystem);
-#endif
 #else
   Flash *fileSystem = new Flash(MOUNT_POINT);
   Files<Flash> *files = new Files<Flash>(fileSystem);

@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <SPIFFS.h>
+#include "Serial.h"
 #include "spectrum.h"
 #include "AudioOutput/AudioOutput.h"
 #include "Input/TouchKeyboard.h"

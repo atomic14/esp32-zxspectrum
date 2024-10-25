@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "Serial.h"
 #include "TFTDisplay.h"
 #include <cstring>
 #include <algorithm>

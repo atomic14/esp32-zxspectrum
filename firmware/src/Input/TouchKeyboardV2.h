@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "Serial.h"
 #include "driver/touch_pad.h"
 #include <unordered_map>
 #include <set>

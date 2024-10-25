@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
+#include "Serial.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
@@ -58,6 +59,11 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
   _isMounted = true;
+
+  m_sector_count = m_card->csd.capacity;
+  m_sector_size = m_card->csd.sector_size;
+
+  m_mutex = xSemaphoreCreateMutex();
   #endif
 }
 
@@ -123,6 +129,11 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_nu
   // Card has been initialized, print its properties
   sdmmc_card_print_info(stdout, m_card);
   _isMounted = true;
+
+  m_sector_count = m_card->csd.capacity;
+  m_sector_size = m_card->csd.sector_size;
+  
+  m_mutex = xSemaphoreCreateMutex();
 }
 
 SDCard::~SDCard()
@@ -131,4 +142,22 @@ SDCard::~SDCard()
   esp_vfs_fat_sdcard_unmount(m_mountPoint.c_str(), m_card);
   //deinitialize the bus after all devices are removed
   spi_bus_free(spi_host_device_t(m_host.slot));
+}
+
+bool SDCard::writeSectors(uint8_t *src, size_t start_sector, size_t sector_count) {
+  xSemaphoreTake(m_mutex, portMAX_DELAY);
+  digitalWrite(GPIO_NUM_2, HIGH);
+  esp_err_t res = sdmmc_write_sectors(m_card, src, start_sector, sector_count);
+  digitalWrite(GPIO_NUM_2, LOW);
+  xSemaphoreGive(m_mutex);
+  return res == ESP_OK;
+}
+
+bool SDCard::readSectors(uint8_t *dst, size_t start_sector, size_t sector_count) {
+  xSemaphoreTake(m_mutex, portMAX_DELAY);
+  digitalWrite(GPIO_NUM_2, HIGH);
+  esp_err_t res = sdmmc_read_sectors(m_card, dst, start_sector, sector_count);
+  digitalWrite(GPIO_NUM_2, LOW);
+  xSemaphoreGive(m_mutex);
+  return res == ESP_OK;
 }

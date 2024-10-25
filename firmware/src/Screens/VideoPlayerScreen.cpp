@@ -1,3 +1,4 @@
+#include "Serial.h"
 #include "VideoPlayerScreen.h"
 #include "VideoPlayer/VideoSource.h"
 #include "AudioOutput/AudioOutput.h"

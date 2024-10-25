@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SPIFFS.h>
 #include "Flash.h"
+#include "Serial.h"
 
 Flash::Flash(const char *mountPoint)
 {

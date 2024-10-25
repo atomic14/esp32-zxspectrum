@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "VideoSource.h"
 #include "AVIParser.h"
+#include "Serial.h"
 
 #define DEFAULT_FPS 15
 

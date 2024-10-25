@@ -29,6 +29,7 @@
 #include "./z80/z80.h"
 #include "./spectrum.h"
 #include "./snaps.h"
+#include "Serial.h"
 
 bool Load(ZXSpectrum *speccy, const char *filename)
 {

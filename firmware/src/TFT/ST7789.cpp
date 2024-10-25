@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "Serial.h"
 #include "ST7789.h"
 #include "esp_log.h"
 

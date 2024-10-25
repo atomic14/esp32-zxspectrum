@@ -1,4 +1,5 @@
 #include "TouchKeyboardV2.h"
+#include "Serial.h"
 
 void TouchKeyboardV2::keyboardTask(void *arg)
 {

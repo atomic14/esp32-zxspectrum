@@ -5,6 +5,7 @@
 #include "keyboard_defs.h"
 #include <string.h>
 #include <Arduino.h>
+#include "Serial.h"
 
 enum models_enum
 {
