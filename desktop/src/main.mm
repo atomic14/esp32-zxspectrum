@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "spectrum.h"
 #include "tzx_cas.h"
+#include "snaps.h"
 #include "RawAudioListener.h"
 #include "DummyListener.h"
 #include "ZXSpectrumTapeListener.h"
@@ -12,10 +13,56 @@
 #include <thread>
 #include <chrono>
 
+std::unordered_map<SDL_Keycode, SpecKeys> sdl_to_spec = {
+    {SDLK_a, SpecKeys::SPECKEY_A},
+    {SDLK_b, SpecKeys::SPECKEY_B},
+    {SDLK_c, SpecKeys::SPECKEY_C},
+    {SDLK_d, SpecKeys::SPECKEY_D},
+    {SDLK_e, SpecKeys::SPECKEY_E},
+    {SDLK_f, SpecKeys::SPECKEY_F},
+    {SDLK_g, SpecKeys::SPECKEY_G},
+    {SDLK_h, SpecKeys::SPECKEY_H},
+    {SDLK_i, SpecKeys::SPECKEY_I},
+    {SDLK_j, SpecKeys::SPECKEY_J},
+    {SDLK_k, SpecKeys::SPECKEY_K},
+    {SDLK_l, SpecKeys::SPECKEY_L},
+    {SDLK_m, SpecKeys::SPECKEY_M},
+    {SDLK_n, SpecKeys::SPECKEY_N},
+    {SDLK_o, SpecKeys::SPECKEY_O},
+    {SDLK_p, SpecKeys::SPECKEY_P},
+    {SDLK_q, SpecKeys::SPECKEY_Q},
+    {SDLK_r, SpecKeys::SPECKEY_R},
+    {SDLK_s, SpecKeys::SPECKEY_S},
+    {SDLK_t, SpecKeys::SPECKEY_T},
+    {SDLK_u, SpecKeys::SPECKEY_U},
+    {SDLK_v, SpecKeys::SPECKEY_V},
+    {SDLK_w, SpecKeys::SPECKEY_W},
+    {SDLK_x, SpecKeys::SPECKEY_X},
+    {SDLK_y, SpecKeys::SPECKEY_Y},
+    {SDLK_z, SpecKeys::SPECKEY_Z},
+    {SDLK_0, SpecKeys::SPECKEY_0},
+    {SDLK_1, SpecKeys::SPECKEY_1},
+    {SDLK_2, SpecKeys::SPECKEY_2},
+    {SDLK_3, SpecKeys::SPECKEY_3},
+    {SDLK_4, SpecKeys::SPECKEY_4},
+    {SDLK_5, SpecKeys::SPECKEY_5},
+    {SDLK_6, SpecKeys::SPECKEY_6},
+    {SDLK_7, SpecKeys::SPECKEY_7},
+    {SDLK_8, SpecKeys::SPECKEY_8},
+    {SDLK_9, SpecKeys::SPECKEY_9},
+    {SDLK_RETURN, SpecKeys::SPECKEY_ENTER},
+    {SDLK_SPACE, SpecKeys::SPECKEY_SPACE},
+    {SDLK_LSHIFT, SpecKeys::SPECKEY_SHIFT},
+    {SDLK_RSHIFT, SpecKeys::SPECKEY_SYMB},
+};
 
+bool isLoading = false;
+uint16_t flashTimer = 0;
+
+// this matches our TFT display - but this could be any size really
 const int WIDTH = 320;  // Width of the display
 const int HEIGHT = 240; // Height of the display
-const float ASPECT_RATIO = ((float) WIDTH/ (float) HEIGHT);
+const float ASPECT_RATIO = ((float) WIDTH / (float) HEIGHT);
 ZXSpectrum *machine = nullptr;
 
 const int SAMPLE_RATE = 15600; // 312 samples * 50 times per second
@@ -100,53 +147,14 @@ void updateAndRender(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *fra
     SDL_RenderPresent(renderer);
 }
 
-std::unordered_map<SDL_Keycode, SpecKeys> sdl_to_spec = {
-    {SDLK_a, SpecKeys::SPECKEY_A},
-    {SDLK_b, SpecKeys::SPECKEY_B},
-    {SDLK_c, SpecKeys::SPECKEY_C},
-    {SDLK_d, SpecKeys::SPECKEY_D},
-    {SDLK_e, SpecKeys::SPECKEY_E},
-    {SDLK_f, SpecKeys::SPECKEY_F},
-    {SDLK_g, SpecKeys::SPECKEY_G},
-    {SDLK_h, SpecKeys::SPECKEY_H},
-    {SDLK_i, SpecKeys::SPECKEY_I},
-    {SDLK_j, SpecKeys::SPECKEY_J},
-    {SDLK_k, SpecKeys::SPECKEY_K},
-    {SDLK_l, SpecKeys::SPECKEY_L},
-    {SDLK_m, SpecKeys::SPECKEY_M},
-    {SDLK_n, SpecKeys::SPECKEY_N},
-    {SDLK_o, SpecKeys::SPECKEY_O},
-    {SDLK_p, SpecKeys::SPECKEY_P},
-    {SDLK_q, SpecKeys::SPECKEY_Q},
-    {SDLK_r, SpecKeys::SPECKEY_R},
-    {SDLK_s, SpecKeys::SPECKEY_S},
-    {SDLK_t, SpecKeys::SPECKEY_T},
-    {SDLK_u, SpecKeys::SPECKEY_U},
-    {SDLK_v, SpecKeys::SPECKEY_V},
-    {SDLK_w, SpecKeys::SPECKEY_W},
-    {SDLK_x, SpecKeys::SPECKEY_X},
-    {SDLK_y, SpecKeys::SPECKEY_Y},
-    {SDLK_z, SpecKeys::SPECKEY_Z},
-    {SDLK_0, SpecKeys::SPECKEY_0},
-    {SDLK_1, SpecKeys::SPECKEY_1},
-    {SDLK_2, SpecKeys::SPECKEY_2},
-    {SDLK_3, SpecKeys::SPECKEY_3},
-    {SDLK_4, SpecKeys::SPECKEY_4},
-    {SDLK_5, SpecKeys::SPECKEY_5},
-    {SDLK_6, SpecKeys::SPECKEY_6},
-    {SDLK_7, SpecKeys::SPECKEY_7},
-    {SDLK_8, SpecKeys::SPECKEY_8},
-    {SDLK_9, SpecKeys::SPECKEY_9},
-    {SDLK_RETURN, SpecKeys::SPECKEY_ENTER},
-    {SDLK_SPACE, SpecKeys::SPECKEY_SPACE},
-    {SDLK_LSHIFT, SpecKeys::SPECKEY_SHIFT},
-    {SDLK_RSHIFT, SpecKeys::SPECKEY_SYMB},
-};
-
-bool isLoading = false;
-
-void loadTape() {
+void loadGame() {
     std::string filename = OpenFileDialog();
+    // check the extension for z80 or sna
+    if (filename.find(".z80") != std::string::npos || filename.find(".Z80") != std::string::npos
+    || filename.find(".sna") != std::string::npos || filename.find(".SNA") != std::string::npos) {
+        Load(machine, filename.c_str());
+        return;
+    }
     // time how long it takes to load the tape
     int start = SDL_GetTicks();
     isLoading = true;
@@ -166,10 +174,11 @@ void loadTape() {
     TzxCas tzxCas;
     ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine);
     listener->start();
-    if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+    if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
         tzxCas.load_tap(listener, tzx_data, file_size);
-    else
+    } else {
         tzxCas.load_tzx(listener, tzx_data, file_size);
+    }
     listener->finish();
     std::cout << "Total ticks: " << listener->getTotalTicks() << std::endl;
     std::cout << "Total time: " << listener->getTotalTicks() / 3500000.0 << " seconds" << std::endl;
@@ -201,7 +210,7 @@ void handleEvents(bool &isRunning)
             {
             case SDLK_ESCAPE:
                 if(!isLoading) {
-                    loadTape();
+                    loadGame();
                     return;
                 }
                 break;
@@ -225,8 +234,6 @@ void handleEvents(bool &isRunning)
         }
     }
 }
-
-uint16_t flashTimer = 0;
 
 const uint16_t specpal565[16] = {
     0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
@@ -309,6 +316,11 @@ void fillFrameBuffer(uint16_t *pixelBuffer, uint8_t *currentScreenBuffer, uint8_
             }
         }
     }
+    flashTimer++;
+    if (flashTimer == 32)
+    {
+        flashTimer = 0;
+    }
 }
 
 // Main function
@@ -356,7 +368,7 @@ int main()
     int end = SDL_GetTicks();
     std::cout << "Time to boot spectrum: " << end - start << "ms" << std::endl;
     // load a tap file
-    loadTape();
+    loadGame();
 
 
 

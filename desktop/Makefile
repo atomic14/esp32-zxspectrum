@@ -11,7 +11,7 @@ CXXFLAGS = \
 	-I../firmware/src/Emulator \
 	-I../firmware/src/AudioOutput \
 	-I../firmware/src/Emulator/z80 \
-	-I../firmware/src/TZX
+	-I../firmware/src/TZX \
 
 # Linker flags (including Cocoa framework for macOS file picker support)
 LDFLAGS = -L/usr/local/lib -framework Cocoa
@@ -24,6 +24,7 @@ SRCS = \
   ../firmware/src/Emulator/48k_rom.cpp \
   ../firmware/src/Emulator/spectrum.cpp \
   ../firmware/src/Emulator/z80/z80.cpp \
+	../firmware/src/Emulator/snaps.cpp \
   ../firmware/src/AySound/AySound.cpp \
 	../firmware/src/TZX/tzx_cas.cpp
 

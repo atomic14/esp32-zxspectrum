@@ -22,14 +22,13 @@
  Copyright (c) 2000 Santiago Romero Iglesias.
  Email: sromero@escomposlinux.org
  ======================================================================*/
-#include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string>
 #include <string.h>
 #include "./z80/z80.h"
 #include "./spectrum.h"
 #include "./snaps.h"
-#include "Serial.h"
 
 bool Load(ZXSpectrum *speccy, const char *filename)
 {
@@ -156,11 +155,11 @@ int getZ80Version(uint8_t *buffer)
 {
   if (buffer[6] != 0 || buffer[7] != 0)
   {
-    Serial.printf("getZ80Version: PC: %x\n", buffer[6] + (buffer[7] << 8));
+    printf("getZ80Version: PC: %x\n", buffer[6] + (buffer[7] << 8));
     return 1;
   }
   int ahb_len = buffer[30] + (buffer[31] << 8);
-  Serial.printf("AHB: %x\n", ahb_len);
+  printf("AHB: %x\n", ahb_len);
   if (ahb_len == 23)
   {
     return 2;
@@ -218,12 +217,12 @@ bool loadZ80Version1(ZXSpectrum *speccy, uint8_t *buffer, FILE *fp)
   fseek(fp, 30, SEEK_SET);
   if (buffer[12] & 0x20)
   {
-    Serial.printf("Loading compressed data %x\n", totalSize - 30);
+    printf("Loading compressed data %x\n", totalSize - 30);
     decompressZ80BlockV1(fp, totalSize - 30, speccy);
   }
   else
   {
-    Serial.printf("Loading uncompressed data %x\n", totalSize - 30);
+    printf("Loading uncompressed data %x\n", totalSize - 30);
     for (int i = 0; i < 0xC000 && i < totalSize - 30; i++)
     {
       speccy->z80_poke(i + 0x4000, fgetc(fp));
@@ -231,9 +230,9 @@ bool loadZ80Version1(ZXSpectrum *speccy, uint8_t *buffer, FILE *fp)
   }
   speccy->z80Regs->PC.B.l = buffer[6];
   speccy->z80Regs->PC.B.h = buffer[7];
-  Serial.printf("PC: %x\n", speccy->z80Regs->PC.W);
+  printf("PC: %x\n", speccy->z80Regs->PC.W);
   loadZ80Regs(speccy, buffer);
-  Serial.printf("PC: %x\n", speccy->z80Regs->PC.W);
+  printf("PC: %x\n", speccy->z80Regs->PC.W);
   return true;
 }
 
@@ -281,7 +280,7 @@ models_enum getHardwareModel(uint8_t *buffer, int version)
 bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *fp)
 {
   models_enum hwmodel = getHardwareModel(buffer, version);
-  Serial.printf("Hardware model %d\n", hwmodel);
+  printf("Hardware model %d\n", hwmodel);
   if (speccy->hwopt.hw_model != hwmodel)
   {
     if (!speccy->init_spectrum(hwmodel))
@@ -293,7 +292,7 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
   fseek(fp, 0, SEEK_END);
   int totalSize = ftell(fp);
   // move to the start of the memory pages
-  Serial.printf("Extra data length %d\n", buffer[30]);
+  printf("Extra data length %d\n", buffer[30]);
   int dataOffset = 30 + 2 + buffer[30];
   fseek(fp, dataOffset, SEEK_SET);
 
@@ -321,27 +320,27 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
     int page = fgetc(fp);
     int actualLength = length == 0xFFFF ? 0x4000 : length;
     dataOffset += 3 + actualLength;
-    Serial.printf("Got page %d, length %d\n", page, length);
+    printf("Got page %d, length %d\n", page, length);
     if (pageMap[page] == NULL)
     {
       // nothing to write to this page
-      Serial.printf("Skipping page %d\n", page);
+      printf("Skipping page %d\n", page);
       continue;
     }
     // if the data is compressed, we need to uncompress it
     if (length == 0xFFFF)
     {
-      Serial.printf("Reading page %d\n", page);
+      printf("Reading page %d\n", page);
       fread(pageMap[page], actualLength, 1, fp);
     } else {
-      Serial.printf("Decompressing page %d\n", page);
+      printf("Decompressing page %d\n", page);
       decompressZ80BlockV2orV3(fp, length, pageMap[page], 0x4000);
     }
   }
   speccy->z80Regs->PC.B.l = buffer[32];
   speccy->z80Regs->PC.B.h = buffer[33];
-  Serial.printf("PC set to %x\n", speccy->z80Regs->PC.W);
-  if ((hwmodel == SPECMDL_128K))
+  printf("PC set to %x\n", speccy->z80Regs->PC.W);
+  if (hwmodel == SPECMDL_128K)
   {
     speccy->mem.page(buffer[35], true);
   }
@@ -356,11 +355,11 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
 
 bool LoadZ80(ZXSpectrum *speccy, const char *filename)
 {
-  Serial.printf("Loading Z80 file %s\n", filename);
+  printf("Loading Z80 file %s\n", filename);
   FILE *fp = fopen(filename, "rb");
   if (!fp)
   {
-    Serial.println("Could not open file\n");
+    printf("Could not open file\n");
     return false;
   }
   // read in the header
@@ -370,20 +369,20 @@ bool LoadZ80(ZXSpectrum *speccy, const char *filename)
     buffer[12] = 1; /*as told in CSS FAQ / .z80 section */
   bool res = false;
   int version = getZ80Version(buffer);
-  Serial.printf("Z80 version %d\n", version);
+  printf("Z80 version %d\n", version);
   switch (version)
   {
   case 1:
-    Serial.printf("Loading Z80 version 1\n");
+    printf("Loading Z80 version 1\n");
     res = loadZ80Version1(speccy, buffer, fp);
     break;
   case 2:
   case 3:
-    Serial.printf("Loading Z80 version %d\n", version);
+    printf("Loading Z80 version %d\n", version);
     res = loadZ80Version2or3(speccy, buffer, version, fp);
     break;
   default:
-    Serial.printf("Unknown Z80 version %d\n", version);
+    printf("Unknown Z80 version %d\n", version);
     break;
   }
   fclose(fp);
@@ -395,7 +394,7 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
   FILE *fp = fopen(filename, "wb");
   if (!fp)
   {
-    Serial.println("Failed to open file for writing");
+    printf("Failed to open file for writing");
     return false;
   }
 
@@ -481,7 +480,7 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
   {
       if (pageMap[page] != NULL)
       {
-          Serial.printf("Writing page: %d\n", page);
+          printf("Writing page: %d\n", page);
           // Write uncompressed page
           uint16_t length = 0xFFFF; // Indicates uncompressed block
           fputc(length & 0xFF, fp); // low byte
@@ -504,11 +503,11 @@ bool LoadSNA(ZXSpectrum *speccy, const char *filename)
   uint8_t buffer[27];
   uint8_t unbyte;
   int model;
-  Serial.println("Cargamos un SNA (by filename)\n");
+  printf("Cargamos un SNA (by filename)\n");
   FILE *fp = fopen(filename, "rb");
   if (!fp)
   {
-    Serial.println("Algo fallo cargando el SNA\n");
+    printf("Algo fallo cargando el SNA\n");
     return false;
   }
   // get the size of the file
@@ -555,7 +554,7 @@ bool LoadSNA(ZXSpectrum *speccy, const char *filename)
   speccy->z80Regs->IM = buffer[25];
   speccy->hwopt.BorderColor = buffer[26];
 
-  if (model = SPECMDL_48K)
+  if (model == SPECMDL_48K)
   {
     // read in each chunk of RAM
     fread(speccy->mem.mappedMemory[1], 0x4000, 1, fp);
@@ -566,7 +565,7 @@ bool LoadSNA(ZXSpectrum *speccy, const char *filename)
     speccy->z80Regs->PC.B.h = speccy->z80_peek(speccy->z80Regs->SP.W);
     speccy->z80Regs->SP.W++;
   }
-  else if (model = SPECMDL_16K)
+  else if (model == SPECMDL_16K)
   {
     fread(speccy->mem.mappedMemory[1], 0x4000, 1, fp);
     speccy->z80Regs->PC.B.l = speccy->z80_peek(speccy->z80Regs->SP.W);
