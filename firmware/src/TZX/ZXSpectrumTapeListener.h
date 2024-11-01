@@ -1,4 +1,4 @@
-#include "spectrum.h"
+#include "../Emulator/spectrum.h"
 #include "TapeListener.h"
 
 class ZXSpectrumTapeListener:public TapeListener {

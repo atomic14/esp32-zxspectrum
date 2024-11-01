@@ -47,7 +47,7 @@ public:
                                    { this->showSnapshots(); }),
         std::make_shared<MenuItem>("Video Player", [&]()
                                    { this->showVideos(); }),
-#ifdef ENABLE_MSC && USE_SDCARD
+#ifdef ENABLE_MSC
         std::make_shared<MenuItem>("Mount SD Card", [&]()
                                   { this->mountSDCard(); }),
 #endif

@@ -7,6 +7,8 @@
 #include "EmulatorScreen.h"
 #include "NavigationStack.h"
 #include "SaveSnapshotScreen.h"
+#include "../TZX/ZXSpectrumTapeListener.h"
+#include "../TZX/tzx_cas.h"
 
 const int screenWidth = TFT_WIDTH;
 const int screenHeight = TFT_HEIGHT;
@@ -237,17 +239,67 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
   pinMode(0, INPUT_PULLUP);
 }
 
-void EmulatorScreen::run(std::string snaPath)
+void EmulatorScreen::loadTape(std::string filename)
 {
-  auto bl = BusyLight();
+  for(int i = 0; i < 200; i++) {
+      machine->runForFrame(nullptr, nullptr);
+  }
+  // press the enter key to trigger tape loading
+  machine->updatekey(SPECKEY_ENTER, 1);
+  for(int i = 0; i < 10; i++) {
+      machine->runForFrame(nullptr, nullptr);
+  }
+  machine->updatekey(SPECKEY_ENTER, 0);
+  for(int i = 0; i < 10; i++) {
+      machine->runForFrame(nullptr, nullptr);
+  }
+  FILE *fp = fopen(filename.c_str(), "rb");
+  if (fp == NULL)
+  {
+      std::cout << "Error: Could not open file." << std::endl;
+      return;
+  }
+  fseek(fp, 0, SEEK_END);
+  long file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  uint8_t *tzx_data = (uint8_t*)ps_malloc(file_size);
+  fread(tzx_data, 1, file_size, fp);
+  fclose(fp);
+  // load the tape
+  TzxCas tzxCas;
+  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine);
+  listener->start();
+  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+      tzxCas.load_tap(listener, tzx_data, file_size);
+  else
+      tzxCas.load_tzx(listener, tzx_data, file_size);
+  listener->finish();
+}
+
+void EmulatorScreen::run(std::string filename)
+{
   // audioFile = fopen("/fs/audio.raw", "wb");
+  auto bl = BusyLight();
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
   machine->reset();
-  machine->init_spectrum(SPECMDL_48K);
-  machine->reset_spectrum(machine->z80Regs);
-  Load(machine, snaPath.c_str());
+  // check for tap or tpz files
+  std::string ext = filename.substr(filename.find_last_of(".") + 1);
+  std::transform(ext.begin(), ext.end(), ext.begin(),
+                 [](unsigned char c)
+                 { return std::tolower(c); });
+  if (ext == "tap" || ext == "tzx")
+  {
+    machine->init_spectrum(SPECMDL_128K);
+    machine->reset_spectrum(machine->z80Regs);
+    loadTape(filename.c_str());
+  } else {
+    // generic loading of z80 and sna files
+    machine->init_spectrum(SPECMDL_48K);
+    machine->reset_spectrum(machine->z80Regs);
+    Load(machine, filename.c_str());
+  }
   m_tft.fillScreen(TFT_WHITE);
   firstDraw = true;
   isRunning = true;

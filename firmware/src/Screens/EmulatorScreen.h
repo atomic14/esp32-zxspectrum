@@ -23,6 +23,7 @@ class EmulatorScreen : public Screen
     bool drawReady = true;
     bool firstDraw = false;
     FILE *audioFile = nullptr;
+    void loadTape(std::string filename);
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
