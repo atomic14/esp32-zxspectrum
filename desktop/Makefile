@@ -10,25 +10,28 @@ CXXFLAGS = \
 	-I/opt/homebrew/Cellar/sdl2/2.30.8/include \
 	-I../firmware/src/Emulator \
 	-I../firmware/src/AudioOutput \
-	-I../firmware/src/Emulator/z80
+	-I../firmware/src/Emulator/z80 \
+	-I../firmware/src/TZX
 
-LDFLAGS = -L/usr/local/lib -lSDL2
+# Linker flags (including Cocoa framework for macOS file picker support)
+LDFLAGS = -L/usr/local/lib -framework Cocoa
 
 # Target executable name
 TARGET = sdl_app
 
-# Source files
 SRCS = \
   ../firmware/src/Emulator/128k_rom.cpp \
   ../firmware/src/Emulator/48k_rom.cpp \
   ../firmware/src/Emulator/spectrum.cpp \
   ../firmware/src/Emulator/z80/z80.cpp \
   ../firmware/src/AySound/AySound.cpp \
-  src/main.cpp \
-  src/tzx_cas.cpp
+	../firmware/src/TZX/tzx_cas.cpp
+
+OBJC_SRCS = \
+	src/main.mm
 
 # Object files (object files will have the same path as source files, but with .o extension)
-OBJS = $(SRCS:.cpp=.o)
+OBJS = $(SRCS:.cpp=.o) $(OBJC_SRCS:.mm=.o)
 
 # Dependency files
 DEPS = $(OBJS:.o=.d)
@@ -37,11 +40,15 @@ DEPS = $(OBJS:.o=.d)
 all: $(TARGET)
 
 # Create executable from object files
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs`
+$(TARGET): $(OBJS) Makefile
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs` $(LDFLAGS)
 
 # Object file rules (object files are placed next to the source files)
-%.o: %.cpp
+%.o: %.cpp Makefile
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+
+# Rules for .mm files (for Objective-C++)
+%.o: %.mm Makefile
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 # Include dependency files
@@ -49,7 +56,7 @@ $(TARGET): $(OBJS)
 
 # Clean up build files
 clean:
-	rm -f $(SRCS:.cpp=.o) $(SRCS:.cpp=.d) $(TARGET)
+	rm -f $(SRCS:.cpp=.o) $(SRCS:.cpp=.d) $(OBJC_SRCS:.mm=.o) $(OBJC_SRCS:.mm=.d) $(TARGET)
 
 # Phony targets
 .PHONY: all clean

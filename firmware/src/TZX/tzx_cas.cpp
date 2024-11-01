@@ -1,4 +1,5 @@
 #include "tzx_cas.h"
+#include <string.h>
 #include <cmath>
 
 int compute_log2(int val)

@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#import <Cocoa/Cocoa.h>
 #include <iostream>
 #include <cstdint>
 #include <unordered_map>
@@ -11,46 +12,6 @@
 #include <thread>
 #include <chrono>
 
-// int main() {
-//     std::cout << "Starting the TZX CAS program..." << std::endl;
-//     // load up the whole tzx file
-//     FILE *fp = fopen("manic.tzx", "rb");
-//     if (fp == NULL)
-//     {
-//         std::cout << "Error: Could not open file." << std::endl;
-//         return 1;
-//     }
-//     fseek(fp, 0, SEEK_END);
-//     long file_size = ftell(fp);
-//     fseek(fp, 0, SEEK_SET);
-//     uint8_t *tzx_data = (uint8_t*)malloc(file_size);
-//     fread(tzx_data, 1, file_size, fp);
-//     fclose(fp);
-//     TzxCas tzxCas;
-//     // need to do this first - this does some work to detect the block starts
-//     if (tzxCas.tzx_cas_to_wav_size(tzx_data, file_size)) {
-//         // work out the total size
-//         DummyListener *dummyListener = new DummyListener();
-//         dummyListener->start();
-//         tzxCas.tzx_cas_fill_wave(dummyListener);
-//         dummyListener->finish();
-//         std::cout << "Total ticks: " << dummyListener->getTotalTicks() << std::endl;
-//         std::cout << "Total time: " << dummyListener->getTotalTicks() / 3500000.0 << " seconds" << std::endl;
-//         std::cout << "***************************************"  << std::endl;
-//         // now generate the audio data
-//         RawAudioListener *listener = new RawAudioListener("tape.raw");
-//         // generate the wav file
-//         listener->start();
-//         tzxCas.tzx_cas_fill_wave(listener);
-//         listener->finish();
-//         std::cout << "Total ticks: " << listener->getTotalTicks() << std::endl;
-//         std::cout << "Total time: " << listener->getTotalTicks() / 3500000.0 << " seconds" << std::endl;
-//     } else {
-//         std::cout << "Error: Could not convert TZX to WAV." << std::endl;
-//     }
-//     std::cout << "Program has finished execution." << std::endl;
-//     return 0;
-// }
 
 const int WIDTH = 320;  // Width of the display
 const int HEIGHT = 240; // Height of the display
@@ -62,6 +23,21 @@ const int BUFFER_SIZE = 312;
 
 SDL_Window *window = nullptr;
 SDL_Renderer *renderer = nullptr;
+
+std::string OpenFileDialog() {
+    @autoreleasepool {
+        NSOpenPanel* openPanel = [NSOpenPanel openPanel];
+        [openPanel setCanChooseFiles:YES];
+        [openPanel setCanChooseDirectories:NO];
+        [openPanel setAllowsMultipleSelection:NO];
+        
+        if ([openPanel runModal] == NSModalResponseOK) {
+            NSURL* fileURL = [[openPanel URLs] objectAtIndex:0];
+            return std::string([[fileURL path] UTF8String]);
+        }
+    }
+    return "";
+}
 
 void enforceAspectRatio(SDL_Window* window, int newWidth, int newHeight) {
     // Calculate the new dimensions while keeping the aspect ratio
@@ -170,10 +146,11 @@ std::unordered_map<SDL_Keycode, SpecKeys> sdl_to_spec = {
 bool isLoading = false;
 
 void loadTape() {
+    std::string filename = OpenFileDialog();
     // time how long it takes to load the tape
     int start = SDL_GetTicks();
     isLoading = true;
-    FILE *fp = fopen("never.tzx", "rb");
+    FILE *fp = fopen(filename.c_str(), "rb");
     if (fp == NULL)
     {
         std::cout << "Error: Could not open file." << std::endl;
@@ -189,7 +166,10 @@ void loadTape() {
     TzxCas tzxCas;
     ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine);
     listener->start();
-    tzxCas.load_tzx(listener, tzx_data, file_size);
+    if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+        tzxCas.load_tap(listener, tzx_data, file_size);
+    else
+        tzxCas.load_tzx(listener, tzx_data, file_size);
     listener->finish();
     std::cout << "Total ticks: " << listener->getTotalTicks() << std::endl;
     std::cout << "Total time: " << listener->getTotalTicks() / 3500000.0 << " seconds" << std::endl;
