@@ -24,6 +24,7 @@
  ======================================================================*/
 #include <stdint.h>
 #include <stdio.h>
+#include <algorithm>
 #include <string>
 #include <string.h>
 #include "./z80/z80.h"
