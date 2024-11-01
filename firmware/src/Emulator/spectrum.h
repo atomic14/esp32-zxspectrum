@@ -4,8 +4,6 @@
 #include "z80/z80.h"
 #include "keyboard_defs.h"
 #include <string.h>
-#include <Arduino.h>
-#include "Serial.h"
 
 enum models_enum
 {
@@ -65,7 +63,7 @@ class Memory {
       for (int i = 0; i < 2; i++) {
         rom[i] = (uint8_t *)malloc(0x4000);
         if (rom[i] == 0) {
-          Serial.println("Failed to allocate ROM");
+          printf("Failed to allocate ROM");
         }
         memset(rom[i], 0, 0x4000);
       }
@@ -73,7 +71,7 @@ class Memory {
       for (int i = 0; i < 8; i++) {
         banks[i] = (uint8_t *)malloc(0x4000);
         if (banks[i] == 0) {
-          Serial.println("Failed to allocate RAM");
+          printf("Failed to allocate RAM");
         }
         memset(banks[i], 0, 0x4000);
       }
@@ -113,10 +111,10 @@ class Memory {
       }
     }
     void loadRom(const uint8_t *rom_data, int rom_len) {
-      Serial.printf("Loading ROM %d", rom_len);
+      printf("Loading ROM %d\n", rom_len);
       int romCount = rom_len / 0x4000;
       for (int i = 0; i < romCount; i++) {
-        Serial.printf("Copying ROM %d\n", i);
+        printf("Copying ROM %d\n", i);
         memcpy(rom[i], rom_data + (i * 0x4000), 0x4000);
       }
     }
@@ -129,9 +127,10 @@ class ZXSpectrum
 public:
   Z80Regs *z80Regs;
   Memory mem;
-  tipo_hwopt hwopt = {0};
+  tipo_hwopt hwopt = {};
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
+  bool micLevel = false;
 
   ZXSpectrum();
   void reset();
@@ -152,6 +151,22 @@ public:
 
   uint8_t z80_in(uint16_t dir);
   void z80_out(uint16_t port, uint8_t dato);
+
+  void toggleMicLevel() {
+    if (micLevel) {
+      micLevel = false;
+    } else {
+      micLevel = true;
+    }
+  }
+
+  void setMicLow() {
+    micLevel = false;
+  }
+
+  void setMicHigh() {
+    micLevel = true;
+  }
 
   bool init_spectrum(int model);
   void reset_spectrum(Z80Regs *);

@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "../Serial.h"
 #include "../Emulator/spectrum.h"
 #include "wii_i2c/wii_i2c.h"
 #include "Nunchuck.h"

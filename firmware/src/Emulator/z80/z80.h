@@ -144,11 +144,11 @@ typedef struct {
 /*====================================================================
    Function declarations, read the .c file to know what they do.
  ===================================================================*/ 
-void     Z80Reset (register Z80Regs * regs);
-void     Z80Interrupt (register Z80Regs *, register uint16_t);
-uint16_t Z80Run (register Z80Regs *, int);
-void     Z80Patch (register Z80Regs *);
-byte     Z80Debug (register Z80Regs *);
+void     Z80Reset (Z80Regs * regs);
+void     Z80Interrupt (Z80Regs *, uint16_t);
+uint16_t Z80Run (Z80Regs *, int);
+void     Z80Patch (Z80Regs *);
+byte     Z80Debug (Z80Regs *);
 void     Z80FlagTables (void);
 uint16_t ParseOpcode (char *, char *, char *, uint16_t, Z80Regs *);
 uint16_t Z80Dissasembler (Z80Regs *, char *, char *);

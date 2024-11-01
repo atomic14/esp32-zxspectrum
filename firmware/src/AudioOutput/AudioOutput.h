@@ -1,8 +1,5 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <driver/i2s.h>
-
 /**
  * Base Class for both the DAC and I2S output
  **/
@@ -11,7 +8,7 @@ class AudioOutput
 protected:
   int mVolume = 10;
 public:
-  AudioOutput();
+  AudioOutput() {};
   virtual void start(uint32_t sample_rate) = 0;
   virtual void stop() = 0;
   // override this in derived classes to turn the sample into

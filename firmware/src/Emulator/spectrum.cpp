@@ -16,14 +16,11 @@
  */
 #include <stdint.h>
 #include <stdlib.h>
-#include <SPIFFS.h>
-#include "Serial.h"
+#include "../AudioOutput/AudioOutput.h"
 #include "spectrum.h"
-#include "AudioOutput/AudioOutput.h"
-#include "Input/TouchKeyboard.h"
 #include "48k_rom.h"
 #include "128k_rom.h"
-#include "AYSound/AySound.h"
+#include "../AYSound/AySound.h"
 
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
@@ -110,7 +107,9 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     fflush(audioFile);
   }
   // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second
-  audioOutput->write(audioBuffer, 312);
+  if (audioOutput) {
+    audioOutput->write(audioBuffer, 312);
+  }
   return c;
 }
 
@@ -127,33 +126,33 @@ void ZXSpectrum::updatekey(SpecKeys key, uint8_t state)
   {
   case JOYK_RIGHT:
     if (state == 1)
-      kempston_port |= B00000001;
+      kempston_port |= 0b00000001;
     else
-      kempston_port &= B11111110;
+      kempston_port &= 0b11111110;
     break;
   case JOYK_LEFT:
     if (state == 1)
-      kempston_port |= B00000010;
+      kempston_port |= 0b00000010;
     else
-      kempston_port &= B11111101;
+      kempston_port &= 0b11111101;
     break;
   case JOYK_DOWN:
     if (state == 1)
-      kempston_port |= B00000100;
+      kempston_port |= 0b00000100;
     else
-      kempston_port &= B11111011;
+      kempston_port &= 0b11111011;
     break;
   case JOYK_UP:
     if (state == 1)
-      kempston_port |= B00001000;
+      kempston_port |= 0b00001000;
     else
-      kempston_port &= B11110111;
+      kempston_port &= 0b11110111;
     break;
   case JOYK_FIRE:
     if (state == 1)
-      kempston_port |= B00010000;
+      kempston_port |= 0b00010000;
     else
-      kempston_port &= B11101111;
+      kempston_port &= 0b11101111;
     break;
   default:
     if (state == 1)
@@ -186,6 +185,16 @@ uint8_t ZXSpectrum::z80_in(uint16_t port)
       data &= speckey[6]; // keys h-l,enter
     if (!(port & 0x8000))
       data &= speckey[7]; // keys b-m,symb,space
+
+    // set bit 6 if the MIC is active
+    if (micLevel)
+    {
+      data |= 0x40;
+    }
+    else
+    {
+      data &= 0xBF;
+    }
     return data;
   }
   // kempston joystick
@@ -216,7 +225,7 @@ void ZXSpectrum::z80_out(uint16_t port, uint8_t data)
   if (!(port & 0x01))
   {
     hwopt.BorderColor = (data & 0x07);
-    hwopt.SoundBits = (data & B00010000);
+    hwopt.SoundBits = (data & 0b00010000);
   }
   else
   {
@@ -351,7 +360,7 @@ bool ZXSpectrum::init_128k()
   mem.loadRom(ZXSpectrum_128_rom, ZXSpectrum_128_rom_len);
 
   // setup the AYSound emulator
-  Serial.println("Setting up AySound");
+  printf("Setting up AySound");
   AySound::init();
   AySound::set_sound_format(15625,1,8);
   AySound::set_stereo(AYEMU_MONO,NULL);

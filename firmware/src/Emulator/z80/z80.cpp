@@ -109,10 +109,10 @@ void Z80Reset (Z80Regs * regs) {
  ===================================================================*/
 uint16_t Z80Run (Z80Regs * regs, int numcycles) {
   /* opcode and temp variables */
-  register byte opcode;
+  byte opcode;
   eword tmpreg, ops, mread, tmpreg2;
   unsigned long tempdword;
-  register int loop;
+  int loop;
   unsigned short tempword;
 
   /* emulate <numcycles> cycles */
@@ -158,7 +158,9 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
       }
       /* patch ROM loading routine */
       // address contributed by Ignacio Burgueño :)
-      if (r_PC >= 0x0556 && r_PC <= 0x056c) Z80Patch (regs);
+      if (r_PC >= 0x0556 && r_PC <= 0x056c) {
+        // printf("ROM loading routine hit\n");
+      }
   }
   return (regs->PC.W);
 }
@@ -212,7 +214,7 @@ void Z80Interrupt (Z80Regs * regs, uint16_t ivec){
  ===================================================================*/
 
 void
-Z80Patch (register Z80Regs * regs)
+Z80Patch (Z80Regs * regs)
 {
 }
 
