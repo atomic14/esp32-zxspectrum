@@ -339,8 +339,26 @@ int main()
 
     uint16_t frameBuffer[WIDTH * HEIGHT] = {}; // Example: initialize your 16-bit frame buffer here
 
-    // const int TARGET_FPS = 50;
-    // const int FRAME_DURATION = 1000 / TARGET_FPS; // 20 ms per frame
+    // run the spectrum for 4 second so that it boots up
+    int start = SDL_GetTicks();
+    for(int i = 0; i < 200; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    // press the enter key to trigger tape loading
+    machine->updatekey(SPECKEY_ENTER, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updatekey(SPECKEY_ENTER, 0);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    int end = SDL_GetTicks();
+    std::cout << "Time to boot spectrum: " << end - start << "ms" << std::endl;
+    // load a tap file
+    loadTape();
+
+
 
     bool isRunning = true;
     int count = 0;
