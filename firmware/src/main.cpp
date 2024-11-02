@@ -59,6 +59,9 @@ void setup(void)
   //   vTaskDelay(pdMS_TO_TICKS(1000));
   //   Serial.println("Booting...");
   // }
+  // print out avialable ram
+  Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+  Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
   #ifdef POWER_PIN
   pinMode(POWER_PIN, OUTPUT);
   digitalWrite(POWER_PIN, POWER_PIN_ON);

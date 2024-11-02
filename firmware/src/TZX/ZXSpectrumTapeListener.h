@@ -1,37 +1,45 @@
+#include "Serial.h"
 #include "../Emulator/spectrum.h"
 #include "TapeListener.h"
 
 class ZXSpectrumTapeListener:public TapeListener {
   private:
     ZXSpectrum *spectrum;
+    uint64_t totalExecutionTime = 0;
   public:
-  ZXSpectrumTapeListener(ZXSpectrum *spectrum) {
+  ZXSpectrumTapeListener(ZXSpectrum *spectrum, ProgressEvent progressEvent) : TapeListener(progressEvent) {
     this->spectrum = spectrum;
   }
   virtual void start() {
     // nothing to do - maybe we could start the spectrum tape loader?
   }
-  virtual void toggleMicLevel() {
+  inline virtual void toggleMicLevel() {
     this->spectrum->toggleMicLevel();
   }
-  virtual void setMicHigh() {
+  inline virtual void setMicHigh() {
     this->spectrum->setMicHigh();
   }
-  virtual void setMicLow() {
+  inline virtual void setMicLow() {
     this->spectrum->setMicLow();
   }
-  virtual void runForTicks(uint32_t ticks) {
-    totalTicks += ticks;
+  inline virtual void runForTicks(uint64_t ticks) {
+    addTicks(ticks);
+    uint64_t startUs = get_usecs();
     this->spectrum->runForCycles(ticks);
+    uint64_t endUs = get_usecs();
+    totalExecutionTime += endUs - startUs;
   }
-  virtual void pause1Millis() {
-    totalTicks += MILLI_SECOND;
+  inline virtual void pause1Millis() {
+    addTicks(MILLI_SECOND);
+    uint64_t startUs = get_usecs();
     this->spectrum->runForCycles(MILLI_SECOND);
+    uint64_t endUs = get_usecs();
+    totalExecutionTime += endUs - startUs;
   }
   virtual void finish() {
     // what should we do here?
   }
-  uint64_t getTotalTicks() {
-    return totalTicks;
+  uint64_t getTotalExecutionTime() {
+    return totalExecutionTime;
   }
 };

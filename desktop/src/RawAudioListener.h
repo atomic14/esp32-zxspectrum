@@ -16,7 +16,7 @@ class RawAudioListener: public TapeListener {
     FILE *fp = NULL;
     std::string fname;
   public:
-    RawAudioListener(const char *fname) {
+    RawAudioListener(const char *fname): TapeListener(NULL) {
       this->fname = fname;
     }
     void start() {
@@ -36,7 +36,7 @@ class RawAudioListener: public TapeListener {
     void setMicLow() {
       micLevel = WAVE_LOW;
     }
-    void runForTicks(uint32_t ticks) {
+    void runForTicks(uint64_t ticks) {
       totalTicks += ticks;
       // need to write out the number of samples that correspond to these CPU ticks
       // the cpu runs at 3.5MHz

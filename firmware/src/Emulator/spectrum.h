@@ -4,6 +4,9 @@
 #include "z80/z80.h"
 #include "keyboard_defs.h"
 #include <string.h>
+#include "../AYSound/AySound.h"
+
+extern uint8_t speckey[8];
 
 enum models_enum
 {
@@ -135,7 +138,11 @@ public:
   ZXSpectrum();
   void reset();
   int runForFrame(AudioOutput *audioOutput, FILE *audioFile);
-  void runForCycles(int cycles);
+  inline void runForCycles(int cycles)
+  {
+    Z80Run(z80Regs, cycles);
+  }
+
   void interrupt();
   void updatekey(SpecKeys key, uint8_t state);
 
@@ -149,10 +156,92 @@ public:
     mem.poke(address, value);
   }
 
-  uint8_t z80_in(uint16_t dir);
-  void z80_out(uint16_t port, uint8_t dato);
+inline uint8_t z80_in(uint16_t port)
+{
+  // Read from the ULA - basically keyboard
+  if ((port & 0x01) == 0)
+  {
+    uint8_t data = 0xFF;
+    if (!(port & 0x0100))
+      data &= speckey[0]; // keys shift,z-v
+    if (!(port & 0x0200))
+      data &= speckey[1]; // keys a-g
+    if (!(port & 0x0400))
+      data &= speckey[2]; // keys q-t
+    if (!(port & 0x0800))
+      data &= speckey[3]; // keys 1-5
+    if (!(port & 0x1000))
+      data &= speckey[4]; // keys 6-0
+    if (!(port & 0x2000))
+      data &= speckey[5]; // keys y-p
+    if (!(port & 0x4000))
+      data &= speckey[6]; // keys h-l,enter
+    if (!(port & 0x8000))
+      data &= speckey[7]; // keys b-m,symb,space
 
-  void toggleMicLevel() {
+    // set bit 6 if the MIC is active
+    if (micLevel)
+    {
+      data |= 0x40;
+    }
+    else
+    {
+      data &= 0xBF;
+    }
+    return data;
+  }
+  // kempston joystick
+  if ((port & 0x01F) == 0x1F)
+  {
+    return kempston_port;
+  }
+  if (hwopt.hw_model == SPECMDL_128K) {
+    if ((port & 0xC002) == 0xC000) {
+      return AySound::getRegisterData();
+    }
+  }
+  // emulacion port FF
+  if ((port & 0xFF) == 0xFF)
+  {
+    if (!hwopt.emulate_FF)
+      return 0xFF;
+    else
+    {
+      return hwopt.portFF;
+    }
+  }
+  return 0xFF;
+}
+
+inline void z80_out(uint16_t port, uint8_t data)
+{
+  if (!(port & 0x01))
+  {
+    hwopt.BorderColor = (data & 0x07);
+    hwopt.SoundBits = (data & 0b00010000);
+  }
+  else
+  {
+    // check for AY chip
+    if ((port & 0x8002) == 0x8000)
+    {
+      if (hwopt.hw_model == SPECMDL_128K) {
+        if ((port & 0x4000) != 0) {
+            AySound::selectRegister(data);
+        } else {
+            AySound::setRegisterData(data);
+        }
+      }
+    }
+    if ((port & 0x8002) == 0)
+    {
+      // paging
+      mem.page(data);
+    }
+  }
+}
+
+  inline void toggleMicLevel() {
     if (micLevel) {
       micLevel = false;
     } else {
@@ -160,11 +249,11 @@ public:
     }
   }
 
-  void setMicLow() {
+  inline void setMicLow() {
     micLevel = false;
   }
 
-  void setMicHigh() {
+  inline void setMicHigh() {
     micLevel = true;
   }
 

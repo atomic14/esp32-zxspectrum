@@ -158,9 +158,9 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
       }
       /* patch ROM loading routine */
       // address contributed by Ignacio Burgueño :)
-      if (r_PC >= 0x0556 && r_PC <= 0x056c) {
+      // if (r_PC >= 0x0556 && r_PC <= 0x056c) {
         // printf("ROM loading routine hit\n");
-      }
+      // }
   }
   return (regs->PC.W);
 }

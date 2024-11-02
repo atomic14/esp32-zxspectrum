@@ -172,7 +172,18 @@ void loadGame() {
     fclose(fp);
     // load the tape
     TzxCas tzxCas;
-    ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine);
+    DummyListener *dummyListener = new DummyListener();
+    dummyListener->start();
+    tzxCas.load_tzx(dummyListener, tzx_data, file_size);
+    dummyListener->finish();
+    uint64_t totalTicks = dummyListener->getTotalTicks();
+
+    ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
+      {
+        printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
+        printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
+        printf("Progress: %lld\n", progress * 100 / totalTicks);
+      });
     listener->start();
     if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
         tzxCas.load_tap(listener, tzx_data, file_size);

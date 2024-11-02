@@ -4,6 +4,7 @@
 
 class DummyListener: public TapeListener {
   public:
+    DummyListener() : TapeListener(nullptr) {}
     void start() {
       totalTicks = 0;
     }
@@ -13,11 +14,11 @@ class DummyListener: public TapeListener {
     }
     void setMicLow() {
     }
-    void runForTicks(uint32_t ticks) {
-      totalTicks += ticks;
+    void runForTicks(uint64_t ticks) {
+      addTicks(ticks);
     }
     void pause1Millis() {
-      totalTicks += MILLI_SECOND;
+      addTicks(MILLI_SECOND);
     }
   void finish() {
   }

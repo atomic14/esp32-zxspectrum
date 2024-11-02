@@ -1,4 +1,5 @@
 #include "tzx_cas.h"
+#include "Serial.h"
 #include <string.h>
 #include <cmath>
 
@@ -151,6 +152,7 @@ void TzxCas::TzxCas::tzx_cas_get_blocks(const uint8_t *casdata, int caslen)
 
 void TzxCas::tzx_cas_handle_block(TapeListener *tapeListener, const uint8_t *bytes, int pause, int data_size, int pilot, int pilot_length, int sync1, int sync2, int bit0, int bit1, int bits_in_last_byte)
 {
+	Serial.printf("tzx_cas_handle_block: loading %d bytes\n", data_size);
 	/* PILOT */
 	for ( ; pilot_length > 0; pilot_length--)
 	{
@@ -187,6 +189,7 @@ void TzxCas::tzx_cas_handle_block(TapeListener *tapeListener, const uint8_t *byt
 	/* pause */
 	if (pause > 0)
 	{
+		Serial.printf("Pause for %d ms\n", pause);
 		tapeListener->pause1Millis();
 		tapeListener->setMicLow();
 		for(int i = 0; i < pause - 1; i++) {
@@ -197,6 +200,7 @@ void TzxCas::tzx_cas_handle_block(TapeListener *tapeListener, const uint8_t *byt
 
 void TzxCas::tzx_handle_direct(TapeListener *tapeListener, const uint8_t *bytes, int pause, int data_size, int tstates, int bits_in_last_byte)
 {
+	Serial.printf("tzx_handle_direct: loading %d bytes\n", data_size);
 	/* data */
 	for (int data_index = 0; data_index < data_size; data_index++)
 	{
@@ -230,7 +234,7 @@ void TzxCas::tzx_handle_generalized(TapeListener *tapeListener, const uint8_t *b
 {
 	if (totp > 0)
 	{
-	//  printf("pilot block table %04x\n", totp);
+	//  Serial.printf("pilot block table %04x\n", totp);
 
 		const uint8_t *symtable = bytes;
 		const uint8_t *table2 = symtable + (2 * npp + 1)*asp;
@@ -240,7 +244,7 @@ void TzxCas::tzx_handle_generalized(TapeListener *tapeListener, const uint8_t *b
 		{
 			uint8_t symbol = table2[i + 0];
 			uint16_t repetitions = get_u16le(&table2[i + 1]);
-			//printf("symbol %02x repetitions %04x\n", symbol, repetitions); // does 1 mean repeat once, or that it only occurs once?
+			//Serial.printf("symbol %02x repetitions %04x\n", symbol, repetitions); // does 1 mean repeat once, or that it only occurs once?
 
 			for (int j = 0; j < repetitions; j++)
 			{
@@ -254,7 +258,7 @@ void TzxCas::tzx_handle_generalized(TapeListener *tapeListener, const uint8_t *b
 
 	if (totd > 0)
 	{
-	//  printf("data block table %04x (has %0d symbols, max symbol length is %d)\n", totd, asd, npd);
+	 Serial.printf("data block table %04x (has %0d symbols, max symbol length is %d)\n", totd, asd, npd);
 
 		const uint8_t *symtable = bytes;
 		const uint8_t *table2 = bytes + (2 * npd + 1)*asd;
@@ -291,7 +295,7 @@ void TzxCas::tzx_handle_generalized(TapeListener *tapeListener, const uint8_t *b
 
 void TzxCas::ascii_block_common_log( const char *block_type_string, uint8_t block_type)
 {
-	printf("%s (type %02x) encountered:\n", block_type_string, block_type);
+	Serial.printf("%s (type %02x) encountered:\n", block_type_string, block_type);
 }
 
 const char *const archive_ident[] =
@@ -335,7 +339,7 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 		uint16_t tstates = 0;
 
 	/* Uncomment this to include into error.log a list of the types each block */
-	printf("tzx_cas_fill_wave: block %d, block_type %02x\n", current_block, block_type);
+	Serial.printf("tzx_cas_fill_wave: block %d, block_type %02x\n", current_block, block_type);
 
 		switch (block_type)
 		{
@@ -397,28 +401,28 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 		case 0x17:  /* C64 Turbo Tape Data Block */     // Deprecated in TZX 1.20
 		case 0x34:  /* Emulation Info */                // Deprecated in TZX 1.20
 		case 0x40:  /* Snapshot Block */                // Deprecated in TZX 1.20
-			printf("Deprecated block type (%02x) encountered.\n", block_type);
-			printf("Please look for an updated .tzx file.\n");
+			Serial.printf("Deprecated block type (%02x) encountered.\n", block_type);
+			Serial.printf("Please look for an updated .tzx file.\n");
 			current_block++;
 			break;
 		case 0x30:  /* Text Description */
 			ascii_block_common_log("Text Description Block", block_type);
 			for (data_size = 0; data_size < cur_block[1]; data_size++)
-				printf("%c", cur_block[2 + data_size]);
-			printf("\n");
+				Serial.printf("%c", cur_block[2 + data_size]);
+			Serial.printf("\n");
 			current_block++;
 			break;
 		case 0x31:  /* Message Block */
 			ascii_block_common_log("Message Block", block_type);
-			printf("Expected duration of the message display: %02x\n", cur_block[1]);
-			printf("Message: \n");
+			Serial.printf("Expected duration of the message display: %02x\n", cur_block[1]);
+			Serial.printf("Message: \n");
 			for (data_size = 0; data_size < cur_block[2]; data_size++)
 			{
-				printf("%c", cur_block[3 + data_size]);
+				Serial.printf("%c", cur_block[3 + data_size]);
 				if (cur_block[3 + data_size] == 0x0d)
-					printf("\n");
+					Serial.printf("\n");
 			}
-			printf("\n");
+			Serial.printf("\n");
 			current_block++;
 			break;
 		case 0x32:  /* Archive Info */
@@ -428,29 +432,29 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 			for (data_size = 0; data_size < cur_block[3]; data_size++)  // data_size = number of text blocks, in this case
 			{
 				if (cur_block[4 + text_size] < 0x09) {
-					printf("%s: \n", archive_ident[cur_block[4 + text_size]]);
+					Serial.printf("%s: \n", archive_ident[cur_block[4 + text_size]]);
 				}
 				else {
-					printf("Comment(s): \n");
+					Serial.printf("Comment(s): \n");
 				}
 
 				for (i = 0; i < cur_block[4 + text_size + 1]; i++)
 				{
-					printf("%c", cur_block[4 + text_size + 2 + i]);
+					Serial.printf("%c", cur_block[4 + text_size + 2 + i]);
 				}
 				text_size += 2 + i;
 			}
-			printf("\n");
+			Serial.printf("\n");
 			if (text_size != total_size)
-				printf("Malformed Archive Info Block (Text length different from the declared one).\n Please verify your tape image.\n");
+				Serial.printf("Malformed Archive Info Block (Text length different from the declared one).\n Please verify your tape image.\n");
 			current_block++;
 			break;
 		case 0x33:  /* Hardware Type */
 			ascii_block_common_log("Hardware Type Block", block_type);
 			for (data_size = 0; data_size < cur_block[1]; data_size++)  // data_size = number of hardware blocks, in this case
 			{
-				printf("Hardware Type %02x - Hardware ID %02x - ", cur_block[2 + data_size * 3], cur_block[2 + data_size * 3 + 1]);
-				printf("%s \n ", hw_info[cur_block[2 + data_size * 3 + 2]]);
+				Serial.printf("Hardware Type %02x - Hardware ID %02x - ", cur_block[2 + data_size * 3], cur_block[2 + data_size * 3 + 1]);
+				Serial.printf("%s \n ", hw_info[cur_block[2 + data_size * 3 + 2]]);
 			}
 			current_block++;
 			break;
@@ -458,18 +462,18 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 			ascii_block_common_log("Custom Info Block", block_type);
 			for (data_size = 0; data_size < 10; data_size++)
 			{
-				printf("%c", cur_block[1 + data_size]);
+				Serial.printf("%c", cur_block[1 + data_size]);
 			}
-			printf(":\n");
+			Serial.printf(":\n");
 			text_size = get_u32le(&cur_block[11]);
 			for (data_size = 0; data_size < text_size; data_size++)
-				printf("%c", cur_block[15 + data_size]);
-			printf("\n");
+				Serial.printf("%c", cur_block[15 + data_size]);
+			Serial.printf("\n");
 			current_block++;
 			break;
 		case 0x5A:  /* "Glue" Block */
-			printf("Glue Block (type %02x) encountered.\n", block_type);
-			printf("Please use a .tzx handling utility to split the merged tape files.\n");
+			Serial.printf("Glue Block (type %02x) encountered.\n", block_type);
+			Serial.printf("Please use a .tzx handling utility to split the merged tape files.\n");
 			current_block++;
 			break;
 		case 0x24:  /* Loop Start */
@@ -477,14 +481,14 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 			current_block++;
 			loopoffset = current_block;
 
-			printf("loop start %d %d\n",  loopcount, current_block);
+			Serial.printf("loop start %d %d\n",  loopcount, current_block);
 			break;
 		case 0x25:  /* Loop End */
 			if (loopcount>0)
 			{
 				current_block = loopoffset;
 				loopcount--;
-				printf("do loop\n");
+				Serial.printf("do loop\n");
 			}
 			else
 			{
@@ -501,7 +505,7 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 		case 0x2A:  /* Stop Tape if in 48K Mode */
 		case 0x2B:  /* Set signal level */
 		default:
-			printf("Unsupported block type (%02x) encountered.\n", block_type);
+			Serial.printf("Unsupported block type (%02x) encountered.\n", block_type);
 			current_block++;
 			break;
 
@@ -517,7 +521,7 @@ void TzxCas::tzx_cas_do_work(TapeListener *tapeListener)
 
 		case 0x18:  /* CSW Recording */
 			// having this missing is fatal
-			printf("Unsupported block type (0x15 - CSW Recording) encountered.\n");
+			Serial.printf("Unsupported block type (0x15 - CSW Recording) encountered.\n");
 			current_block++;
 			break;
 
@@ -555,28 +559,28 @@ bool TzxCas::load_tzx(TapeListener *listener, uint8_t *casdata, int caslen)
 	/* Header size plus major and minor version number */
 	if (caslen < 10)
 	{
-		printf("tzx_cas_to_wav_size: cassette image too small\n");
+		Serial.printf("tzx_cas_to_wav_size: cassette image too small\n");
 		return false;
 	}
 
 	/* Check for correct header */
 	if (memcmp(casdata, TZX_HEADER, sizeof(TZX_HEADER)))
 	{
-		printf("tzx_cas_to_wav_size: cassette image has incompatible header\n");
+		Serial.printf("tzx_cas_to_wav_size: cassette image has incompatible header\n");
 		return false;
 	}
 
 	/* Check major version number in header */
 	if (casdata[0x08] > SUPPORTED_VERSION_MAJOR)
 	{
-		printf("tzx_cas_to_wav_size: unsupported version\n");
+		Serial.printf("tzx_cas_to_wav_size: unsupported version\n");
 		return false;
 	}
 	tzx_cas_get_blocks(casdata, caslen);
-	printf("tzx_cas_to_wav_size: %d blocks found\n", block_count);
+	Serial.printf("tzx_cas_to_wav_size: %d blocks found\n", block_count);
 	if (block_count == 0)
 	{
-		printf("tzx_cas_to_wav_size: no blocks found!\n");
+		Serial.printf("tzx_cas_to_wav_size: no blocks found!\n");
 		return false;
 	}
 	tzx_cas_do_work(listener);
@@ -591,7 +595,7 @@ bool TzxCas::load_tap(TapeListener *tapeListener, uint8_t *casdata, int caslen)
 	{
 		int data_size = get_u16le(&p[0]);
 		int pilot_length = (p[2] == 0x00) ? 8063 : 3223;
-		printf("tap_cas_fill_wave: Handling TAP block containing 0x%X bytes\n", data_size);
+		Serial.printf("tap_cas_fill_wave: Handling TAP block containing 0x%X bytes\n", data_size);
 		p += 2;
 		tzx_cas_handle_block(tapeListener, p, 1000, data_size, 2168, pilot_length, 667, 735, 855, 1710, 8);
 		p += data_size;

@@ -1,12 +1,17 @@
+#include "Serial.h"
+
+#ifdef ARDUINO_ARCH_ESP32
+
 #include <Arduino.h>
 #include "USB.h"
 #include "USBMSC.h"
-#include "Serial.h"
 #include "./Files/SDCard.h"
 #include "./Files/Files.h"
 
 USBMSC msc;
+#ifdef NO_GLOBAL_SERIAL
 USBCDC Serial;
+#endif
 
 static SDCard *card;
 
@@ -51,7 +56,9 @@ void setupUSB(SDCard *_card)
     card = _card;
   }
   Serial.begin(115200);
+  #ifdef NO_GLOBAL_SERIAL
   USB.begin();
+  #endif
 }
 
 void startMSC()
@@ -70,3 +77,9 @@ void stopMSC()
 {
   msc.end();
 }
+
+#else
+
+Logger Serial;
+
+#endif

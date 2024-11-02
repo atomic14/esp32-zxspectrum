@@ -15,6 +15,7 @@ class EmulatorScreen : public Screen
   private:
     ZXSpectrum *machine = nullptr;
     bool isRunning = false;
+    bool isLoading = false;
     SemaphoreHandle_t m_displaySemaphore;
     uint16_t *pixelBuffer = nullptr;
     // copy of the screen so we can track changes

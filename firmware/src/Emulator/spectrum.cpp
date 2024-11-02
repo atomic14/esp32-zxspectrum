@@ -20,7 +20,6 @@
 #include "spectrum.h"
 #include "48k_rom.h"
 #include "128k_rom.h"
-#include "../AYSound/AySound.h"
 
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
@@ -47,11 +46,6 @@ void ZXSpectrum::reset()
 {
   Z80Reset(z80Regs);
   Z80FlagTables();
-}
-
-void ZXSpectrum::runForCycles(int cycles)
-{
-  Z80Run(z80Regs, cycles);
 }
 
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
@@ -160,91 +154,6 @@ void ZXSpectrum::updatekey(SpecKeys key, uint8_t state)
     else
       speckey[key2specy[0][key]] |= ((key2specy[1][key]) ^ 0xFF);
     break;
-  }
-}
-
-uint8_t ZXSpectrum::z80_in(uint16_t port)
-{
-  // Read from the ULA - basically keyboard
-  if ((port & 0x01) == 0)
-  {
-    uint8_t data = 0xFF;
-    if (!(port & 0x0100))
-      data &= speckey[0]; // keys shift,z-v
-    if (!(port & 0x0200))
-      data &= speckey[1]; // keys a-g
-    if (!(port & 0x0400))
-      data &= speckey[2]; // keys q-t
-    if (!(port & 0x0800))
-      data &= speckey[3]; // keys 1-5
-    if (!(port & 0x1000))
-      data &= speckey[4]; // keys 6-0
-    if (!(port & 0x2000))
-      data &= speckey[5]; // keys y-p
-    if (!(port & 0x4000))
-      data &= speckey[6]; // keys h-l,enter
-    if (!(port & 0x8000))
-      data &= speckey[7]; // keys b-m,symb,space
-
-    // set bit 6 if the MIC is active
-    if (micLevel)
-    {
-      data |= 0x40;
-    }
-    else
-    {
-      data &= 0xBF;
-    }
-    return data;
-  }
-  // kempston joystick
-  if ((port & 0x01F) == 0x1F)
-  {
-    return kempston_port;
-  }
-  if (hwopt.hw_model == SPECMDL_128K) {
-    if ((port & 0xC002) == 0xC000) {
-      return AySound::getRegisterData();
-    }
-  }
-  // emulacion port FF
-  if ((port & 0xFF) == 0xFF)
-  {
-    if (!hwopt.emulate_FF)
-      return 0xFF;
-    else
-    {
-      return hwopt.portFF;
-    }
-  }
-  return 0xFF;
-}
-
-void ZXSpectrum::z80_out(uint16_t port, uint8_t data)
-{
-  if (!(port & 0x01))
-  {
-    hwopt.BorderColor = (data & 0x07);
-    hwopt.SoundBits = (data & 0b00010000);
-  }
-  else
-  {
-    // check for AY chip
-    if ((port & 0x8002) == 0x8000)
-    {
-      if (hwopt.hw_model == SPECMDL_128K) {
-        if ((port & 0x4000) != 0) {
-            AySound::selectRegister(data);
-        } else {
-            AySound::setRegisterData(data);
-        }
-      }
-    }
-    if ((port & 0x8002) == 0)
-    {
-      // paging
-      mem.page(data);
-    }
   }
 }
 

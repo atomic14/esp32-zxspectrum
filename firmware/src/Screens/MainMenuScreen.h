@@ -8,7 +8,7 @@
 #include "VideoFilePickerScreen.h"
 #include "GameFilePickerScreen.h"
 
-static const std::vector<std::string> gameValidExtensions = {".z80", ".sna"};
+static const std::vector<std::string> gameValidExtensions = {".z80", ".sna", ".tap", ".tzx"};
 static const std::vector<std::string> videoValidExtensions = {".avi"};
 
 class MenuItem

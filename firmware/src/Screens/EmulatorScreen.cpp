@@ -8,6 +8,7 @@
 #include "NavigationStack.h"
 #include "SaveSnapshotScreen.h"
 #include "../TZX/ZXSpectrumTapeListener.h"
+#include "../TZX/DummyListener.h"
 #include "../TZX/tzx_cas.h"
 
 const int screenWidth = TFT_WIDTH;
@@ -152,6 +153,12 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   tft.endWrite();
   emulatorScreen->drawReady = true;
   emulatorScreen->firstDraw = false;
+  emulatorScreen->frameCount++;
+    flashTimer++;
+    if (flashTimer == 32)
+    {
+      flashTimer = 0;
+    }
 }
 
 void drawDisplay(void *pvParameters)
@@ -166,12 +173,6 @@ void drawDisplay(void *pvParameters)
     }
     if(xSemaphoreTake(emulatorScreen->m_displaySemaphore, portMAX_DELAY)) {
       drawScreen(emulatorScreen);
-      emulatorScreen->frameCount++;
-      flashTimer++;
-      if (flashTimer == 32)
-      {
-        flashTimer = 0;
-      }
     }
     if (emulatorScreen->isRunning && digitalRead(0) == LOW)
     {
@@ -241,9 +242,13 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 
 void EmulatorScreen::loadTape(std::string filename)
 {
+  uint64_t startTime = get_usecs();
+  isLoading = true;
+  Serial.printf("Loading tape %s\n", filename.c_str());
   for(int i = 0; i < 200; i++) {
       machine->runForFrame(nullptr, nullptr);
   }
+  Serial.printf("Pressing enter\n");
   // press the enter key to trigger tape loading
   machine->updatekey(SPECKEY_ENTER, 1);
   for(int i = 0; i < 10; i++) {
@@ -253,32 +258,81 @@ void EmulatorScreen::loadTape(std::string filename)
   for(int i = 0; i < 10; i++) {
       machine->runForFrame(nullptr, nullptr);
   }
+  Serial.printf("Loading tape file\n");
   FILE *fp = fopen(filename.c_str(), "rb");
   if (fp == NULL)
   {
-      std::cout << "Error: Could not open file." << std::endl;
-      return;
+    Serial.println("Error: Could not open file.");
+    std::cout << "Error: Could not open file." << std::endl;
+    isLoading = false;
+    return;
   }
   fseek(fp, 0, SEEK_END);
   long file_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
+  Serial.printf("File size %d\n", file_size);
   uint8_t *tzx_data = (uint8_t*)ps_malloc(file_size);
+  if (!tzx_data)
+  {
+    Serial.println("Error: Could not allocate memory.");
+    isLoading = false;
+    return;
+  }
   fread(tzx_data, 1, file_size, fp);
   fclose(fp);
   // load the tape
   TzxCas tzxCas;
-  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine);
+  DummyListener *dummyListener = new DummyListener();
+  dummyListener->start();
+  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
+    tzxCas.load_tap(dummyListener, tzx_data, file_size);
+  } else {
+    tzxCas.load_tzx(dummyListener, tzx_data, file_size);
+  }
+  dummyListener->finish();
+  uint64_t totalTicks = dummyListener->getTotalTicks();
+  Serial.printf("Total cycles: %lld\n", dummyListener->getTotalTicks());
+  delete dummyListener;
+  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
+      {
+        Serial.printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
+        Serial.printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
+        Serial.printf("Wall Clock time: %fs\n", (float) (get_usecs() - startTime) / 1000000.0f);
+        Serial.printf("Progress: %lld\n", progress * 100 / totalTicks);
+        if (drawReady) {
+          drawReady = false;
+          memcpy(currentScreenBuffer, machine->mem.currentScreen, 6912);
+          drawScreen(this);
+          // draw a progreess bar
+          int position = progress * screenWidth / totalTicks;
+          m_tft.fillRect(position, 0, screenWidth - position, 8, TFT_BLACK);
+          m_tft.fillRect(0, 0, position, 8, TFT_GREEN);
+          vTaskDelay(1);
+      }
+      });
   listener->start();
-  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
+      Serial.printf("Loading tap file\n");
       tzxCas.load_tap(listener, tzx_data, file_size);
-  else
+  } else {
+      Serial.printf("Loading tzx file\n");
       tzxCas.load_tzx(listener, tzx_data, file_size);
+  }
+  Serial.printf("Tape loaded\n");
   listener->finish();
+  Serial.printf("*********************");
+  Serial.printf("Total execution time: %lld\n", listener->getTotalExecutionTime());
+  Serial.printf("Total cycles: %lld\n", listener->getTotalTicks());
+  Serial.printf("*********************");
+  free(tzx_data);
+  delete listener;
+  isLoading = false;
 }
 
 void EmulatorScreen::run(std::string filename)
 {
   // audioFile = fopen("/fs/audio.raw", "wb");
+  firstDraw = true;
   auto bl = BusyLight();
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
@@ -300,10 +354,10 @@ void EmulatorScreen::run(std::string filename)
     machine->reset_spectrum(machine->z80Regs);
     Load(machine, filename.c_str());
   }
-  m_tft.fillScreen(TFT_WHITE);
-  firstDraw = true;
-  isRunning = true;
   // tasks to do the work
+  Serial.println("Starting tasks\n");
+  m_tft.fillScreen(TFT_BLACK);
+  isRunning = true;
   xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
