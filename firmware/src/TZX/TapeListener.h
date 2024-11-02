@@ -27,7 +27,7 @@ public:
   inline virtual void addTicks(uint64_t ticks) {
     totalTicks += ticks;
     elapsedTicks += ticks;
-    if (elapsedTicks >= 1 * CPU_FREQ) {
+    if (elapsedTicks >= 3 * CPU_FREQ) {
       elapsedTicks = 0;
       if (progressEvent) {
         progressEvent(totalTicks);
