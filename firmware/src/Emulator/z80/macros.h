@@ -114,16 +114,16 @@
 
 /* store a given register in the stack (hi and lo bytes) */
 #define PUSH(rreg)                              \
-  Z80WriteMem( --(r_SP), regs->rreg.B.h, regs); \
-  Z80WriteMem( --(r_SP), regs->rreg.B.l, regs)
+  r_SP--; Z80WriteMem(r_SP, regs->rreg.B.h, regs); \
+  r_SP--; Z80WriteMem(r_SP, regs->rreg.B.l, regs)
 
 #define POP(rreg)\
   regs->rreg.B.l = Z80ReadMem(r_SP); r_SP++;\
   regs->rreg.B.h = Z80ReadMem(r_SP); r_SP++
 
 #define PUSH_IXYr() \
-  Z80WriteMem( --(r_SP), REGH, regs); \
-  Z80WriteMem( --(r_SP), REGL, regs)
+  r_SP--; Z80WriteMem(r_SP, REGH, regs); \
+  r_SP--; Z80WriteMem(r_SP, REGL, regs)
 
 #define POP_IXYr()\
   REGL = Z80ReadMem(r_SP); r_SP++; \
@@ -162,7 +162,7 @@
                            r_oph = Z80ReadMem(r_PC); r_PC++; \
                            dreg = Z80ReadMem(r_op)
 
-#define LD_r_n(reg) (reg) = Z80ReadMem(r_PC++)
+#define LD_r_n(reg) (reg) = Z80ReadMem(r_PC); r_PC++;
 
 #define LD_rr_nn(reg)   r_opl = Z80ReadMem(r_PC); r_PC++; \
                         r_oph = Z80ReadMem(r_PC); r_PC++; \
@@ -277,8 +277,8 @@
 
 #define CALL_nn()  r_opl = Z80ReadMem(r_PC); r_PC++; \
                    r_oph = Z80ReadMem(r_PC); r_PC++; \
-                   Z80WriteMem( --(r_SP), r_PCh, regs ); \
-                   Z80WriteMem( --(r_SP), r_PCl, regs ); \
+                   r_SP--; Z80WriteMem(r_SP, r_PCh, regs ); \
+                   r_SP--; Z80WriteMem(r_SP, r_PCl, regs ); \
                    r_PC = r_op
 
 

@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #import <Cocoa/Cocoa.h>
 #include <iostream>
 #include <cstdint>
@@ -180,9 +180,9 @@ void loadGame() {
 
     ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
       {
-        printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
-        printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
-        printf("Progress: %lld\n", progress * 100 / totalTicks);
+        // printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
+        // printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
+        // printf("Progress: %lld\n", progress * 100 / totalTicks);
       });
     listener->start();
     if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {

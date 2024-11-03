@@ -21,10 +21,15 @@
 #include "tables.h"
 #include "z80.h"
 
-#define Z80ReadMem(where) (((ZXSpectrum *)regs->userInfo)->z80_peek(where))
-#define Z80WriteMem(where, A, regs) (((ZXSpectrum *)regs->userInfo)->z80_poke(where, A))
-#define Z80InPort(regs, port) (((ZXSpectrum *)regs->userInfo)->z80_in(port))
-#define Z80OutPort(regs, port, value) (((ZXSpectrum *)regs->userInfo)->z80_out(port, value))
+#define Z80ReadMem(where) (mappedMemory[(where) >> 14][(where) & 0x3FFF])
+#define Z80WriteMem(where, A, regs) ({ \
+  int memoryBank = (where) >> 14; \
+  if (memoryBank != 0) { \
+    mappedMemory[memoryBank][(where) & 0x3fff] = A; \
+  } \
+})
+#define Z80InPort(regs, port) (spectrum->z80_in(port))
+#define Z80OutPort(regs, port, value) (spectrum->z80_out(port, value))
 
 #include "macros.h"
 
@@ -108,6 +113,9 @@ void Z80Reset (Z80Regs * regs) {
   z80 opcodes for or < 0 (negative) to execute "infinite" opcodes.
  ===================================================================*/
 uint16_t Z80Run (Z80Regs * regs, int numcycles) {
+  ZXSpectrum *spectrum = ((ZXSpectrum *)regs->userInfo);
+  Memory &memory = spectrum->mem;
+  uint8_t **mappedMemory = memory.mappedMemory;
   /* opcode and temp variables */
   byte opcode;
   eword tmpreg, ops, mread, tmpreg2;
@@ -171,6 +179,9 @@ uint16_t Z80Run (Z80Regs * regs, int numcycles) {
   void Z80Interrupt( Z80Regs *regs, word ivec )
  ===================================================================*/
 void Z80Interrupt (Z80Regs * regs, uint16_t ivec){
+  ZXSpectrum *spectrum = ((ZXSpectrum *)regs->userInfo);
+  Memory &memory = spectrum->mem;
+  uint8_t **mappedMemory = memory.mappedMemory;
   uint16_t intaddress;
 
   /* unhalt the computer */
