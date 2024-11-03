@@ -37,19 +37,21 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   ZXSpectrum *machine = emulatorScreen->machine;
 
   tft.startWrite();
-  // do the border
-  uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
-  uint16_t tftColor = specpal565[borderColor];
-  // swap the byte order
-  tftColor = (tftColor >> 8) | (tftColor << 8);
-  if (tftColor != lastBorderColor || emulatorScreen->firstDraw)
-  {
-    // do the border with some simple rects - no need to push pixels for a solid color
-    tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
-    tft.fillRect(0, screenHeight - borderHeight, screenWidth, borderHeight, tftColor);
-    tft.fillRect(0, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
-    tft.fillRect(screenWidth - borderWidth, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
-    lastBorderColor = tftColor;
+  if (!emulatorScreen->isLoading) {
+    // do the border
+    uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
+    uint16_t tftColor = specpal565[borderColor];
+    // swap the byte order
+    tftColor = (tftColor >> 8) | (tftColor << 8);
+    if (tftColor != lastBorderColor || emulatorScreen->firstDraw)
+    {
+      // do the border with some simple rects - no need to push pixels for a solid color
+      tft.fillRect(0, 0, screenWidth, borderHeight, tftColor);
+      tft.fillRect(0, screenHeight - borderHeight, screenWidth, borderHeight, tftColor);
+      tft.fillRect(0, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
+      tft.fillRect(screenWidth - borderWidth, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
+      lastBorderColor = tftColor;
+    }
   }
   // do the pixels
   uint8_t *attrBase = emulatorScreen->currentScreenBuffer + 0x1800;
@@ -293,22 +295,43 @@ void EmulatorScreen::loadTape(std::string filename)
   uint64_t totalTicks = dummyListener->getTotalTicks();
   Serial.printf("Total cycles: %lld\n", dummyListener->getTotalTicks());
   delete dummyListener;
+  int count = 0;
+  uint16_t borderColors[240];
   ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
       {
-        Serial.printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
-        Serial.printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
-        Serial.printf("Wall Clock time: %fs\n", (float) (get_usecs() - startTime) / 1000000.0f);
-        Serial.printf("Progress: %lld\n", progress * 100 / totalTicks);
-        if (drawReady) {
-          drawReady = false;
-          memcpy(currentScreenBuffer, machine->mem.currentScreen, 6912);
-          drawScreen(this);
-          // draw a progreess bar
-          int position = progress * screenWidth / totalTicks;
-          m_tft.fillRect(position, 0, screenWidth - position, 8, TFT_BLACK);
-          m_tft.fillRect(0, 0, position, 8, TFT_GREEN);
-          vTaskDelay(1);
-      }
+        // approximate the border position - not very accutare but good enough
+        int borderPos = count % 240;
+        // get the border color
+        borderColors[borderPos] = specpal565[machine->hwopt.BorderColor & B00000111];
+        count++;
+        if (count % 4000 == 0) {
+          for(int borderPos = 8; borderPos < 240; borderPos++) {
+            // draw the border
+            if (borderPos < borderHeight || borderPos >= screenHeight - borderHeight) {
+              m_tft.drawFastHLine(0, borderPos, screenWidth, borderColors[borderPos]);
+            } else {
+              m_tft.drawFastHLine(0, borderPos, borderWidth, borderColors[borderPos]);
+              m_tft.drawFastHLine(screenWidth - borderWidth, borderPos, borderWidth, borderColors[borderPos]);
+            }
+          }
+          float machineTime = (float) listener->getTotalTicks() / 3500000.0f;
+          float wallTime = (float) (get_usecs() - startTime) / 1000000.0f;
+          Serial.printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
+          Serial.printf("Total machine time: %f\n", machineTime);
+          Serial.printf("Wall Clock time: %fs\n", wallTime);
+          Serial.printf("Speed Up: %f\n",  machineTime/wallTime);
+          Serial.printf("Progress: %lld\n", progress * 100 / totalTicks);
+          if (drawReady) {
+            drawReady = false;
+            memcpy(currentScreenBuffer, machine->mem.currentScreen, 6912);
+            drawScreen(this);
+            // draw a progreess bar
+            int position = progress * screenWidth / totalTicks;
+            m_tft.fillRect(position, 0, screenWidth - position, 8, TFT_BLACK);
+            m_tft.fillRect(0, 0, position, 8, TFT_GREEN);
+            vTaskDelay(1);
+          }
+        }
       });
   listener->start();
   if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
