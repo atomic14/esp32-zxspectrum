@@ -9,6 +9,7 @@ Nunchuck::Nunchuck(KeyEventType keyEvent, PressKeyEventType pressKeyEvent, gpio_
   if (wii_i2c_init(0, data, clk) != 0)
   {
     Serial.printf("ERROR initializing wii i2c controller\n");
+    return;
   }
   else
   {

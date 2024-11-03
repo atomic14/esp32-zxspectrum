@@ -33,6 +33,7 @@ public:
   void write(const uint8_t *samples, int count);
   void start(uint32_t sample_rate);
   void stop() {}
-
+  void pause();
+  void resume();
   bool onTimer();
 };

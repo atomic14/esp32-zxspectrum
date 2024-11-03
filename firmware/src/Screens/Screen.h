@@ -26,13 +26,19 @@ class Screen {
   virtual void updatekey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};
   void playKeyClick() {
-    m_audioOutput->write(click, 4);
+    if (m_audioOutput) {
+      m_audioOutput->write(click, 4);
+    }
   }
   void playErrorBeep() {
-    m_audioOutput->write(fatal_error_raw, fatal_error_raw_len);
+    if (m_audioOutput) {
+      m_audioOutput->write(fatal_error_raw, fatal_error_raw_len);
+    }
   }
   void playSuccessBeep() {
-    m_audioOutput->write(bell_raw, bell_raw_len);
+    if (m_audioOutput) {
+      m_audioOutput->write(bell_raw, bell_raw_len);
+    }
   }
   void drawBusy() {
     m_tft.fillRect(m_tft.width() / 2 - busyImageWidth /2 - 2,

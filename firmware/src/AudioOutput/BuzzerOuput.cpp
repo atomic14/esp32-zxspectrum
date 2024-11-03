@@ -30,8 +30,18 @@ void BuzzerOutput::start(uint32_t sample_rate)
   ESP_ERROR_CHECK(timer_enable_intr(TIMER_GROUP_0, TIMER_0));
   ESP_ERROR_CHECK(timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, onTimerCallback, this, 0));
   ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
-  ESP_ERROR_CHECK(timer_start(TIMER_GROUP_0, TIMER_0));
 }
+
+void BuzzerOutput::pause()
+{
+  timer_pause(TIMER_GROUP_0, TIMER_0);
+}
+
+void BuzzerOutput::resume()
+{
+  timer_start(TIMER_GROUP_0, TIMER_0);
+}
+
 
 void BuzzerOutput::write(const uint8_t *samples, int count)
 {

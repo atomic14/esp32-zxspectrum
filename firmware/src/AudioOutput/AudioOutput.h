@@ -11,6 +11,8 @@ public:
   AudioOutput() {};
   virtual void start(uint32_t sample_rate) = 0;
   virtual void stop() = 0;
+  virtual void pause() {};
+  virtual void resume() {};
   // override this in derived classes to turn the sample into
   // something the output device expects - for the default case
   // this is simply a pass through

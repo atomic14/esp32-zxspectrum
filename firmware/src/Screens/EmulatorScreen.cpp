@@ -10,6 +10,7 @@
 #include "../TZX/ZXSpectrumTapeListener.h"
 #include "../TZX/DummyListener.h"
 #include "../TZX/tzx_cas.h"
+#include "utils.h"
 
 const int screenWidth = TFT_WIDTH;
 const int screenHeight = TFT_HEIGHT;
@@ -244,6 +245,11 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
 
 void EmulatorScreen::loadTape(std::string filename)
 {
+  ScopeGuard guard([&]() {
+    isLoading = false;
+    if (m_audioOutput) m_audioOutput->resume();
+  });
+  if (m_audioOutput) m_audioOutput->pause();
   uint64_t startTime = get_usecs();
   isLoading = true;
   Serial.printf("Loading tape %s\n", filename.c_str());
@@ -266,7 +272,6 @@ void EmulatorScreen::loadTape(std::string filename)
   {
     Serial.println("Error: Could not open file.");
     std::cout << "Error: Could not open file." << std::endl;
-    isLoading = false;
     return;
   }
   fseek(fp, 0, SEEK_END);
@@ -277,7 +282,6 @@ void EmulatorScreen::loadTape(std::string filename)
   if (!tzx_data)
   {
     Serial.println("Error: Could not allocate memory.");
-    isLoading = false;
     return;
   }
   fread(tzx_data, 1, file_size, fp);
@@ -296,7 +300,8 @@ void EmulatorScreen::loadTape(std::string filename)
   Serial.printf("Total cycles: %lld\n", dummyListener->getTotalTicks());
   delete dummyListener;
   int count = 0;
-  uint16_t borderColors[240];
+  uint16_t drawnBorderColors[240] = {0x18C6};
+  uint16_t borderColors[240] = {0x18C6};
   ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
       {
         // approximate the border position - not very accutare but good enough
@@ -306,12 +311,15 @@ void EmulatorScreen::loadTape(std::string filename)
         count++;
         if (count % 4000 == 0) {
           for(int borderPos = 8; borderPos < 240; borderPos++) {
-            // draw the border
-            if (borderPos < borderHeight || borderPos >= screenHeight - borderHeight) {
-              m_tft.drawFastHLine(0, borderPos, screenWidth, borderColors[borderPos]);
-            } else {
-              m_tft.drawFastHLine(0, borderPos, borderWidth, borderColors[borderPos]);
-              m_tft.drawFastHLine(screenWidth - borderWidth, borderPos, borderWidth, borderColors[borderPos]);
+            if (drawnBorderColors[borderPos] != borderColors[borderPos]) {
+              drawnBorderColors[borderPos] = borderColors[borderPos];
+              // draw the border
+              if (borderPos < borderHeight || borderPos >= screenHeight - borderHeight) {
+                m_tft.drawFastHLine(0, borderPos, screenWidth, borderColors[borderPos]);
+              } else {
+                m_tft.drawFastHLine(0, borderPos, borderWidth, borderColors[borderPos]);
+                m_tft.drawFastHLine(screenWidth - borderWidth, borderPos, borderWidth, borderColors[borderPos]);
+              }
             }
           }
           float machineTime = (float) listener->getTotalTicks() / 3500000.0f;
@@ -349,7 +357,6 @@ void EmulatorScreen::loadTape(std::string filename)
   Serial.printf("*********************");
   free(tzx_data);
   delete listener;
-  isLoading = false;
 }
 
 void EmulatorScreen::run(std::string filename)
