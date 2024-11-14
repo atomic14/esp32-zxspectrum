@@ -38,7 +38,8 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   ZXSpectrum *machine = emulatorScreen->machine;
 
   tft.startWrite();
-  if (!emulatorScreen->isLoading) {
+  if (!emulatorScreen->isLoading)
+  {
     // do the border
     uint8_t borderColor = machine->hwopt.BorderColor & B00000111;
     uint16_t tftColor = specpal565[borderColor];
@@ -52,6 +53,23 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       tft.fillRect(0, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
       tft.fillRect(screenWidth - borderWidth, borderHeight, borderWidth, screenHeight - borderHeight, tftColor);
       lastBorderColor = tftColor;
+    }
+  } else {
+    int position = emulatorScreen->loadProgress * screenWidth / 100;
+    tft.fillRect(position, 0, screenWidth - position, 8, TFT_BLACK);
+    tft.fillRect(0, 0, position, 8, TFT_GREEN);
+    for(int borderPos = 8; borderPos < 240; borderPos++) {
+      uint16_t borderColor = emulatorScreen->currentBorderColors[borderPos];
+      if (emulatorScreen->drawnBorderColors[borderPos] != borderColor) {
+        emulatorScreen->drawnBorderColors[borderPos] = borderColor;
+        // draw the border
+        if (borderPos < borderHeight || borderPos >= screenHeight - borderHeight) {
+          tft.drawFastHLine(0, borderPos, screenWidth, borderColor);
+        } else {
+          tft.drawFastHLine(0, borderPos, borderWidth, borderColor);
+          tft.drawFastHLine(screenWidth - borderWidth, borderPos, borderWidth, borderColor);
+        }
+      }
     }
   }
   // do the pixels
@@ -69,7 +87,8 @@ void drawScreen(EmulatorScreen *emulatorScreen)
       uint8_t inkColor = attr & B00000111;
       uint8_t paperColor = (attr & B00111000) >> 3;
       // check for changes in the attribute
-      if ((attr & B10000000) != 0 && flashTimer < 16) {
+      if ((attr & B10000000) != 0 && flashTimer < 16)
+      {
         // we are flashing we need to swap the ink and paper colors
         uint8_t temp = inkColor;
         inkColor = paperColor;
@@ -104,7 +123,7 @@ void drawScreen(EmulatorScreen *emulatorScreen)
           *(pixelBaseCopy + 32 * scan + col) = row;
         }
         uint16_t *pixelAddress = emulatorScreen->pixelBuffer + 256 * y + attrX * 8;
-        for (int x = 0; x <8; x++)
+        for (int x = 0; x < 8; x++)
         {
           if (row & 128)
           {
@@ -137,9 +156,11 @@ void drawScreen(EmulatorScreen *emulatorScreen)
           }
           dstX++;
         }
-        if (y % 2 == 0) {
+        if (y % 2 == 0)
+        {
           dstY++;
-          for(int x = 0; x < 384; x++) {
+          for (int x = 0; x < 384; x++)
+          {
             scaledBuffer[dstY * 384 + x] = scaledBuffer[(dstY - 1) * 384 + x];
           }
         }
@@ -157,11 +178,11 @@ void drawScreen(EmulatorScreen *emulatorScreen)
   emulatorScreen->drawReady = true;
   emulatorScreen->firstDraw = false;
   emulatorScreen->frameCount++;
-    flashTimer++;
-    if (flashTimer == 32)
-    {
-      flashTimer = 0;
-    }
+  flashTimer++;
+  if (flashTimer >= 32)
+  {
+    flashTimer = 0;
+  }
 }
 
 void drawDisplay(void *pvParameters)
@@ -169,12 +190,13 @@ void drawDisplay(void *pvParameters)
   EmulatorScreen *emulatorScreen = (EmulatorScreen *)pvParameters;
   while (1)
   {
-    if (!emulatorScreen->isRunning)
+    if (!emulatorScreen->isRunning && !emulatorScreen->isLoading)
     {
       vTaskDelay(100 / portTICK_PERIOD_MS);
       continue;
     }
-    if(xSemaphoreTake(emulatorScreen->m_displaySemaphore, portMAX_DELAY)) {
+    if (xSemaphoreTake(emulatorScreen->m_displaySemaphore, portMAX_DELAY))
+    {
       drawScreen(emulatorScreen);
     }
     if (emulatorScreen->isRunning && digitalRead(0) == LOW)
@@ -195,7 +217,8 @@ void z80Runner(void *pvParameter)
     {
       emulatorScreen->cycleCount += emulatorScreen->machine->runForFrame(emulatorScreen->m_audioOutput, emulatorScreen->audioFile);
       // make a copy of the current screen
-      if (emulatorScreen->drawReady) {
+      if (emulatorScreen->drawReady)
+      {
         emulatorScreen->drawReady = false;
         memcpy(emulatorScreen->currentScreenBuffer, emulatorScreen->machine->mem.currentScreen, 6912);
         xSemaphoreGive(emulatorScreen->m_displaySemaphore);
@@ -243,29 +266,121 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Scre
   pinMode(0, INPUT_PULLUP);
 }
 
-void EmulatorScreen::loadTape(std::string filename)
+void EmulatorScreen::loadGPIOTape()
 {
-  ScopeGuard guard([&]() {
+  ScopeGuard guard([&](){
     isLoading = false;
     if (m_audioOutput) m_audioOutput->resume();
   });
-  if (m_audioOutput) m_audioOutput->pause();
+  if (m_audioOutput) {
+    m_audioOutput->pause();
+  }
+  isLoading = true;
+  for (int i = 0; i < 200; i++)
+  {
+    machine->runForFrame(nullptr, nullptr);
+  }
+  triggerDraw();
+  if (machine->hwopt.hw_model == SPECMDL_48K)
+  {
+    tapKey(SPECKEY_J);
+    machine->updatekey(SPECKEY_SYMB, 1);
+    tapKey(SPECKEY_P);
+    tapKey(SPECKEY_P);
+    machine->updatekey(SPECKEY_SYMB, 0);
+    tapKey(SPECKEY_ENTER);
+  } 
+  else
+  {
+    // 128K the tape loader is first in the menu
+    tapKey(SPECKEY_ENTER);
+  }
+  triggerDraw();
+  GPIOTapeLoader *gpioTapeLoader = new GPIOTapeLoader(15625);
+  gpioTapeLoader->start();
+  int borderPos = 0;
+  uint16_t borderColors[240] = {0x18C6};
+  float ave = 2048;
+  while (1)
+  {
+    uint16_t sample = gpioTapeLoader->readSample();
+    ave = (ave * 0.999) + (sample * 0.001);
+    if (sample > ave)
+    {
+      machine->setMicHigh();
+    }
+    else
+    {
+      machine->setMicLow();
+    }
+    machine->runForCycles(224);
+    uint16_t borderColor = specpal565[machine->hwopt.BorderColor & B00000111];
+    borderColors[borderPos % 240] = borderColor;
+    borderPos++;
+    if (borderPos == 240)
+    {
+      memcpy(currentBorderColors, borderColors, 240 * sizeof(uint16_t));
+      triggerDraw();
+    }
+    if (borderPos == 240 * 10) {
+      vTaskDelay(1);
+      borderPos = 0;
+    }
+    // read pin 0 and if it is low then we are done
+    if (digitalRead(0) == LOW)
+    {
+      gpioTapeLoader->stop();
+      break;
+    }
+  }
+}
+
+void EmulatorScreen::tapKey(SpecKeys key) {
+  machine->updatekey(key, 1);
+  for (int i = 0; i < 10; i++)
+  {
+    machine->runForFrame(nullptr, nullptr);
+  }
+  machine->updatekey(key, 0);
+  for (int i = 0; i < 10; i++)
+  {
+    machine->runForFrame(nullptr, nullptr);
+  }
+}
+
+void EmulatorScreen::triggerDraw() {
+  if (drawReady)
+  {
+    drawReady = false;
+    memcpy(currentScreenBuffer, machine->mem.currentScreen, 6912);
+    xSemaphoreGive(m_displaySemaphore);
+  }
+}
+
+void EmulatorScreen::loadTape(std::string filename)
+{
+  ScopeGuard guard([&]()
+  {
+    isLoading = false;
+    if (m_audioOutput) m_audioOutput->resume(); 
+  });
+  // stop audio playback
+  if (m_audioOutput) 
+  {
+    m_audioOutput->pause();
+  }
   uint64_t startTime = get_usecs();
   isLoading = true;
   Serial.printf("Loading tape %s\n", filename.c_str());
-  for(int i = 0; i < 200; i++) {
-      machine->runForFrame(nullptr, nullptr);
+  // go into tape loading mode
+  for (int i = 0; i < 200; i++)
+  {
+    machine->runForFrame(nullptr, nullptr);
   }
+  triggerDraw();
   Serial.printf("Pressing enter\n");
-  // press the enter key to trigger tape loading
-  machine->updatekey(SPECKEY_ENTER, 1);
-  for(int i = 0; i < 10; i++) {
-      machine->runForFrame(nullptr, nullptr);
-  }
-  machine->updatekey(SPECKEY_ENTER, 0);
-  for(int i = 0; i < 10; i++) {
-      machine->runForFrame(nullptr, nullptr);
-  }
+  tapKey(SPECKEY_ENTER);
+  triggerDraw();
   Serial.printf("Loading tape file\n");
   FILE *fp = fopen(filename.c_str(), "rb");
   if (fp == NULL)
@@ -278,7 +393,7 @@ void EmulatorScreen::loadTape(std::string filename)
   long file_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
   Serial.printf("File size %d\n", file_size);
-  uint8_t *tzx_data = (uint8_t*)ps_malloc(file_size);
+  uint8_t *tzx_data = (uint8_t *)ps_malloc(file_size);
   if (!tzx_data)
   {
     Serial.println("Error: Could not allocate memory.");
@@ -290,9 +405,12 @@ void EmulatorScreen::loadTape(std::string filename)
   TzxCas tzxCas;
   DummyListener *dummyListener = new DummyListener();
   dummyListener->start();
-  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
+  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+  {
     tzxCas.load_tap(dummyListener, tzx_data, file_size);
-  } else {
+  }
+  else
+  {
     tzxCas.load_tzx(dummyListener, tzx_data, file_size);
   }
   dummyListener->finish();
@@ -300,28 +418,20 @@ void EmulatorScreen::loadTape(std::string filename)
   Serial.printf("Total cycles: %lld\n", dummyListener->getTotalTicks());
   delete dummyListener;
   int count = 0;
-  uint16_t drawnBorderColors[240] = {0x18C6};
   uint16_t borderColors[240] = {0x18C6};
-  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
-      {
+  int borderPos = 0;
+  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress) {
         // approximate the border position - not very accutare but good enough
-        int borderPos = count % 240;
         // get the border color
         borderColors[borderPos] = specpal565[machine->hwopt.BorderColor & B00000111];
+        borderPos++;
         count++;
+        if (borderPos == 240) {
+          borderPos = 0;
+          memcpy(currentBorderColors, borderColors, 240 * sizeof(uint16_t));
+          triggerDraw();
+        }
         if (count % 4000 == 0) {
-          for(int borderPos = 8; borderPos < 240; borderPos++) {
-            if (drawnBorderColors[borderPos] != borderColors[borderPos]) {
-              drawnBorderColors[borderPos] = borderColors[borderPos];
-              // draw the border
-              if (borderPos < borderHeight || borderPos >= screenHeight - borderHeight) {
-                m_tft.drawFastHLine(0, borderPos, screenWidth, borderColors[borderPos]);
-              } else {
-                m_tft.drawFastHLine(0, borderPos, borderWidth, borderColors[borderPos]);
-                m_tft.drawFastHLine(screenWidth - borderWidth, borderPos, borderWidth, borderColors[borderPos]);
-              }
-            }
-          }
           float machineTime = (float) listener->getTotalTicks() / 3500000.0f;
           float wallTime = (float) (get_usecs() - startTime) / 1000000.0f;
           Serial.printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
@@ -329,25 +439,21 @@ void EmulatorScreen::loadTape(std::string filename)
           Serial.printf("Wall Clock time: %fs\n", wallTime);
           Serial.printf("Speed Up: %f\n",  machineTime/wallTime);
           Serial.printf("Progress: %lld\n", progress * 100 / totalTicks);
-          if (drawReady) {
-            drawReady = false;
-            memcpy(currentScreenBuffer, machine->mem.currentScreen, 6912);
-            drawScreen(this);
-            // draw a progreess bar
-            int position = progress * screenWidth / totalTicks;
-            m_tft.fillRect(position, 0, screenWidth - position, 8, TFT_BLACK);
-            m_tft.fillRect(0, 0, position, 8, TFT_GREEN);
-            vTaskDelay(1);
-          }
+          // draw a progreess bar
+          loadProgress = progress * 100 / totalTicks;
+          vTaskDelay(1);
         }
-      });
+});
   listener->start();
-  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
-      Serial.printf("Loading tap file\n");
-      tzxCas.load_tap(listener, tzx_data, file_size);
-  } else {
-      Serial.printf("Loading tzx file\n");
-      tzxCas.load_tzx(listener, tzx_data, file_size);
+  if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos)
+  {
+    Serial.printf("Loading tap file\n");
+    tzxCas.load_tap(listener, tzx_data, file_size);
+  }
+  else
+  {
+    Serial.printf("Loading tzx file\n");
+    tzxCas.load_tzx(listener, tzx_data, file_size);
   }
   Serial.printf("Tape loaded\n");
   listener->finish();
@@ -361,6 +467,8 @@ void EmulatorScreen::loadTape(std::string filename)
 
 void EmulatorScreen::run(std::string filename)
 {
+  m_tft.fillScreen(TFT_BLACK);
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   // audioFile = fopen("/fs/audio.raw", "wb");
   firstDraw = true;
   auto bl = BusyLight();
@@ -378,7 +486,9 @@ void EmulatorScreen::run(std::string filename)
     machine->init_spectrum(SPECMDL_128K);
     machine->reset_spectrum(machine->z80Regs);
     loadTape(filename.c_str());
-  } else {
+  }
+  else
+  {
     // generic loading of z80 and sna files
     machine->init_spectrum(SPECMDL_48K);
     machine->reset_spectrum(machine->z80Regs);
@@ -386,13 +496,35 @@ void EmulatorScreen::run(std::string filename)
   }
   // tasks to do the work
   Serial.println("Starting tasks\n");
-  m_tft.fillScreen(TFT_BLACK);
   isRunning = true;
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
-void EmulatorScreen::run48K() {
+void EmulatorScreen::runGPIOTape()
+{
+  m_tft.fillScreen(TFT_BLACK);
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
+  firstDraw = true;
+  auto bl = BusyLight();
+  memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
+  memset(screenBuffer, 0, 6192);
+  machine = new ZXSpectrum();
+  machine->reset();
+  machine->init_spectrum(SPECMDL_48K);
+  machine->reset_spectrum(machine->z80Regs);
+  // start loading the tape
+  loadGPIOTape();
+  // tasks to do the work
+  Serial.println("Starting tasks\n");
+  isRunning = true;
+  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
+}
+
+void EmulatorScreen::run48K()
+{
+  m_tft.fillScreen(TFT_BLACK);
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
+
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
@@ -403,11 +535,13 @@ void EmulatorScreen::run48K() {
   firstDraw = true;
   isRunning = true;
   // tasks to do the work
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
-void EmulatorScreen::run128K() {
+void EmulatorScreen::run128K()
+{
+  m_tft.fillScreen(TFT_BLACK);
+  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   memset(pixelBuffer, 0, screenWidth * 8 * sizeof(uint16_t));
   memset(screenBuffer, 0, 6192);
   machine = new ZXSpectrum();
@@ -418,7 +552,6 @@ void EmulatorScreen::run128K() {
   firstDraw = true;
   isRunning = true;
   // tasks to do the work
-  xTaskCreatePinnedToCore(drawDisplay, "drawDisplay", 8192, this, 1, NULL, 1);
   xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
@@ -439,7 +572,8 @@ void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
 {
   if (key == SPECKEY_0)
   {
-    if (audioFile) {
+    if (audioFile)
+    {
       isRunning = false;
       vTaskDelay(1000 / portTICK_PERIOD_MS);
       fclose(audioFile);
@@ -447,11 +581,13 @@ void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
       Serial.printf("Audio file closed\n");
     }
   }
-  if (isRunning) {
+  if (isRunning)
+  {
     machine->updatekey(key, state);
   }
 }
 
-void EmulatorScreen::showSaveSnapshotScreen() {
+void EmulatorScreen::showSaveSnapshotScreen()
+{
   m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine));
 }

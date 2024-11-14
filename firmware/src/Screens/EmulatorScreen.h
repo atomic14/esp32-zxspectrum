@@ -21,16 +21,23 @@ class EmulatorScreen : public Screen
     // copy of the screen so we can track changes
     uint8_t *screenBuffer = nullptr;
     uint8_t *currentScreenBuffer = nullptr;
+    uint16_t currentBorderColors[240] = {0xffff};
+    uint16_t drawnBorderColors[240] = {0xffff};
+    int loadProgress = 0;
     bool drawReady = true;
     bool firstDraw = false;
     FILE *audioFile = nullptr;
     void loadTape(std::string filename);
+    void loadGPIOTape();
+    void tapKey(SpecKeys key);
+    void triggerDraw();
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename);
     void run48K();
     void run128K();
+    void runGPIOTape();
     void pause();
     void resume();
     void showSaveSnapshotScreen();

@@ -118,7 +118,9 @@ void setup(void)
       { navigationStack->pressKey(key); });
   touchKeyboard->start();
 #endif
-  audioOutput->start(15625);
+  if (audioOutput) {
+    audioOutput->start(15625);
+  }
   #ifdef TFT_ST7789
   TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
