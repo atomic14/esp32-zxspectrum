@@ -18,7 +18,7 @@ public:
   // this is simply a pass through
   virtual int16_t process_sample(int16_t sample) { return sample; }
   virtual void write(const uint8_t *samples, int count) = 0;
-  virtual uint16_t getMicSample() { return 2048; }
+  virtual bool getMicValue() { return false; }
 
   void setVolume(int volume){
     if (volume > 10 || volume < 0) mVolume = 10;

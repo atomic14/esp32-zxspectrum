@@ -6,6 +6,7 @@
 #include <string>
 #include "Screen.h"
 #include "EmulatorScreen/Renderer.h"
+#include "EmulatorScreen/Machine.h"
 
 class TFTDisplay;
 class AudioOutput;
@@ -15,13 +16,8 @@ class EmulatorScreen : public Screen
 {
   private:
     Renderer *renderer = nullptr;
-    ZXSpectrum *machine = nullptr;
-    bool isRunning = false;
-    int loadProgress = 0;
-    FILE *audioFile = nullptr;
+    Machine *machine = nullptr;
     void loadTape(std::string filename);
-    void tapKey(SpecKeys key);
-    void startLoading();
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
@@ -34,7 +30,4 @@ class EmulatorScreen : public Screen
     void didAppear() {
       resume();
     }
-    friend void z80Runner(void *pvParameter);
-    uint32_t cycleCount = 0;
-    uint32_t frameCount = 0;
 };

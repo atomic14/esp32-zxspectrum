@@ -34,6 +34,7 @@ void BuzzerOutput::start(uint32_t sample_rate)
 
 void BuzzerOutput::pause()
 {
+  ledcWrite(0, 0);
   timer_pause(TIMER_GROUP_0, TIMER_0);
 }
 
@@ -76,13 +77,15 @@ bool IRAM_ATTR BuzzerOutput::onTimer()
   if (mCurrentIndex < mBufferLength)
   {
     uint16_t micSample = adc1_get_raw(ADC1_CHANNEL_4);
-    xQueueSendFromISR(sampleQueue, &micSample, &xHigherPriorityTaskWoken);
+    micAve = (micAve * 99 + micSample) / 100;
+    uint8_t micValue = micSample > micAve ? 1 : 0;
+    xQueueSendFromISR(micValueQueue, &micValue, &xHigherPriorityTaskWoken);
     mCount++;
     // get the first sample from the buffer - shift it up to 9 bits for max resolution
     uint16_t sample = mBuffer[mCurrentIndex];
-    if (micSample > 2048)
+    if (micValue)
     {
-      sample = std::min(255, sample + 20);
+      sample = std::min(255, sample + 5);
     }
     // go up to 9 bits resolution
     sample = sample << 1;

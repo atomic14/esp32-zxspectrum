@@ -13,79 +13,13 @@
 #include "../TZX/tzx_cas.h"
 #include "utils.h"
 
-
-void z80Runner(void *pvParameter)
-{
-  EmulatorScreen *emulatorScreen = (EmulatorScreen *)pvParameter;
-  unsigned long lastTime = millis();
-  while (1)
-  {
-    if (emulatorScreen->isRunning)
-    {
-      emulatorScreen->cycleCount += emulatorScreen->machine->runForFrame(emulatorScreen->m_audioOutput, emulatorScreen->audioFile);
-      emulatorScreen->renderer->triggerDraw(emulatorScreen->machine->mem.currentScreen, emulatorScreen->machine->borderColors);
-      unsigned long currentTime = millis();
-      unsigned long elapsed = currentTime - lastTime;
-      if (elapsed > 1000)
-      {
-        lastTime = currentTime;
-        float cycles = emulatorScreen->cycleCount / (elapsed * 1000.0);
-        float fps = emulatorScreen->frameCount / (elapsed / 1000.0);
-        Serial.printf("Executed at %.3FMHz cycles, frame rate=%.2f\n", cycles, fps);
-        emulatorScreen->frameCount = 0;
-        emulatorScreen->cycleCount = 0;
-      }
-    }
-    else
-    {
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
-  }
-}
-
 EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
   renderer = new Renderer(tft);
+  machine = new Machine(renderer, audioOutput, nullptr);
   pinMode(0, INPUT_PULLUP);
 }
 
-void EmulatorScreen::startLoading()
-{
-  for (int i = 0; i < 200; i++)
-  {
-    machine->runForFrame(nullptr, nullptr);
-  }
-  renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
-  if (machine->hwopt.hw_model == SPECMDL_48K)
-  {
-    tapKey(SPECKEY_J);
-    machine->updatekey(SPECKEY_SYMB, 1);
-    tapKey(SPECKEY_P);
-    tapKey(SPECKEY_P);
-    machine->updatekey(SPECKEY_SYMB, 0);
-    tapKey(SPECKEY_ENTER);
-  }
-  else
-  {
-    // 128K the tape loader is first in the menu
-    tapKey(SPECKEY_ENTER);
-  }
-  renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
-}
-
-void EmulatorScreen::tapKey(SpecKeys key)
-{
-  machine->updatekey(key, 1);
-  for (int i = 0; i < 10; i++)
-  {
-    machine->runForFrame(nullptr, nullptr);
-  }
-  machine->updatekey(key, 0);
-  for (int i = 0; i < 10; i++)
-  {
-    machine->runForFrame(nullptr, nullptr);
-  }
-}
 
 void EmulatorScreen::loadTape(std::string filename)
 {
@@ -101,7 +35,7 @@ void EmulatorScreen::loadTape(std::string filename)
   uint64_t startTime = get_usecs();
   renderer->setIsLoading(true);
   Serial.printf("Loading tape %s\n", filename.c_str());
-  startLoading();
+  machine->startLoading();
   Serial.printf("Loading tape file\n");
   FILE *fp = fopen(filename.c_str(), "rb");
   if (fp == NULL)
@@ -141,16 +75,16 @@ void EmulatorScreen::loadTape(std::string filename)
   int count = 0;
   int borderPos = 0;
   uint8_t currentBorderColors[312] = {0};
-  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
+  ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine->getMachine(), [&](uint64_t progress)
                                                                 {
         // approximate the border position - not very accutare but good enough
         // get the border color
-        currentBorderColors[borderPos] = machine->hwopt.BorderColor & B00000111;
+        currentBorderColors[borderPos] = machine->getMachine()->hwopt.BorderColor & B00000111;
         borderPos++;
         count++;
         if (borderPos == 312) {
           borderPos = 0;
-          renderer->triggerDraw(machine->mem.currentScreen, currentBorderColors);
+          renderer->triggerDraw(machine->getMachine()->mem.currentScreen, currentBorderColors);
         }
         if (count % 4000 == 0) {
           float machineTime = (float) listener->getTotalTicks() / 3500000.0f;
@@ -161,7 +95,7 @@ void EmulatorScreen::loadTape(std::string filename)
           Serial.printf("Speed Up: %f\n",  machineTime/wallTime);
           Serial.printf("Progress: %lld\n", progress * 100 / totalTicks);
           // draw a progreess bar
-          loadProgress = progress * 100 / totalTicks;
+          renderer->setLoadProgress(progress * 100 / totalTicks);
           vTaskDelay(1);
         } });
   listener->start();
@@ -191,8 +125,6 @@ void EmulatorScreen::run(std::string filename)
   renderer->start();
   // audioFile = fopen("/fs/audio.raw", "wb");
   auto bl = BusyLight();
-  machine = new ZXSpectrum();
-  machine->reset();
   // check for tap or tpz files
   std::string ext = filename.substr(filename.find_last_of(".") + 1);
   std::transform(ext.begin(), ext.end(), ext.begin(),
@@ -200,82 +132,65 @@ void EmulatorScreen::run(std::string filename)
                  { return std::tolower(c); });
   if (ext == "tap" || ext == "tzx")
   {
-    machine->init_spectrum(SPECMDL_48K);
-    machine->reset_spectrum(machine->z80Regs);
+    machine->setup(SPECMDL_128K);
     loadTape(filename.c_str());
+    machine->start();
   }
   else
   {
     // generic loading of z80 and sna files
-    machine->init_spectrum(SPECMDL_48K);
-    machine->reset_spectrum(machine->z80Regs);
-    Load(machine, filename.c_str());
+    machine->setup(SPECMDL_48K);
+    Load(machine->getMachine(), filename.c_str());
+    machine->start();
   }
-  // tasks to do the work
-  Serial.println("Starting tasks\n");
-  isRunning = true;
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
 }
 
 void EmulatorScreen::run48K()
 {
   m_tft.fillScreen(TFT_BLACK);
   renderer->start();
-  machine = new ZXSpectrum();
-  machine->reset();
-  machine->init_spectrum(SPECMDL_48K);
-  machine->reset_spectrum(machine->z80Regs);
-  m_tft.fillScreen(TFT_WHITE);
-  isRunning = true;
-  // tasks to do the work
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
+  machine->setup(SPECMDL_48K);
+  machine->start();
 }
 
 void EmulatorScreen::run128K()
 {
   m_tft.fillScreen(TFT_BLACK);
   renderer->start();
-  machine = new ZXSpectrum();
-  machine->reset();
-  machine->init_spectrum(SPECMDL_128K);
-  machine->reset_spectrum(machine->z80Regs);
-  m_tft.fillScreen(TFT_WHITE);
-  // tasks to do the work
-  xTaskCreatePinnedToCore(z80Runner, "z80Runner", 8192, this, 5, NULL, 0);
+  machine->setup(SPECMDL_128K);
+  machine->start();
 }
 
 void EmulatorScreen::pause()
 {
-  isRunning = false;
   renderer->pause();
+  machine->pause();
 }
 
 void EmulatorScreen::resume()
 {
-  isRunning = true;
   renderer->resume();
+  machine->resume();
 }
 
 void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
 {
-  if (key == SPECKEY_0)
-  {
-    if (audioFile)
-    {
-      isRunning = false;
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
-      fclose(audioFile);
-      audioFile = NULL;
-      Serial.printf("Audio file closed\n");
-    }
-  }
-  if (isRunning)
-  {
-    machine->updatekey(key, state);
-  }
+  // TODO audio capture
+  // if (key == SPECKEY_0)
+  // {
+  //   if (audioFile)
+  //   {
+  //     isRunning = false;
+  //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+  //     fclose(audioFile);
+  //     audioFile = NULL;
+  //     Serial.printf("Audio file closed\n");
+  //   }
+  // }
+  machine->updatekey(key, state);
 }
 
 void EmulatorScreen::showSaveSnapshotScreen()
 {
-  m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine));
+  m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine->getMachine()));
 }

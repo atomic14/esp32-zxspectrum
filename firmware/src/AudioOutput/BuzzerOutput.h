@@ -22,8 +22,9 @@ private:
   uint8_t *mSecondBuffer=NULL;
   int mSecondBufferLength=0;
   int mCount = 0;
+  int micAve = 2048;
   // queue to hold samples read from the ADC
-  xQueueHandle sampleQueue;
+  xQueueHandle micValueQueue;
 public:
   BuzzerOutput(gpio_num_t buzzerPin) : AudioOutput()
   {
@@ -34,16 +35,16 @@ public:
     mBufferSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(mBufferSemaphore);
     // create a queue to hold the values read from the ADC
-    sampleQueue = xQueueCreate(312*2, sizeof(uint16_t));
+    micValueQueue = xQueueCreate(312*2, sizeof(uint8_t));
   }
   void write(const uint8_t *samples, int count);
-  uint16_t getMicSample()
+  bool getMicValue()
   {
-    uint16_t sample;
-    if (xQueueReceive(sampleQueue, &sample, 0)) {
-      return sample;
+    uint8_t value;
+    if (xQueueReceive(micValueQueue, &value, 0)) {
+      return value != 0;
     }
-    return 2048;
+    return false;
   }
   void start(uint32_t sample_rate);
   void stop() {}

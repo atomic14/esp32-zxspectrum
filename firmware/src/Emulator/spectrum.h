@@ -1,6 +1,7 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
+#include <stdint.h>
 #include "z80/z80.h"
 #include "keyboard_defs.h"
 #include <string.h>
@@ -250,6 +251,10 @@ inline void z80_out(uint16_t port, uint8_t data)
     } else {
       micLevel = true;
     }
+  }
+
+  inline void setMicValue(bool value) {
+    micLevel = value;
   }
 
   inline void setMicLow() {

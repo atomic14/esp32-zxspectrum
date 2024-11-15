@@ -91,4 +91,13 @@ public:
       isRunning = true;
       firstDraw = true;
     }
+    uint32_t getFrameCount() {
+      return frameCount;
+    }
+    void resetFrameCount() {
+      frameCount = 0;
+    }
+    void setLoadProgress(uint16_t progress) {
+      loadProgress = progress;
+    }
 };

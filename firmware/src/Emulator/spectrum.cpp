@@ -56,7 +56,6 @@ void ZXSpectrum::reset()
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
   uint8_t audioBuffer[312];
-  static float ave = 2048;
   uint8_t *attrBase = mem.currentScreen + 0x1800;
   int c = 0;
   // Each line should be 224 tstates long...
@@ -64,16 +63,7 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
   for (int i = 0; i < 312; i++)
   {
     if (audioOutput) {
-      uint16_t micSample = audioOutput->getMicSample();
-      ave = (ave * 0.99) + (micSample * 0.01);
-      if (micSample > ave)
-      {
-        setMicHigh();
-      }
-      else
-      {
-        setMicLow();
-      }
+      setMicValue(audioOutput->getMicValue());
     }
     // handle port FF for the border - is this actually doing anything useful?
     if (i < 64 || i >= 192 + 64)
