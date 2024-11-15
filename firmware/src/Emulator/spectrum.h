@@ -8,6 +8,8 @@
 
 extern uint8_t speckey[8];
 
+extern const uint16_t specpal565[16];
+
 enum models_enum
 {
   SPECMDL_UNKNOWN = 0,
@@ -134,6 +136,7 @@ public:
   uint8_t kempston_port = 0x0;
   uint8_t ulaport_FF = 0xFF;
   bool micLevel = false;
+  uint8_t borderColors[312] = {0};
 
   ZXSpectrum();
   void reset();

@@ -45,8 +45,6 @@ public:
                                    { this->showGames(); }),
         std::make_shared<MenuItem>("Snapshots", [&]()
                                    { this->showSnapshots(); }),
-        std::make_shared<MenuItem>("Load Tape", [&]()
-                                   { this->loadGPIOTape(); }),
         std::make_shared<MenuItem>("Video Player", [&]()
                                    { this->showVideos(); }),
 #ifdef ENABLE_MSC
@@ -73,14 +71,6 @@ public:
   {
     EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);
     emulatorScreen->run128K();
-    // touchKeyboard->setToggleMode(true);
-    m_navigationStack->push(emulatorScreen);
-  }
-
-  void loadGPIOTape()
-  {
-    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);
-    emulatorScreen->runGPIOTape();
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
   }

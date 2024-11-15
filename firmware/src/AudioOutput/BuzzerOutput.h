@@ -7,30 +7,44 @@
 #include "esp_log.h"
 #include "driver/sigmadelta.h"
 #include "driver/timer.h"
+#include <driver/adc.h>
 
-/**
- * Base Class for both the ADC and I2S sampler
- **/
+
 class BuzzerOutput : public AudioOutput
 {
 private:
   gpio_num_t mBuzzerPin;
   uint32_t mSampleRate;
   SemaphoreHandle_t mBufferSemaphore;
-  uint8_t *mBuffer=NULL;;
+  uint8_t *mBuffer=NULL;
   int mCurrentIndex=0;
   int mBufferLength=0;
-  uint8_t *mSecondBuffer=NULL;;
+  uint8_t *mSecondBuffer=NULL;
   int mSecondBufferLength=0;
   int mCount = 0;
+  // queue to hold samples read from the ADC
+  xQueueHandle sampleQueue;
 public:
   BuzzerOutput(gpio_num_t buzzerPin) : AudioOutput()
   {
+    // set up the ADC
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_12);
     mBuzzerPin = buzzerPin;
     mBufferSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(mBufferSemaphore);
+    // create a queue to hold the values read from the ADC
+    sampleQueue = xQueueCreate(312*2, sizeof(uint16_t));
   }
   void write(const uint8_t *samples, int count);
+  uint16_t getMicSample()
+  {
+    uint16_t sample;
+    if (xQueueReceive(sampleQueue, &sample, 0)) {
+      return sample;
+    }
+    return 2048;
+  }
   void start(uint32_t sample_rate);
   void stop() {}
   void pause();

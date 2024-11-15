@@ -21,6 +21,11 @@
 #include "48k_rom.h"
 #include "128k_rom.h"
 
+const uint16_t specpal565[16] = {
+    0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF
+};
+
+
 // Con estas variables se controla el mapeado de las teclas virtuales del spectrum a I/O port
 const int key2specy[2][41] = {
     {0, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
@@ -51,12 +56,25 @@ void ZXSpectrum::reset()
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
   uint8_t audioBuffer[312];
+  static float ave = 2048;
   uint8_t *attrBase = mem.currentScreen + 0x1800;
   int c = 0;
   // Each line should be 224 tstates long...
   // And a complete frame is (64+192+56)*224=69888 tstates long
   for (int i = 0; i < 312; i++)
   {
+    if (audioOutput) {
+      uint16_t micSample = audioOutput->getMicSample();
+      ave = (ave * 0.99) + (micSample * 0.01);
+      if (micSample > ave)
+      {
+        setMicHigh();
+      }
+      else
+      {
+        setMicLow();
+      }
+    }
     // handle port FF for the border - is this actually doing anything useful?
     if (i < 64 || i >= 192 + 64)
     {
@@ -71,6 +89,8 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     // run for 224 cycles
     c += 224;
     runForCycles(224);
+    borderColors[i] = hwopt.BorderColor & 0b00000111;
+
     if (hwopt.SoundBits != 0)
     {
       audioBuffer[i] = 0xFF;
