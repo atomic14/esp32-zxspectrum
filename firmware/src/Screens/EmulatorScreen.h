@@ -1,29 +1,26 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <stdint.h>
 #include <string>
 #include "Screen.h"
-#include "EmulatorScreen/Renderer.h"
-#include "EmulatorScreen/Machine.h"
 
 class TFTDisplay;
 class AudioOutput;
 class ZXSpectrum;
 class TouchKeyboard;
+class Machine;
+class GameLoader;
+class Renderer;
+
 class EmulatorScreen : public Screen
 {
   private:
     Renderer *renderer = nullptr;
     Machine *machine = nullptr;
-    void loadTape(std::string filename);
+    GameLoader *gameLoader = nullptr;
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
-    void run(std::string filename);
-    void run48K();
-    void run128K();
+    void run(std::string filename, models_enum model);
     void pause();
     void resume();
     void showSaveSnapshotScreen();

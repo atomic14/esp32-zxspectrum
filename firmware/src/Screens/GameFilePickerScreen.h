@@ -12,7 +12,9 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
       void onItemSelect(FileInfoPtr item, int index) {
         drawBusy();
         EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);
-        emulatorScreen->run(item->getPath());
+        // TODO - we should pick the machine to run on - 48k or 128k
+        // there's no way to know from the file name or the file contents
+        emulatorScreen->run(item->getPath(), models_enum::SPECMDL_128K);
         m_navigationStack->push(emulatorScreen);
       }
       void onBack() {
