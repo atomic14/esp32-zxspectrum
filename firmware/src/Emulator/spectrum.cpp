@@ -93,7 +93,7 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 
     if (hwopt.SoundBits != 0)
     {
-      audioBuffer[i] = 0xFF;
+      audioBuffer[i] = 50;
     }
     else
     {

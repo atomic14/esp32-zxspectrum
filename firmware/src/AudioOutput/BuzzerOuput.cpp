@@ -14,7 +14,7 @@ void BuzzerOutput::start(uint32_t sample_rate)
 {
   mSampleRate = sample_rate;
   // pinMode(mBuzzerPin, OUTPUT);
-  ledcSetup(0, 30000, 8);
+  ledcSetup(0, 50000, 9);
   ledcAttachPin(mBuzzerPin, 0);
   // create a timer that will fire at the sample rate
   timer_config_t timer_config = {
@@ -82,15 +82,16 @@ bool IRAM_ATTR BuzzerOutput::onTimer()
     uint16_t sample = mBuffer[mCurrentIndex];
     if (micSample > 2048)
     {
-      // we have a high mic signal so reduce the volume
-      sample = sample + 10;
+      sample = std::min(255, sample + 20);
     }
+    // go up to 9 bits resolution
+    sample = sample << 1;
     sample = sample * mVolume / 10;
-    // limit to 80% of the max volume - our speaker is 8ohm, 2W
-    // 5 volts * 0.8 = 4 volts
+    // limit to 70% of the max volume - our speaker is 8ohm, 2W
+    // 5 volts * 0.7 = 3.5 volts
     // P = V^2 / R
-    // 4^2 / 8 = 2W
-    sample = sample * 80 / 100;
+    // 3.5^2 / 8 = 1.2W
+    sample = sample * 70 / 100;
     mCurrentIndex++;
     ledcWrite(0, sample);
   }
