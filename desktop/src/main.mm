@@ -352,6 +352,9 @@ void main_loop()
     // fill out the framebuffer
     fillFrameBuffer(frameBuffer, machine->mem.currentScreen, machine->hwopt.BorderColor);
     updateAndRender(renderer, texture, frameBuffer);
+    #ifndef __EMSCRIPTEN__
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    #endif
 }
 
 // Main function
