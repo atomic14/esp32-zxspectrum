@@ -17,6 +17,7 @@ class EmulatorScreen : public Screen
     Renderer *renderer = nullptr;
     Machine *machine = nullptr;
     GameLoader *gameLoader = nullptr;
+    FILE *audioFile = nullptr;
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);

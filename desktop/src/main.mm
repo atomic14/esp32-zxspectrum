@@ -1,5 +1,10 @@
 #include <SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+#ifndef __EMSCRIPTEN__
 #import <Cocoa/Cocoa.h>
+#endif
 #include <iostream>
 #include <cstdint>
 #include <unordered_map>
@@ -57,6 +62,7 @@ std::unordered_map<SDL_Keycode, SpecKeys> sdl_to_spec = {
 };
 
 bool isLoading = false;
+bool isRunning = false;
 uint16_t flashTimer = 0;
 
 // this matches our TFT display - but this could be any size really
@@ -65,12 +71,16 @@ const int HEIGHT = 240; // Height of the display
 const float ASPECT_RATIO = ((float) WIDTH / (float) HEIGHT);
 ZXSpectrum *machine = nullptr;
 
-const int SAMPLE_RATE = 15600; // 312 samples * 50 times per second
-const int BUFFER_SIZE = 312;
+int count = 0;
+
+uint16_t frameBuffer[WIDTH * HEIGHT] = {0}; // Example: initialize your 16-bit frame buffer here
 
 SDL_Window *window = nullptr;
 SDL_Renderer *renderer = nullptr;
+AudioOutput *audioOutput = nullptr;
+SDL_Texture *texture = nullptr;
 
+#ifndef __EMSCRIPTEN__
 std::string OpenFileDialog() {
     @autoreleasepool {
         NSOpenPanel* openPanel = [NSOpenPanel openPanel];
@@ -85,6 +95,7 @@ std::string OpenFileDialog() {
     }
     return "";
 }
+#endif
 
 void enforceAspectRatio(SDL_Window* window, int newWidth, int newHeight) {
     // Calculate the new dimensions while keeping the aspect ratio
@@ -147,8 +158,7 @@ void updateAndRender(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *fra
     SDL_RenderPresent(renderer);
 }
 
-void loadGame() {
-    std::string filename = OpenFileDialog();
+void loadGame(std::string filename) {
     // check the extension for z80 or sna
     if (filename.find(".z80") != std::string::npos || filename.find(".Z80") != std::string::npos
     || filename.find(".sna") != std::string::npos || filename.find(".SNA") != std::string::npos) {
@@ -220,10 +230,13 @@ void handleEvents(bool &isRunning)
             switch (e.key.keysym.sym)
             {
             case SDLK_ESCAPE:
+                #ifndef __EMSCRIPTEN__
                 if(!isLoading) {
-                    loadGame();
+                    std::string filename = OpenFileDialog();
+                    loadGame(filename);
                     return;
                 }
+                #endif
                 break;
             default:
                 break;
@@ -245,9 +258,6 @@ void handleEvents(bool &isRunning)
         }
     }
 }
-
-const uint16_t specpal565[16] = {
-    0x0000, 0x1B00, 0x00B8, 0x17B8, 0xE005, 0xF705, 0xE0BD, 0x18C6, 0x0000, 0x1F00, 0x00F8, 0x1FF8, 0xE007, 0xFF07, 0xE0FF, 0xFFFF};
 
 void fillFrameBuffer(uint16_t *pixelBuffer, uint8_t *currentScreenBuffer, uint8_t machineBorderColor)
 {
@@ -334,6 +344,16 @@ void fillFrameBuffer(uint16_t *pixelBuffer, uint8_t *currentScreenBuffer, uint8_
     }
 }
 
+void main_loop()
+{
+    handleEvents(isRunning);
+    // machine->runForFrame(audioOutput, nullptr);
+    count++;
+    // fill out the framebuffer
+    fillFrameBuffer(frameBuffer, machine->mem.currentScreen, machine->hwopt.BorderColor);
+    updateAndRender(renderer, texture, frameBuffer);
+}
+
 // Main function
 int main()
 {
@@ -348,7 +368,7 @@ int main()
         return -1;
     }
 
-    SDL_Texture *texture = createTexture(renderer);
+    texture = createTexture(renderer);
     if (!texture)
     {
         SDL_DestroyRenderer(renderer);
@@ -357,13 +377,13 @@ int main()
         return -1;
     }
 
-    AudioOutput *audioOutput = new SDLAudioOutput(BUFFER_SIZE);
-    audioOutput->start(SAMPLE_RATE);
-
-    uint16_t frameBuffer[WIDTH * HEIGHT] = {}; // Example: initialize your 16-bit frame buffer here
+    audioOutput = new SDLAudioOutput(machine);
+    audioOutput->start(15600);
 
     // run the spectrum for 4 second so that it boots up
     int start = SDL_GetTicks();
+
+    #ifndef __EMSCRIPTEN__
     for(int i = 0; i < 200; i++) {
         machine->runForFrame(nullptr, nullptr);
     }
@@ -379,36 +399,22 @@ int main()
     int end = SDL_GetTicks();
     std::cout << "Time to boot spectrum: " << end - start << "ms" << std::endl;
     // load a tap file
-    loadGame();
-
-
-
-    bool isRunning = true;
-    int count = 0;
+    std::string filename = OpenFileDialog();
+    loadGame(filename);
+    #endif
+    isRunning = true;
+    #ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(main_loop, 50, 1);
+    #else
     while (isRunning)
     {
-        // uint32_t frameStart = SDL_GetTicks(); // Start time for the frame
-
-        handleEvents(isRunning);
-
-        if (!isLoading) {
-            machine->runForFrame(audioOutput, nullptr);
-            count++;
-            if (count % 100 == 0) {
-                machine->toggleMicLevel();
-                count = 0;
-            }
-            // fill out the framebuffer
-            fillFrameBuffer(frameBuffer, machine->mem.currentScreen, machine->hwopt.BorderColor);
-            updateAndRender(renderer, texture, frameBuffer);
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
+        main_loop();
     }
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    #endif
     return 0;
 }

@@ -36,7 +36,7 @@ void Machine::runEmulator() {
 }
 
 
-Machine::Machine(Renderer *renderer, AudioOutput *audioOutput, FILE *audioFile): renderer(renderer), audioOutput(audioOutput), audioFile(audioFile) {
+Machine::Machine(Renderer *renderer, AudioOutput *audioOutput): renderer(renderer), audioOutput(audioOutput) {
   machine = new ZXSpectrum();
 }
 
@@ -52,7 +52,8 @@ void Machine::setup(models_enum model) {
   machine->reset_spectrum(machine->z80Regs);
 }
 
-void Machine::start() {
+void Machine::start(FILE *audioFile) {
+  this->audioFile = audioFile;
   isRunning = true;
   xTaskCreatePinnedToCore(runnerTask, "z80Runner", 8192, this, 5, NULL, 0);
 }

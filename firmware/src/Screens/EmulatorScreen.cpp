@@ -14,7 +14,7 @@
 EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput) : Screen(tft, audioOutput)
 {
   renderer = new Renderer(tft);
-  machine = new Machine(renderer, audioOutput, nullptr);
+  machine = new Machine(renderer, audioOutput);
   gameLoader = new GameLoader(machine, renderer, audioOutput);
   pinMode(0, INPUT_PULLUP);
 }
@@ -23,7 +23,6 @@ void EmulatorScreen::run(std::string filename, models_enum model)
 {
   m_tft.fillScreen(TFT_BLACK);
   renderer->start();
-  // audioFile = fopen("/fs/audio.raw", "wb");
   auto bl = BusyLight();
   machine->setup(model);
   if (filename.size() > 0)
@@ -43,7 +42,8 @@ void EmulatorScreen::run(std::string filename, models_enum model)
       Load(machine->getMachine(), filename.c_str());
     }
   }
-  machine->start();
+  // audioFile = fopen("/fs/audio.raw", "wb");
+  machine->start(audioFile);
 }
 
 void EmulatorScreen::pause()
@@ -65,7 +65,7 @@ void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
   // {
   //   if (audioFile)
   //   {
-  //     isRunning = false;
+  //     machine->pause();
   //     vTaskDelay(1000 / portTICK_PERIOD_MS);
   //     fclose(audioFile);
   //     audioFile = NULL;

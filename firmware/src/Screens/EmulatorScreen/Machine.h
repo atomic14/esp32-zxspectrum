@@ -27,10 +27,10 @@ class Machine {
     // keeps track of how many tstates we've run
     uint32_t cycleCount = 0;
   public:
-    Machine(Renderer *renderer, AudioOutput *audioOutput, FILE *audioFile);
+    Machine(Renderer *renderer, AudioOutput *audioOutput);
     void updatekey(SpecKeys key, uint8_t state);
     void setup(models_enum model);
-    void start();
+    void start(FILE *audioFile);
     void pause() {
       isRunning = false;
     }

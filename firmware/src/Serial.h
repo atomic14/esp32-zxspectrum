@@ -8,11 +8,10 @@
 
 #ifdef NO_GLOBAL_SERIAL
 extern USBCDC Serial;
+extern USBMSC msc;
 #endif
 
 class SDCard;
-
-extern USBMSC msc;
 
 void setupUSB(SDCard *_card);
 void startMSC();

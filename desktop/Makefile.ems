@@ -1,5 +1,5 @@
 # Compiler
-CXX = clang++
+CXX = emcc
 
 # Compiler flags
 CXXFLAGS = \
@@ -14,13 +14,15 @@ CXXFLAGS = \
 	-I../firmware/src/Emulator/z80 \
 	-I../firmware/src/TZX \
 	-I../firmware/src \
-	-D__DESKTOP__
+	-D__DESKTOP__ \
+	-s USE_SDL=2 \
+	-sSTACK_SIZE=200000
 
 # Linker flags (including Cocoa framework for macOS file picker support)
-LDFLAGS = -L/usr/local/lib -framework Cocoa
+LDFLAGS = -L/usr/local/lib
 
 # Target executable name
-TARGET = sdl_app
+TARGET = sdl_app.html
 
 SRCS = \
   ../firmware/src/Emulator/128k_rom.cpp \

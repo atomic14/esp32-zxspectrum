@@ -142,9 +142,9 @@ public:
   ZXSpectrum();
   void reset();
   int runForFrame(AudioOutput *audioOutput, FILE *audioFile);
-  inline void runForCycles(int cycles)
+  inline int runForCycles(int cycles)
   {
-    Z80Run(z80Regs, cycles);
+    return Z80Run(z80Regs, cycles);
   }
 
   void interrupt();

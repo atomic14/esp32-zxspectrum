@@ -8,9 +8,9 @@
 #include "./Files/SDCard.h"
 #include "./Files/Files.h"
 
-USBMSC msc;
 #ifdef NO_GLOBAL_SERIAL
 USBCDC Serial;
+USBMSC msc;
 #endif
 
 static SDCard *card;
@@ -45,7 +45,9 @@ static bool onStartStop(uint8_t power_condition, bool start, bool load_eject)
   Serial.printf("StartStop: %d %d %d\n", power_condition, start, load_eject);
   if (load_eject)
   {
+    #ifdef NO_GLOBAL_SERIAL    
     msc.end();
+    #endif
   }
   return true;
 }
@@ -63,6 +65,7 @@ void setupUSB(SDCard *_card)
 
 void startMSC()
 {
+  #ifdef NO_GLOBAL_SERIAL
   msc.vendorID("atomic14");
   msc.productID("ESP32Rainbow");
   msc.productRevision("1.0");
@@ -71,11 +74,14 @@ void startMSC()
   msc.onStartStop(onStartStop);
   msc.mediaPresent(true);
   msc.begin(card->getSectorCount(), card->getSectorSize());
+  #endif
 }
 
 void stopMSC()
 {
+  #ifdef NO_GLOBAL_SERIAL
   msc.end();
+  #endif
 }
 
 #else

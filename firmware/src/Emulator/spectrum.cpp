@@ -14,6 +14,10 @@
  *
  *======================================================================
  */
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "../AudioOutput/AudioOutput.h"
@@ -78,17 +82,9 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     }
     // run for 224 cycles
     c += 224;
-    runForCycles(224);
+    uint16_t speakerValue = runForCycles(224);
     borderColors[i] = hwopt.BorderColor & 0b00000111;
-
-    if (hwopt.SoundBits != 0)
-    {
-      audioBuffer[i] = 50;
-    }
-    else
-    {
-      audioBuffer[i] = 0;
-    }
+    audioBuffer[i] = speakerValue/4;
   }
   interrupt();
 
@@ -105,9 +101,6 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
   }
   if (audioFile != NULL) {
     fwrite(audioBuffer, 1, 312, audioFile);
-    //fwrite(AySound::SamplebufAY, 1, 312, audioFile);
-  }
-  if (audioFile != NULL) {
     fflush(audioFile);
   }
   // write the audio buffer to the I2S device - this will block if the buffer is full which will control our frame rate 312/15.6KHz = 1/50th of a second

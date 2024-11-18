@@ -14,12 +14,22 @@ class ZXSpectrumTapeListener:public TapeListener {
     // nothing to do - maybe we could start the spectrum tape loader?
   }
   inline virtual void toggleMicLevel() {
-    this->spectrum->toggleMicLevel();
+    if (this->spectrum->micLevel) {
+      setMicLow();
+    } else {
+      setMicHigh();
+    }
   }
   inline virtual void setMicHigh() {
+  #ifndef __DESKTOP__
+    ledcWrite(0, 50);
+  #endif
     this->spectrum->setMicHigh();
   }
   inline virtual void setMicLow() {
+  #ifndef __DESKTOP__
+    ledcWrite(0, 0);
+  #endif
     this->spectrum->setMicLow();
   }
   inline virtual void runForTicks(uint64_t ticks) {
