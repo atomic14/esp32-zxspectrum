@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdio.h"
+#include <functional>
 #include "../../Emulator/spectrum.h"
 
 void runnerTask(void *pvParameter);
@@ -26,8 +27,10 @@ class Machine {
     FILE *audioFile = nullptr;
     // keeps track of how many tstates we've run
     uint32_t cycleCount = 0;
+    // callback for when rom loading routine is hit
+    std::function<void()> romLoadingRoutineHitCallback;
   public:
-    Machine(Renderer *renderer, AudioOutput *audioOutput);
+    Machine(Renderer *renderer, AudioOutput *audioOutput, std::function<void()> romLoadingRoutineHitCallback);
     void updatekey(SpecKeys key, uint8_t state);
     void setup(models_enum model);
     void start(FILE *audioFile);

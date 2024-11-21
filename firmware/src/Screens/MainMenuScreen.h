@@ -26,14 +26,14 @@ private:
 using MenuItemPtr = std::shared_ptr<MenuItem>;
 using MenuItemVector = std::vector<MenuItemPtr>;
 
-template <class Files_T>
+
 class MainMenuScreen : public PickerScreen<MenuItemPtr>
 {
 private:
-  Files_T *m_files;
+  IFiles *m_files;
 
 public:
-  MainMenuScreen(TFTDisplay &tft, AudioOutput *audioOutput, Files_T *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
+  MainMenuScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
   {
     // Main menu
     MenuItemVector menuItems = {
@@ -62,14 +62,14 @@ public:
 
   void run48K()
   {
-    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);
+    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput, m_files);
     emulatorScreen->run("", models_enum::SPECMDL_48K);
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
   }
   void run128K()
   {
-    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput);
+    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput, m_files);
     emulatorScreen->run("", models_enum::SPECMDL_128K);
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
@@ -103,7 +103,7 @@ public:
       m_navigationStack->push(errorScreen);
       return;
     }
-    AlphabetPicker<Files_T, FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<Files_T, FilterPickerScreen_T>(title, m_files,  m_tft, m_audioOutput, path, extensions);
+    AlphabetPicker<FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<FilterPickerScreen_T>(title, m_files,  m_tft, m_audioOutput, path, extensions);
     alphabetPicker->setItems(fileLetterCounts);
     m_navigationStack->push(alphabetPicker);
   }

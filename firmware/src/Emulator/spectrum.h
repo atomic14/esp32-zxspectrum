@@ -138,6 +138,8 @@ public:
   uint8_t ulaport_FF = 0xFF;
   bool micLevel = false;
   uint8_t borderColors[312] = {0};
+  // indicates that the ROM loading routine is active
+  bool romLoadingRoutineHit = false;
 
   ZXSpectrum();
   void reset();

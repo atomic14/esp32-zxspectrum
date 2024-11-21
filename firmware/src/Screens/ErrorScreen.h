@@ -3,6 +3,7 @@
 #include "Screen.h"
 #include "../TFT/TFTDisplay.h"
 #include "fonts/GillSans_30_vlw.h"
+#include "NavigationStack.h"
 
 class TFTDisplay;
 

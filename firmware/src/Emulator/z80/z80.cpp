@@ -176,9 +176,13 @@ uint16_t Z80Run(Z80Regs *regs, int numcycles)
     micValue += spectrum->hwopt.SoundBits != 0 ? totalCycles : 0;
     /* patch ROM loading routine */
     // address contributed by Ignacio Burgueño :)
-    // if (r_PC >= 0x0556 && r_PC <= 0x056c) {
+    if (r_PC >= 0x04C2  && r_PC < 0x09F4) {
+      // set a flag to indicate that the ROM loading routine has been hit
+      spectrum->romLoadingRoutineHit = true;
     // printf("ROM loading routine hit\n");
-    // }
+    } else {
+      spectrum->romLoadingRoutineHit = false;
+    }
   }
   return micValue;
 }

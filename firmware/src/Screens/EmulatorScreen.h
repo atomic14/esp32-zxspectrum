@@ -18,8 +18,11 @@ class EmulatorScreen : public Screen
     Machine *machine = nullptr;
     GameLoader *gameLoader = nullptr;
     FILE *audioFile = nullptr;
+    IFiles *m_files;
+    void triggerLoadTape();
+    bool isLoading = false;
   public:
-    EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput);
+    EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files);
     void updatekey(SpecKeys key, uint8_t state);
     void run(std::string filename, models_enum model);
     void pause();
@@ -28,4 +31,5 @@ class EmulatorScreen : public Screen
     void didAppear() {
       resume();
     }
+    void loadTape(std::string filename);
 };

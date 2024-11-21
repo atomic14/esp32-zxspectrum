@@ -29,12 +29,12 @@ void Renderer::drawBorder(int startPos, int endPos, int offset, int length, int 
   for (int borderPos = startPos; borderPos < endPos;)
   {
     uint8_t borderColor = currentBorderColors[borderPos + offset];
-    if (drawnBorderColors[borderPos + offset] != borderColor)
+    if (drawnBorderColors[borderPos + offset] != borderColor || firstDraw)
     {
       // Find consecutive lines with the same color
       int rangeStart = borderPos;
-      while (borderPos < endPos && currentBorderColors[borderPos + offset] == borderColor &&
-              drawnBorderColors[borderPos + offset] != borderColor)
+      while (borderPos < endPos && ((currentBorderColors[borderPos + offset] == borderColor &&
+              drawnBorderColors[borderPos + offset] != borderColor) || firstDraw))
       {
         drawnBorderColors[borderPos + offset] = borderColor;
         borderPos++;

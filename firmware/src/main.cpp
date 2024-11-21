@@ -47,11 +47,11 @@ void setup(void)
 #ifdef USE_SDCARD
 #ifdef USE_SDIO
   SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-  Files<SDCard> *files = new Files<SDCard>(fileSystem);
+  IFiles *files = new FilesImplementation<SDCard>(fileSystem);
   setupUSB(fileSystem);
 #else
   SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
-  Files<SDCard> *files = new Files<SDCard>(fileSystem);
+  IFiles *files = new FilesImplementation<SDCard>(fileSystem);
 #endif
   // Serial.begin(115200);
   // for(int i = 0; i < 5; i++) {

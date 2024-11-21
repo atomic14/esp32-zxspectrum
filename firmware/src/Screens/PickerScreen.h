@@ -12,10 +12,6 @@
 class TFTDisplay;
 class ScrollingList;
 
-bool starts_with(const std::string& str, const std::string& prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-}
-
 template <class ItemT>
 class PickerScreen : public Screen
 {
@@ -26,6 +22,10 @@ private:
   int lastSearchPrefix = 0;
   int m_selectedItem = 0;
   int m_lastPageDrawn = -1;
+
+  bool starts_with(const std::string& str, const std::string& prefix) {
+      return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+  }
 public:
   PickerScreen(
       std::string title,

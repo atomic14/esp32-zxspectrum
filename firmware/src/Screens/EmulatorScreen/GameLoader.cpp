@@ -8,7 +8,6 @@
 #include "../../AudioOutput/AudioOutput.h"
 #include "../../utils.h"
 
-
 GameLoader::GameLoader(Machine *machine, Renderer *renderer, AudioOutput *audioOutput) : machine(machine), renderer(renderer), audioOutput(audioOutput) {}
 
 void GameLoader::loadTape(std::string filename)
@@ -25,7 +24,6 @@ void GameLoader::loadTape(std::string filename)
   uint64_t startTime = get_usecs();
   renderer->setIsLoading(true);
   Serial.printf("Loading tape %s\n", filename.c_str());
-  machine->startLoading();
   Serial.printf("Loading tape file\n");
   FILE *fp = fopen(filename.c_str(), "rb");
   if (fp == NULL)

@@ -189,6 +189,16 @@ public:
       : title(title), path(path) {}
   std::string getTitle() const { return title; }
   std::string getPath() const { return path; }
+  std::string getExtension() const
+  {
+    size_t pos = title.find_last_of('.');
+    if (pos != std::string::npos)
+    {
+      std::string extension = title.substr(pos);
+      return StringUtils::downcase(extension);
+    }
+    return "";
+  }
 
 private:
   std::string title;
@@ -220,14 +230,23 @@ using FileLetterCountPtr = std::shared_ptr<FileLetterCount>;
 using FileLetterCountVector = std::vector<FileLetterCountPtr>;
 
 // Files class to list files in a directory
+class IFiles
+{
+public:
+  virtual bool isAvailable() = 0;
+  virtual void createDirectory(const char *folder) = 0;
+  virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions) = 0;
+  virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions) = 0;
+};
+
 template <class FileSystemT>
-class Files
+class FilesImplementation: public IFiles
 {
 private:
   FileSystemT *fileSystem;
 
 public:
-  Files(FileSystemT *fileSystem) : fileSystem(fileSystem)
+  FilesImplementation(FileSystemT *fileSystem) : fileSystem(fileSystem)
   {
   }
 

@@ -27,6 +27,10 @@ void Machine::runEmulator() {
         renderer->resetFrameCount();
         cycleCount = 0;
       }
+      if (machine->romLoadingRoutineHit)
+      {
+        romLoadingRoutineHitCallback();
+      }
     }
     else
     {
@@ -36,7 +40,9 @@ void Machine::runEmulator() {
 }
 
 
-Machine::Machine(Renderer *renderer, AudioOutput *audioOutput): renderer(renderer), audioOutput(audioOutput) {
+Machine::Machine(Renderer *renderer, AudioOutput *audioOutput, std::function<void()> romLoadingRoutineHitCallback)
+: renderer(renderer), audioOutput(audioOutput), romLoadingRoutineHitCallback(romLoadingRoutineHitCallback) {
+  Serial.println("Creating machine");
   machine = new ZXSpectrum();
 }
 
@@ -47,12 +53,14 @@ void Machine::updatekey(SpecKeys key, uint8_t state) {
 }
 
 void Machine::setup(models_enum model) {
+  Serial.println("Setting up machine");
   machine->reset();
   machine->init_spectrum(model);
   machine->reset_spectrum(machine->z80Regs);
 }
 
 void Machine::start(FILE *audioFile) {
+  Serial.println("Starting machine");
   this->audioFile = audioFile;
   isRunning = true;
   xTaskCreatePinnedToCore(runnerTask, "z80Runner", 8192, this, 5, NULL, 0);
@@ -80,13 +88,17 @@ void Machine::startLoading()
     machine->runForFrame(nullptr, nullptr);
   }
   renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
+  // TODO load screenshot...
   if (machine->hwopt.hw_model == SPECMDL_48K)
   {
     tapKey(SPECKEY_J);
     machine->updatekey(SPECKEY_SYMB, 1);
     tapKey(SPECKEY_P);
     tapKey(SPECKEY_P);
+    tapKey(SPECKEY_SHIFT);
+    tapKey(SPECKEY_K);
     machine->updatekey(SPECKEY_SYMB, 0);
+    machine->updatekey(SPECKEY_SHIFT, 0);
     tapKey(SPECKEY_ENTER);
   }
   else

@@ -26,3 +26,4 @@ private:
     std::function<void()> func_;
     bool active_;
 };
+

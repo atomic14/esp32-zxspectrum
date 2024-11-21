@@ -380,13 +380,9 @@ int main()
         return -1;
     }
 
-    audioOutput = new SDLAudioOutput(machine);
-    audioOutput->start(15600);
-
     // run the spectrum for 4 second so that it boots up
     int start = SDL_GetTicks();
 
-    #ifndef __EMSCRIPTEN__
     for(int i = 0; i < 200; i++) {
         machine->runForFrame(nullptr, nullptr);
     }
@@ -402,9 +398,14 @@ int main()
     int end = SDL_GetTicks();
     std::cout << "Time to boot spectrum: " << end - start << "ms" << std::endl;
     // load a tap file
+    #if __EMSCRIPTEN__
+    std::string filename = "filesystem/manic.z80";
+    #else
     std::string filename = OpenFileDialog();
-    loadGame(filename);
     #endif
+    loadGame(filename);
+    audioOutput = new SDLAudioOutput(machine);
+    audioOutput->start(15600);
     isRunning = true;
     #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 50, 1);

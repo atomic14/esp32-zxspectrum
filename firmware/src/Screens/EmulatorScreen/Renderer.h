@@ -100,4 +100,7 @@ public:
     void setLoadProgress(uint16_t progress) {
       loadProgress = progress;
     }
+    void setNeedsRedraw() {
+      firstDraw = true;
+    }
 };

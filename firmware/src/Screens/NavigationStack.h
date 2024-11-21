@@ -5,9 +5,8 @@
 
 class NavigationStack
 {
-  private:
-    std::vector<Screen *> stack;
   public:
+    std::vector<Screen *> stack;
     NavigationStack() {}
     ~NavigationStack() {}
     Screen *getTop() {
