@@ -76,9 +76,10 @@ bool IRAM_ATTR BuzzerOutput::onTimer()
   // output a sample from the buffer if we have one
   if (mCurrentIndex < mBufferLength)
   {
-    uint16_t micSample = adc1_get_raw(ADC1_CHANNEL_4);
-    micAve = (micAve * 99 + micSample) / 100;
-    uint8_t micValue = micSample > (micAve * 1001)/1000 ? 1 : 0;
+    // uint16_t micSample = adc1_get_raw(ADC1_CHANNEL_4);
+    // micAve = (micAve * 99 + micSample) / 100;
+    // uint8_t micValue = micSample > (micAve * 1001)/1000 ? 1 : 0;
+    uint8_t micValue = 0;
     xQueueSendFromISR(micValueQueue, &micValue, &xHigherPriorityTaskWoken);
     mCount++;
     // get the first sample from the buffer - shift it up to 9 bits for max resolution

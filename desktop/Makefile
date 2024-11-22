@@ -30,7 +30,8 @@ SRCS = \
 	../firmware/src/Emulator/snaps.cpp \
   ../firmware/src/AySound/AySound.cpp \
 	../firmware/src/Serial.cpp \
-	../firmware/src/TZX/tzx_cas.cpp
+	../firmware/src/TZX/tzx_cas.cpp \
+	src/loadgame.cpp
 
 OBJC_SRCS = \
 	src/main.mm

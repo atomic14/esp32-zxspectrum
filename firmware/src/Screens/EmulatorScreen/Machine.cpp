@@ -95,10 +95,7 @@ void Machine::startLoading()
     machine->updatekey(SPECKEY_SYMB, 1);
     tapKey(SPECKEY_P);
     tapKey(SPECKEY_P);
-    tapKey(SPECKEY_SHIFT);
-    tapKey(SPECKEY_K);
     machine->updatekey(SPECKEY_SYMB, 0);
-    machine->updatekey(SPECKEY_SHIFT, 0);
     tapKey(SPECKEY_ENTER);
   }
   else

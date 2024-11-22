@@ -121,6 +121,9 @@ void TzxCas::TzxCas::tzx_cas_get_blocks(const uint8_t *casdata, int caslen)
 			pos += 1 + datasize;
 			break;
 		case 0x33:
+			// TODO - hardware type block
+			// haven't seen this in the wild yet - but it could let us
+			// work out the correct machine to emulate
 			datasize = casdata[pos];
 			pos += 1 + 3 * datasize;
 			break;

@@ -53,7 +53,7 @@ void setup(void)
   SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
   IFiles *files = new FilesImplementation<SDCard>(fileSystem);
 #endif
-  // Serial.begin(115200);
+  Serial.begin(115200);
   // for(int i = 0; i < 5; i++) {
   //   BusyLight bl;
   //   vTaskDelay(pdMS_TO_TICKS(1000));

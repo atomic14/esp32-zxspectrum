@@ -15,51 +15,10 @@
 #include "DummyListener.h"
 #include "ZXSpectrumTapeListener.h"
 #include "SDLAudioOutput.h"
+#include "loadgame.h"
+#include "input.h"
 #include <thread>
 #include <chrono>
-
-std::unordered_map<SDL_Keycode, SpecKeys> sdl_to_spec = {
-    {SDLK_a, SpecKeys::SPECKEY_A},
-    {SDLK_b, SpecKeys::SPECKEY_B},
-    {SDLK_c, SpecKeys::SPECKEY_C},
-    {SDLK_d, SpecKeys::SPECKEY_D},
-    {SDLK_e, SpecKeys::SPECKEY_E},
-    {SDLK_f, SpecKeys::SPECKEY_F},
-    {SDLK_g, SpecKeys::SPECKEY_G},
-    {SDLK_h, SpecKeys::SPECKEY_H},
-    {SDLK_i, SpecKeys::SPECKEY_I},
-    {SDLK_j, SpecKeys::SPECKEY_J},
-    {SDLK_k, SpecKeys::SPECKEY_K},
-    {SDLK_l, SpecKeys::SPECKEY_L},
-    {SDLK_m, SpecKeys::SPECKEY_M},
-    {SDLK_n, SpecKeys::SPECKEY_N},
-    {SDLK_o, SpecKeys::SPECKEY_O},
-    {SDLK_p, SpecKeys::SPECKEY_P},
-    {SDLK_q, SpecKeys::SPECKEY_Q},
-    {SDLK_r, SpecKeys::SPECKEY_R},
-    {SDLK_s, SpecKeys::SPECKEY_S},
-    {SDLK_t, SpecKeys::SPECKEY_T},
-    {SDLK_u, SpecKeys::SPECKEY_U},
-    {SDLK_v, SpecKeys::SPECKEY_V},
-    {SDLK_w, SpecKeys::SPECKEY_W},
-    {SDLK_x, SpecKeys::SPECKEY_X},
-    {SDLK_y, SpecKeys::SPECKEY_Y},
-    {SDLK_z, SpecKeys::SPECKEY_Z},
-    {SDLK_0, SpecKeys::SPECKEY_0},
-    {SDLK_1, SpecKeys::SPECKEY_1},
-    {SDLK_2, SpecKeys::SPECKEY_2},
-    {SDLK_3, SpecKeys::SPECKEY_3},
-    {SDLK_4, SpecKeys::SPECKEY_4},
-    {SDLK_5, SpecKeys::SPECKEY_5},
-    {SDLK_6, SpecKeys::SPECKEY_6},
-    {SDLK_7, SpecKeys::SPECKEY_7},
-    {SDLK_8, SpecKeys::SPECKEY_8},
-    {SDLK_9, SpecKeys::SPECKEY_9},
-    {SDLK_RETURN, SpecKeys::SPECKEY_ENTER},
-    {SDLK_SPACE, SpecKeys::SPECKEY_SPACE},
-    {SDLK_LSHIFT, SpecKeys::SPECKEY_SHIFT},
-    {SDLK_RSHIFT, SpecKeys::SPECKEY_SYMB},
-};
 
 bool isLoading = false;
 bool isRunning = false;
@@ -158,58 +117,6 @@ void updateAndRender(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *fra
     SDL_RenderPresent(renderer);
 }
 
-void loadGame(std::string filename) {
-    // check the extension for z80 or sna
-    if (filename.find(".z80") != std::string::npos || filename.find(".Z80") != std::string::npos
-    || filename.find(".sna") != std::string::npos || filename.find(".SNA") != std::string::npos) {
-        Load(machine, filename.c_str());
-        return;
-    }
-    // time how long it takes to load the tape
-    int start = SDL_GetTicks();
-    isLoading = true;
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (fp == NULL)
-    {
-        std::cout << "Error: Could not open file." << std::endl;
-        return;
-    }
-    fseek(fp, 0, SEEK_END);
-    long file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    uint8_t *tzx_data = (uint8_t*)malloc(file_size);
-    fread(tzx_data, 1, file_size, fp);
-    fclose(fp);
-    // load the tape
-    TzxCas tzxCas;
-    DummyListener *dummyListener = new DummyListener();
-    dummyListener->start();
-    tzxCas.load_tzx(dummyListener, tzx_data, file_size);
-    dummyListener->finish();
-    uint64_t totalTicks = dummyListener->getTotalTicks();
-
-    ZXSpectrumTapeListener *listener = new ZXSpectrumTapeListener(machine, [&](uint64_t progress)
-      {
-        // printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
-        // printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
-        // printf("Progress: %lld\n", progress * 100 / totalTicks);
-      });
-    listener->start();
-    if (filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos) {
-        tzxCas.load_tap(listener, tzx_data, file_size);
-    } else {
-        tzxCas.load_tzx(listener, tzx_data, file_size);
-    }
-    listener->finish();
-    std::cout << "Total ticks: " << listener->getTotalTicks() << std::endl;
-    std::cout << "Total time: " << listener->getTotalTicks() / 3500000.0 << " seconds" << std::endl;
-
-    std::cout << "Loaded tape." << std::endl;
-    isLoading = false;
-    int end = SDL_GetTicks();
-    std::cout << "Time to load tape: " << end - start << "ms" << std::endl;
-}
-
 // Handles SDL events, including quit and keyboard input
 void handleEvents(bool &isRunning)
 {
@@ -233,7 +140,7 @@ void handleEvents(bool &isRunning)
                 #ifndef __EMSCRIPTEN__
                 if(!isLoading) {
                     std::string filename = OpenFileDialog();
-                    loadGame(filename);
+                    loadGame(filename, machine);
                     return;
                 }
                 #endif
@@ -347,7 +254,6 @@ void fillFrameBuffer(uint16_t *pixelBuffer, uint8_t *currentScreenBuffer, uint8_
 void main_loop()
 {
     handleEvents(isRunning);
-    // machine->runForFrame(audioOutput, nullptr);
     count++;
     // fill out the framebuffer
     fillFrameBuffer(frameBuffer, machine->mem.currentScreen, machine->hwopt.BorderColor);
@@ -403,7 +309,9 @@ int main()
     #else
     std::string filename = OpenFileDialog();
     #endif
-    loadGame(filename);
+    isLoading = true;
+    loadGame(filename, machine);
+    isLoading = false;
     audioOutput = new SDLAudioOutput(machine);
     audioOutput->start(15600);
     isRunning = true;

@@ -23,7 +23,7 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
         }
         // if we found the emulator screen and if we're loading a tape file then we've been triggered due to the user starting the
         // load routine from the emulator screen. We just need to tell the emulator screen to load the tape file and pop back to it
-        if (emulatorScreen != nullptr && item->getExtension() == ".tap" || item->getExtension() == ".tzx") {
+        if (emulatorScreen != nullptr && (item->getExtension() == ".tap" || item->getExtension() == ".tzx")) {
           Serial.println("Loading tape file into existing emulator screen");
           // pop to the emaulator screen - get a local copy of the stack as it will be set to null when we pop
           NavigationStack *navStack = m_navigationStack;
