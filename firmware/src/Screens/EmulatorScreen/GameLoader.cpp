@@ -72,7 +72,7 @@ void GameLoader::loadTape(std::string filename)
         count++;
         if (borderPos == 312) {
           borderPos = 0;
-          renderer->triggerDraw(machine->getMachine()->mem.currentScreen, currentBorderColors);
+          renderer->triggerDraw(machine->getMachine()->mem.currentScreen->data, currentBorderColors);
         }
         if (count % 4000 == 0) {
           float machineTime = (float) listener->getTotalTicks() / 3500000.0f;

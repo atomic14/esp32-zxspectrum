@@ -86,7 +86,7 @@ bool IRAM_ATTR BuzzerOutput::onTimer()
     uint16_t sample = mBuffer[mCurrentIndex];
     if (micValue)
     {
-      sample = std::min(255, sample + 5);
+      sample = std::min(255, sample + 50);
     }
     // go up to 9 bits resolution
     sample = sample << 1;

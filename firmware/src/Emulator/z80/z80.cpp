@@ -21,12 +21,13 @@
 #include "tables.h"
 #include "z80.h"
 
-#define Z80ReadMem(where) (mappedMemory[(where) >> 14][(where) & 0x3FFF])
+#define Z80ReadMem(where) (mappedMemory[(where) >> 14]->data[(where) & 0x3FFF])
 #define Z80WriteMem(where, A, regs) ({              \
   int memoryBank = (where) >> 14;                   \
   if (memoryBank != 0)                              \
   {                                                 \
-    mappedMemory[memoryBank][(where) & 0x3fff] = A; \
+    mappedMemory[memoryBank]->data[(where) & 0x3fff] = A; \
+    mappedMemory[memoryBank]->isDirty = true;       \
   }                                                 \
 })
 #define Z80InPort(regs, port) (spectrum->z80_in(port))
@@ -118,7 +119,7 @@ uint16_t Z80Run(Z80Regs *regs, int numcycles)
 {
   ZXSpectrum *spectrum = ((ZXSpectrum *)regs->userInfo);
   Memory &memory = spectrum->mem;
-  uint8_t **mappedMemory = memory.mappedMemory;
+  MemoryPage **mappedMemory = memory.mappedMemory;
   /* opcode and temp variables */
   byte opcode;
   eword tmpreg, ops, mread, tmpreg2;
@@ -194,7 +195,7 @@ void Z80Interrupt(Z80Regs *regs, uint16_t ivec)
 {
   ZXSpectrum *spectrum = ((ZXSpectrum *)regs->userInfo);
   Memory &memory = spectrum->mem;
-  uint8_t **mappedMemory = memory.mappedMemory;
+  MemoryPage **mappedMemory = memory.mappedMemory;
   uint16_t intaddress;
 
   /* unhalt the computer */

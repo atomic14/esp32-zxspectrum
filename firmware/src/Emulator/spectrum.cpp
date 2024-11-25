@@ -60,7 +60,7 @@ void ZXSpectrum::reset()
 int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
 {
   uint8_t audioBuffer[312];
-  uint8_t *attrBase = mem.currentScreen + 0x1800;
+  uint8_t *attrBase = mem.currentScreen->data + 0x1800;
   int c = 0;
   // Each line should be 224 tstates long...
   // And a complete frame is (64+192+56)*224=69888 tstates long

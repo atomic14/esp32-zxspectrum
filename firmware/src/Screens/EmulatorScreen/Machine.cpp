@@ -15,7 +15,7 @@ void Machine::runEmulator() {
     if (isRunning)
     {
       cycleCount += machine->runForFrame(audioOutput, audioFile);
-      renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
+      renderer->triggerDraw(machine->mem.currentScreen->data, machine->borderColors);
       unsigned long currentTime = millis();
       unsigned long elapsed = currentTime - lastTime;
       if (elapsed > 1000)
@@ -26,6 +26,10 @@ void Machine::runEmulator() {
         Serial.printf("Executed at %.3FMHz cycles, frame rate=%.2f\n", cycles, fps);
         renderer->resetFrameCount();
         cycleCount = 0;
+        // save the state of the machine for time travel
+        timeTravel->record(machine);
+        Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+        Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
       }
       if (machine->romLoadingRoutineHit)
       {
@@ -44,6 +48,7 @@ Machine::Machine(Renderer *renderer, AudioOutput *audioOutput, std::function<voi
 : renderer(renderer), audioOutput(audioOutput), romLoadingRoutineHitCallback(romLoadingRoutineHitCallback) {
   Serial.println("Creating machine");
   machine = new ZXSpectrum();
+  timeTravel = new TimeTravel();
 }
 
 void Machine::updatekey(SpecKeys key, uint8_t state) {
@@ -87,7 +92,7 @@ void Machine::startLoading()
   {
     machine->runForFrame(nullptr, nullptr);
   }
-  renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
+  renderer->triggerDraw(machine->mem.currentScreen->data, machine->borderColors);
   // TODO load screenshot...
   if (machine->hwopt.hw_model == SPECMDL_48K)
   {
@@ -103,5 +108,5 @@ void Machine::startLoading()
     // 128K the tape loader is first in the menu
     tapKey(SPECKEY_ENTER);
   }
-  renderer->triggerDraw(machine->mem.currentScreen, machine->borderColors);
+  renderer->triggerDraw(machine->mem.currentScreen->data, machine->borderColors);
 }

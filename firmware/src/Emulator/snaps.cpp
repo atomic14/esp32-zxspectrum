@@ -297,7 +297,7 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
   int dataOffset = 30 + 2 + buffer[30];
   fseek(fp, dataOffset, SEEK_SET);
 
-  uint8_t *pageMap[16] = {0};
+  MemoryPage *pageMap[16] = {0};
   if (hwmodel == SPECMDL_48K)
   {
     pageMap[4] = speccy->mem.banks[2];
@@ -335,7 +335,7 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
       fread(pageMap[page], actualLength, 1, fp);
     } else {
       printf("Decompressing page %d\n", page);
-      decompressZ80BlockV2orV3(fp, length, pageMap[page], 0x4000);
+      decompressZ80BlockV2orV3(fp, length, pageMap[page]->data, 0x4000);
     }
   }
   speccy->z80Regs->PC.B.l = buffer[32];
@@ -461,20 +461,20 @@ bool saveZ80(ZXSpectrum *speccy, const char *filename)
   // Map pages based on 48K or 128K model
   if (speccy->hwopt.hw_model == SPECMDL_48K)
   {
-    pageMap[4] = speccy->mem.banks[2];
-    pageMap[5] = speccy->mem.banks[0];
-    pageMap[8] = speccy->mem.banks[5];
+    pageMap[4] = speccy->mem.banks[2]->data;
+    pageMap[5] = speccy->mem.banks[0]->data;
+    pageMap[8] = speccy->mem.banks[5]->data;
   }
   else if (speccy->hwopt.hw_model == SPECMDL_128K)
   {
-    pageMap[3] = speccy->mem.banks[0];
-    pageMap[4] = speccy->mem.banks[1];
-    pageMap[5] = speccy->mem.banks[2];
-    pageMap[6] = speccy->mem.banks[3];
-    pageMap[7] = speccy->mem.banks[4];
-    pageMap[8] = speccy->mem.banks[5];
-    pageMap[9] = speccy->mem.banks[6];
-    pageMap[10] = speccy->mem.banks[7];
+    pageMap[3] = speccy->mem.banks[0]->data;
+    pageMap[4] = speccy->mem.banks[1]->data;
+    pageMap[5] = speccy->mem.banks[2]->data;
+    pageMap[6] = speccy->mem.banks[3]->data;
+    pageMap[7] = speccy->mem.banks[4]->data;
+    pageMap[8] = speccy->mem.banks[5]->data;
+    pageMap[9] = speccy->mem.banks[6]->data;
+    pageMap[10] = speccy->mem.banks[7]->data;
   }
 
   for (int page = 0; page < 16; ++page)
@@ -604,7 +604,7 @@ bool LoadSNA(ZXSpectrum *speccy, const char *filename)
       }
       else
       {
-        fread(speccy->mem.banks[i], 0x4000, 1, fp);
+        fread(speccy->mem.banks[i]->data, 0x4000, 1, fp);
       }
     }
   }
