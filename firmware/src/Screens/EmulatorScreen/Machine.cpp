@@ -51,9 +51,9 @@ Machine::Machine(Renderer *renderer, AudioOutput *audioOutput, std::function<voi
   timeTravel = new TimeTravel();
 }
 
-void Machine::updatekey(SpecKeys key, uint8_t state) {
+void Machine::updateKey(SpecKeys key, uint8_t state) {
   if (isRunning) {
-    machine->updatekey(key, state);
+    machine->updateKey(key, state);
   }
 }
 
@@ -73,12 +73,12 @@ void Machine::start(FILE *audioFile) {
 
 void Machine::tapKey(SpecKeys key)
 {
-  machine->updatekey(key, 1);
+  machine->updateKey(key, 1);
   for (int i = 0; i < 10; i++)
   {
     machine->runForFrame(nullptr, nullptr);
   }
-  machine->updatekey(key, 0);
+  machine->updateKey(key, 0);
   for (int i = 0; i < 10; i++)
   {
     machine->runForFrame(nullptr, nullptr);
@@ -97,10 +97,10 @@ void Machine::startLoading()
   if (machine->hwopt.hw_model == SPECMDL_48K)
   {
     tapKey(SPECKEY_J);
-    machine->updatekey(SPECKEY_SYMB, 1);
+    machine->updateKey(SPECKEY_SYMB, 1);
     tapKey(SPECKEY_P);
     tapKey(SPECKEY_P);
-    machine->updatekey(SPECKEY_SYMB, 0);
+    machine->updateKey(SPECKEY_SYMB, 0);
     tapKey(SPECKEY_ENTER);
   }
   else

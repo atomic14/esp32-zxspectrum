@@ -77,7 +77,7 @@ public:
     USB.begin();
   }
   
-  void updatekey(SpecKeys key, uint8_t state)
+  void updateKey(SpecKeys key, uint8_t state)
   {
     // map from the spectrum key to a hid_key
     int hid_key = 0;

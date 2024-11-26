@@ -59,7 +59,6 @@ EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles
     Serial.println("ROM loading routine hit");
     triggerLoadTape(); });
   gameLoader = new GameLoader(machine, renderer, audioOutput);
-  pinMode(0, INPUT_PULLUP);
 }
 
 void EmulatorScreen::run(std::string filename, models_enum model)
@@ -102,7 +101,7 @@ void EmulatorScreen::resume()
   machine->resume();
 }
 
-void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
+void EmulatorScreen::updateKey(SpecKeys key, uint8_t state)
 {
   // TODO audio capture
   // if (key == SPECKEY_0)
@@ -116,7 +115,7 @@ void EmulatorScreen::updatekey(SpecKeys key, uint8_t state)
   //     Serial.printf("Audio file closed\n");
   //   }
   // }
-  machine->updatekey(key, state);
+  machine->updateKey(key, state);
 }
 
 void EmulatorScreen::showSaveSnapshotScreen()

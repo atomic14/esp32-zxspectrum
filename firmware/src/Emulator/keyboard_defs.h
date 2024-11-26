@@ -53,6 +53,8 @@ enum SpecKeys
   // special pseudo keys
   SPECKEY_DEL,
   SPECKEY_BREAK,
+  // special keys for the emulator
+  SPECKEY_MENU,
 };
 
 const std::unordered_map<SpecKeys, char> specKeyToLetter = {

@@ -23,7 +23,7 @@ class Screen {
   public:
   Screen(TFTDisplay &tft, AudioOutput *audioOutput) : m_tft(tft), m_audioOutput(audioOutput) {}
   // input
-  virtual void updatekey(SpecKeys key, uint8_t state) {};
+  virtual void updateKey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};
   void playKeyClick() {
     if (m_audioOutput) {

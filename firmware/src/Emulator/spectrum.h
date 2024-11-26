@@ -161,7 +161,7 @@ public:
   }
 
   void interrupt();
-  void updatekey(SpecKeys key, uint8_t state);
+  void updateKey(SpecKeys key, uint8_t state);
 
   inline uint8_t z80_peek(uint16_t address)
   {

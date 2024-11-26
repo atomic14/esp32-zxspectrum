@@ -116,7 +116,7 @@ void ZXSpectrum::interrupt()
   Z80Interrupt(z80Regs, 0x38);
 }
 
-void ZXSpectrum::updatekey(SpecKeys key, uint8_t state)
+void ZXSpectrum::updateKey(SpecKeys key, uint8_t state)
 {
   // Bit pattern: XXXFULDR
   switch (key)

@@ -105,7 +105,7 @@ void setup(void)
       [&](SpecKeys key, bool down)
       {
         {
-          navigationStack->updatekey(key, down);
+          navigationStack->updateKey(key, down);
         }
       });
   touchKeyboard->calibrate();
@@ -114,7 +114,7 @@ void setup(void)
 #ifdef TOUCH_KEYBOARD_V2
   TouchKeyboardV2 *touchKeyboard = new TouchKeyboardV2(
       [&](SpecKeys key, bool down) 
-      { navigationStack->updatekey(key, down); },
+      { navigationStack->updateKey(key, down); },
       [&](SpecKeys key)
       { navigationStack->pressKey(key); });
   touchKeyboard->start();
@@ -138,29 +138,42 @@ void setup(void)
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
   SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
-                                                { navigationStack->updatekey(key, down); if (down) { navigationStack->pressKey(key); } });
+                                                { navigationStack->updateKey(key, down); if (down) { navigationStack->pressKey(key); } });
 
 // start up the nunchuk controller and feed events into the active screen
 #ifdef NUNCHUK_CLOCK
    Nunchuck *nunchuck = new Nunchuck([&](SpecKeys key, bool down)
-                                    { navigationStack->updatekey(key, down); },
+                                    { navigationStack->updateKey(key, down); },
                                     [&](SpecKeys key)
                                     { navigationStack->pressKey(key); },
                                     NUNCHUK_CLOCK, NUNCHUK_DATA);
 #endif
 #ifdef SEESAW_CLOCK
   AdafruitSeeSaw *seeSaw = new AdafruitSeeSaw([&](SpecKeys key, bool down)
-                                    { navigationStack->updatekey(key, down); },
+                                    { navigationStack->updateKey(key, down); },
                                     [&](SpecKeys key)
                                     { navigationStack->pressKey(key); });
   seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
 #endif
 
   Serial.println("Running on core: " + String(xPortGetCoreID()));
+  // use the boot pin to open the emulator menu
+  pinMode(0, INPUT_PULLUP);
   // just keep running
+  bool bootButtonWasPressed = false;
   while (true)
   {
-    vTaskDelay(10000);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    if (digitalRead(0) == LOW)
+    {
+      navigationStack->updateKey(SPECKEY_MENU, true);
+    }
+    else if (bootButtonWasPressed)
+    {
+      navigationStack->updateKey(SPECKEY_MENU, false);
+      navigationStack->pressKey(SPECKEY_MENU);
+      bootButtonWasPressed = false;
+    }
   }
 }
 

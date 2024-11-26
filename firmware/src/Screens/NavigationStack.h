@@ -40,10 +40,10 @@ class NavigationStack
         }
       }
     }
-    void updatekey(SpecKeys key, uint8_t state) {
+    void updateKey(SpecKeys key, uint8_t state) {
       Screen *top = getTop();
       if (top) {
-        top->updatekey(key, state);
+        top->updateKey(key, state);
       }
     };
     void pressKey(SpecKeys key) {

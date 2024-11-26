@@ -155,7 +155,7 @@ class Machine {
     std::function<void()> romLoadingRoutineHitCallback;
   public:
     Machine(Renderer *renderer, AudioOutput *audioOutput, std::function<void()> romLoadingRoutineHitCallback);
-    void updatekey(SpecKeys key, uint8_t state);
+    void updateKey(SpecKeys key, uint8_t state);
     void setup(models_enum model);
     void start(FILE *audioFile);
     void pause() {

@@ -23,7 +23,7 @@ class EmulatorScreen : public Screen
     bool isLoading = false;
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files);
-    void updatekey(SpecKeys key, uint8_t state);
+    void updateKey(SpecKeys key, uint8_t state);
     void run(std::string filename, models_enum model);
     void pause();
     void resume();

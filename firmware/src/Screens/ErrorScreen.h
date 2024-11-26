@@ -25,7 +25,7 @@ public:
     updateDisplay();
   }
   
-  void updatekey(SpecKeys key, uint8_t state)
+  void updateKey(SpecKeys key, uint8_t state)
   {
     if (state == 1)
     {
