@@ -31,7 +31,7 @@ public:
   bool begin(gpio_num_t data, gpio_num_t clk)
   {
     TwoWire *i2c = new TwoWire(0);
-    i2c->setPins(GPIO_NUM_44, GPIO_NUM_43);
+    i2c->setPins(data, clk);
     ss = new Adafruit_seesaw(i2c);
     if (!ss->begin(0x50))
     {
