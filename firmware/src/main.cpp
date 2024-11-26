@@ -29,6 +29,7 @@
 #include "Screens/MainMenuScreen.h"
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
+#include "Input/AdafruitSeeSaw.h"
 #include "TFT/TFTDisplay.h"
 #include "TFT/ST7789.h"
 #include "TFT/ILI9341.h"
@@ -141,12 +142,20 @@ void setup(void)
 
 // start up the nunchuk controller and feed events into the active screen
 #ifdef NUNCHUK_CLOCK
-  Nunchuck *nunchuck = new Nunchuck([&](SpecKeys key, bool down)
+   Nunchuck *nunchuck = new Nunchuck([&](SpecKeys key, bool down)
                                     { navigationStack->updatekey(key, down); },
                                     [&](SpecKeys key)
                                     { navigationStack->pressKey(key); },
                                     NUNCHUK_CLOCK, NUNCHUK_DATA);
 #endif
+#ifdef SEESAW_CLOCK
+  AdafruitSeeSaw *seeSaw = new AdafruitSeeSaw([&](SpecKeys key, bool down)
+                                    { navigationStack->updatekey(key, down); },
+                                    [&](SpecKeys key)
+                                    { navigationStack->pressKey(key); });
+  seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
+#endif
+
   Serial.println("Running on core: " + String(xPortGetCoreID()));
   // just keep running
   while (true)
