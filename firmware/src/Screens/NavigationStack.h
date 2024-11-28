@@ -2,12 +2,15 @@
 
 #include <vector>
 #include "Screen.h"
+#include "../TFT/TFTDisplay.h"
 
 class NavigationStack
 {
+  private:
+    TFTDisplay *m_tft;
   public:
     std::vector<Screen *> stack;
-    NavigationStack() {}
+    NavigationStack(TFTDisplay *tft) : m_tft(tft) {}
     ~NavigationStack() {}
     Screen *getTop() {
       if (stack.size() > 0) {
@@ -51,5 +54,9 @@ class NavigationStack
       if (top) {
         top->pressKey(key);
       }
+      // TODO: Add some combination of keys to save a screenshot
+      // if (key == SPECKEY_MENU) {
+      //   m_tft->saveScreenshot();
+      // }
     };
 };

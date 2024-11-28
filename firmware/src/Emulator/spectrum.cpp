@@ -152,10 +152,12 @@ void ZXSpectrum::updateKey(SpecKeys key, uint8_t state)
       kempston_port &= 0b11101111;
     break;
   default:
-    if (state == 1)
-      speckey[key2specy[0][key]] &= key2specy[1][key];
-    else
-      speckey[key2specy[0][key]] |= ((key2specy[1][key]) ^ 0xFF);
+    if (key < SPECKEY_MAX_NORMAL) {
+      if (state == 1)
+        speckey[key2specy[0][key]] &= key2specy[1][key];
+      else
+        speckey[key2specy[0][key]] |= ((key2specy[1][key]) ^ 0xFF);
+    }
     break;
   }
 }

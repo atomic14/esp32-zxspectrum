@@ -45,6 +45,9 @@ enum SpecKeys
   SPECKEY_M,
   SPECKEY_SYMB,
   SPECKEY_SPACE,
+  // indicates that everything above is not a normal key
+  SPECKEY_MAX_NORMAL,
+  // joystick keys
   JOYK_UP,
   JOYK_DOWN,
   JOYK_LEFT,

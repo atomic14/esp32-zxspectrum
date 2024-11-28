@@ -103,4 +103,10 @@ public:
     void setNeedsRedraw() {
       firstDraw = true;
     }
+    void forceRedraw(const uint8_t *currentScreen, const uint8_t *borderColors) {
+      memcpy(currentScreenBuffer, currentScreen, 6912);
+      memcpy(currentBorderColors, borderColors, 312);
+      firstDraw = true;
+      drawScreen();
+    }
 };

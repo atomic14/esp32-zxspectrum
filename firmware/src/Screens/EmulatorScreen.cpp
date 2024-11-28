@@ -115,7 +115,45 @@ void EmulatorScreen::updateKey(SpecKeys key, uint8_t state)
   //     Serial.printf("Audio file closed\n");
   //   }
   // }
-  machine->updateKey(key, state);
+  if (!isInTimeTravelMode)
+  {
+    machine->updateKey(key, state);
+  }
+}
+
+void EmulatorScreen::pressKey(SpecKeys key)
+{
+  if (key == SPECKEY_MENU)
+  {
+    // TODO show menu for save snapshot, load snapshot, time travel
+    if (!isInTimeTravelMode)
+    {
+      pause();
+      isInTimeTravelMode = true;
+      machine->startTimeTravel();
+      drawTimeTravel();
+    }
+    // showSaveSnapshotScreen();
+  } else if (isInTimeTravelMode)
+  {
+    // TODO cancel time travel
+    if (key == SPECKEY_ENTER)
+    {
+      machine->stopTimeTravel();
+      isInTimeTravelMode = false;
+      resume();
+    }
+    else
+    {
+      if (key == SPECKEY_5) {
+        machine->stepBack();
+      }
+      if (key == SPECKEY_8) {
+        machine->stepForward();
+      }
+      drawTimeTravel();
+    }
+  }
 }
 
 void EmulatorScreen::showSaveSnapshotScreen()
@@ -133,4 +171,24 @@ void EmulatorScreen::loadTape(std::string filename)
   renderer->setNeedsRedraw();
   machine->resume();
   isLoading = false;
+}
+
+void EmulatorScreen::drawTimeTravel() {
+    m_tft.fillRect(0, 0, m_tft.width(), 20, TFT_BLACK);
+
+    m_tft.loadFont(GillSans_15_vlw);
+    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    
+    // Draw the left control "<5"
+    m_tft.drawString("<5", 5, 0);
+    
+    // Draw the center text "Time Travel - Enter=Jump"
+    Point centerSize = m_tft.measureString("Time Travel - Enter=Jump");
+    int centerX = (m_tft.width() - centerSize.x) / 2;
+    m_tft.drawString("Time Travel - Enter=Jump", centerX, 0);
+    
+    // Draw the right control "8>"
+    Point rightSize = m_tft.measureString("8>");
+    int rightX = m_tft.width() - rightSize.x - 5;  // 5 pixels from right edge
+    m_tft.drawString("8>", rightX, 0);
 }

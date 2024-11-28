@@ -69,8 +69,14 @@ void setup(void)
   vTaskDelay(100);
   #endif
   Serial.println("Starting up");
+    #ifdef TFT_ST7789
+  TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  #endif
+  #ifdef TFT_ILI9341
+  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  #endif
   // navigation stack
-  NavigationStack *navigationStack = new NavigationStack();
+  NavigationStack *navigationStack = new NavigationStack(tft);
   // Audio output
 #ifdef USE_DAC_AUDIO
   AudioOutput *audioOutput = new DACOutput(I2S_NUM_0);
@@ -122,12 +128,6 @@ void setup(void)
   if (audioOutput) {
     audioOutput->start(15625);
   }
-  #ifdef TFT_ST7789
-  TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  #endif
-  #ifdef TFT_ILI9341
-  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  #endif
 #else
   Flash *fileSystem = new Flash(MOUNT_POINT);
   Files<Flash> *files = new Files<Flash>(fileSystem);
@@ -149,11 +149,12 @@ void setup(void)
                                     NUNCHUK_CLOCK, NUNCHUK_DATA);
 #endif
 #ifdef SEESAW_CLOCK
-  AdafruitSeeSaw *seeSaw = new AdafruitSeeSaw([&](SpecKeys key, bool down)
-                                    { navigationStack->updateKey(key, down); },
-                                    [&](SpecKeys key)
-                                    { navigationStack->pressKey(key); });
-  seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
+  // TODO - this seems to hang the system
+  // AdafruitSeeSaw *seeSaw = new AdafruitSeeSaw([&](SpecKeys key, bool down)
+  //                                   { navigationStack->updateKey(key, down); },
+  //                                   [&](SpecKeys key)
+  //                                   { navigationStack->pressKey(key); });
+  // seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
 #endif
 
   Serial.println("Running on core: " + String(xPortGetCoreID()));
@@ -167,6 +168,7 @@ void setup(void)
     if (digitalRead(0) == LOW)
     {
       navigationStack->updateKey(SPECKEY_MENU, true);
+      bootButtonWasPressed = true;
     }
     else if (bootButtonWasPressed)
     {

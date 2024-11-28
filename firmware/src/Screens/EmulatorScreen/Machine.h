@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <deque>
+#include "Renderer.h"
 #include "../../Emulator/spectrum.h"
 #include "../../Serial.h"
 
@@ -23,9 +24,14 @@ struct MemoryBank {
 };
 
 struct TimeTravelInstant {
+  // the current memory pages
+  uint8_t hwBank = 0;
+  // the memory banks
   std::vector<MemoryBank *> memoryBanks;
+  // the z80 registers
   Z80Regs z80Regs;
-  uint8_t borderColors[32] = {0};
+  // the border colors
+  uint8_t borderColors[312] = {0};
 };
 
 class TimeTravel {
@@ -92,7 +98,9 @@ public:
     // copy the z80 registers
     memcpy(&instant->z80Regs, machine->z80Regs, sizeof(Z80Regs));
     // copy the border colors
-    memcpy(instant->borderColors, machine->borderColors, 32);
+    memcpy(instant->borderColors, machine->borderColors, 312);
+    // make sure the correct paging is set
+    instant->hwBank = machine->mem.hwBank;
     // add the instant to the list
     timeTravelInstants.push_back(instant);
     // if we have more than 30 seconds of time travel, remove the oldest instant
@@ -112,12 +120,14 @@ public:
     TimeTravelInstant *instant = timeTravelInstants[index];
     // copy the memory banks
     for (MemoryBank *memoryBank : instant->memoryBanks) {
-      memcpy(machine->mem.mappedMemory[memoryBank->index], memoryBank->data, 0x4000);
+      memcpy(machine->mem.banks[memoryBank->index]->data, memoryBank->data, 0x4000);
     }
     // copy the z80 registers
     memcpy(machine->z80Regs, &instant->z80Regs, sizeof(Z80Regs));
     // copy the border colors
-    memcpy(machine->borderColors, instant->borderColors, 32);
+    memcpy(machine->borderColors, instant->borderColors, 312);
+    // make sure the correct paging is set
+    machine->mem.page(instant->hwBank, true);
   }
   // remove everything from this point in time
   void reset(int index) {
@@ -151,6 +161,8 @@ class Machine {
     uint32_t cycleCount = 0;
     // time travel
     TimeTravel *timeTravel;
+    // current time travel position
+    int timeTravelPosition = 0;
     // callback for when rom loading routine is hit
     std::function<void()> romLoadingRoutineHitCallback;
   public:
@@ -163,6 +175,31 @@ class Machine {
     }
     void resume() {
       isRunning = true;
+    }
+    void startTimeTravel() {
+      // record the current state
+      timeTravel->record(machine);
+      timeTravelPosition = timeTravel->size() - 1;
+      Serial.printf("Starting time travel %d\n", timeTravelPosition);
+    }
+    void stepBack() {
+      if (timeTravelPosition > 0) {
+        timeTravelPosition--;
+        timeTravel->rewind(machine, timeTravelPosition);
+        renderer->forceRedraw(machine->mem.currentScreen->data, machine->borderColors);
+        Serial.printf("Time travel %d\n", timeTravelPosition);
+      }
+    }
+    void stepForward() {
+      if (timeTravelPosition < timeTravel->size() - 1) {
+        timeTravelPosition++;
+        timeTravel->rewind(machine, timeTravelPosition);
+        renderer->forceRedraw(machine->mem.currentScreen->data, machine->borderColors);
+        Serial.printf("Time travel %d\n", timeTravelPosition);
+      }
+    }
+    void stopTimeTravel() {
+      timeTravel->reset(timeTravelPosition);
     }
     ZXSpectrum *getMachine() {
       return machine;

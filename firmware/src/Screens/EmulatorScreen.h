@@ -21,9 +21,12 @@ class EmulatorScreen : public Screen
     IFiles *m_files;
     void triggerLoadTape();
     bool isLoading = false;
+    bool isInTimeTravelMode = false;
+    void drawTimeTravel();
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files);
     void updateKey(SpecKeys key, uint8_t state);
+    void pressKey(SpecKeys key);
     void run(std::string filename, models_enum model);
     void pause();
     void resume();

@@ -1,6 +1,7 @@
 #pragma once
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
+#include "../Serial.h"
 #include <vector>
 
 #define TFT_WHITE 0xFFFF
@@ -37,24 +38,7 @@
 #define TFT_MAD_SS  0x02
 #define TFT_MAD_GS  0x01
 
-
-#define TFT_NOP     0x00
-#define TFT_SWRST   0x01
-
-#define TFT_SLPIN   0x10
-#define TFT_SLPOUT  0x11
-#define TFT_NORON   0x13
-
-#define TFT_INVOFF  0x20
-#define TFT_INVON   0x21
-#define TFT_DISPOFF 0x28
-#define TFT_DISPON  0x29
-#define TFT_CASET   0x2A
-#define TFT_PASET   0x2B
-#define TFT_RAMWR   0x2C
-#define TFT_RAMRD   0x2E
-#define TFT_MADCTL  0x36
-#define TFT_COLMOD  0x3A
+#define ENABLE_FRAMEBUFFER 0
 
 #define SEND_CMD_DATA(cmd, data...)        \
 {                                          \
@@ -139,6 +123,66 @@ public:
   virtual int width() { return _width; }
   virtual int height() { return _height; }
 
+  void saveScreenshot(uint16_t borderWidth = 20, uint16_t borderColor = TFT_BLACK) {
+#if ENABLE_FRAMEBUFFER
+    char fname[32];
+    snprintf(fname, sizeof(fname), "/fs/screenshot%03d.ppm", screenshotCount++);
+    FILE *file = fopen(fname, "wb");
+    if (!file) {
+        perror("Failed to open file");
+        return;
+    }
+
+    Serial.printf("Saving screenshot to %s\n", fname);
+
+    // Write the PPM header with increased dimensions for border
+    fprintf(file, "P6\n%zu %zu\n255\n", width() + (borderWidth * 2), 
+                                       height() + (borderWidth * 2));
+    
+    // Convert border color from RGB565 to RGB888 components
+    uint8_t borderR = ((borderColor >> 11) & 0x1F) * 255 / 31;
+    uint8_t borderG = ((borderColor >> 5) & 0x3F) * 255 / 63;
+    uint8_t borderB = (borderColor & 0x1F) * 255 / 31;
+    
+    // Create a buffer for one row of pixels (RGB888 format)
+    const size_t rowWidth = width() + (borderWidth * 2);
+    uint8_t *rowBuffer = new uint8_t[rowWidth * 3];
+    
+    // Write pixel data with border
+    for (size_t y = 0; y < height() + (borderWidth * 2); ++y) {
+        uint8_t *ptr = rowBuffer;
+        
+        for (size_t x = 0; x < rowWidth; ++x) {
+            // If we're in the border area, write border color pixels
+            if (y < borderWidth || y >= height() + borderWidth || 
+                x < borderWidth || x >= width() + borderWidth) {
+                *ptr++ = borderR;
+                *ptr++ = borderG;
+                *ptr++ = borderB;
+            } else {
+                // Get the RGB565 pixel from the actual image area
+                uint16_t rgb565 = SWAPBYTES(framebuffer[(y - borderWidth) * width() + 
+                                                      (x - borderWidth)]);
+
+                // Extract and scale RGB components
+                *ptr++ = ((rgb565 >> 11) & 0x1F) * 255 / 31;  // R
+                *ptr++ = ((rgb565 >> 5) & 0x3F) * 255 / 63;   // G
+                *ptr++ = (rgb565 & 0x1F) * 255 / 31;          // B
+            }
+        }
+        
+        // Write the entire row at once
+        fwrite(rowBuffer, 1, rowWidth * 3, file);
+    }
+
+    delete[] rowBuffer;
+    fflush(file);
+    fclose(file);
+    Serial.println("Done Screenshot");
+#else
+    Serial.println("Screenshots disabled - ENABLE_FRAMEBUFFER is 0");
+#endif
+  }
 protected:
   int _width;
   int _height;
@@ -172,4 +216,46 @@ protected:
 
   // The current font
   Font currentFont;
+
+  // Frame buffer rendering
+  int screenshotCount = 0;
+#if ENABLE_FRAMEBUFFER
+  uint16_t framebuffer[320 * 240] = {0}; // Full display framebuffer
+#endif
+  int32_t windowX0, windowY0, windowX1, windowY1; // Active window
+  int32_t currentX, currentY; // Current pixel being written
+
+  void writePixelsToFrameBuffer(uint16_t color, size_t count) {
+#if ENABLE_FRAMEBUFFER
+    for (size_t i = 0; i < count; ++i) {
+        if (currentX >= 0 && currentX < 320 && currentY >= 0 && currentY < 240) {
+            framebuffer[currentY * 320 + currentX] = color; // Write to framebuffer
+        }
+
+        // Move to the next pixel in the window
+        currentX++;
+        if (currentX > windowX1) {
+            currentX = windowX0;
+            currentY++;
+        }
+    }
+#endif
+  }
+
+  void writePixelsToFrameBuffer(const uint16_t *buffer, size_t count) {
+#if ENABLE_FRAMEBUFFER
+    for (size_t i = 0; i < count; ++i) {
+        if (currentX >= 0 && currentX < 320 && currentY >= 0 && currentY < 240) {
+            framebuffer[currentY * 320 + currentX] = buffer[i]; // Write pixel from buffer
+        }
+
+        // Move to the next pixel in the window
+        currentX++;
+        if (currentX > windowX1) {
+            currentX = windowX0;
+            currentY++;
+        }
+    }
+#endif
+  }
 };

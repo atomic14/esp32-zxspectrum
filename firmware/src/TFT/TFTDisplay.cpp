@@ -152,6 +152,8 @@ void TFTDisplay::sendTransaction(SPITransactionInfo *trans)
 
 void TFTDisplay::sendPixels(const uint16_t *data, int numPixels)
 {
+  writePixelsToFrameBuffer(data, numPixels);
+
   int bytes = numPixels * 2;
   for (uint32_t i = 0; i < bytes; i += DMA_BUFFER_SIZE)
   {
@@ -175,6 +177,7 @@ void TFTDisplay::sendData(const uint8_t *data, int length)
 
 void TFTDisplay::sendColor(uint16_t color, int numPixels)
 {
+  writePixelsToFrameBuffer(color, numPixels);
   for (int i = 0; i < numPixels; i += DMA_BUFFER_SIZE >> 1)
   {
     int len = std::min(numPixels - i, int(DMA_BUFFER_SIZE >> 1));
@@ -186,6 +189,15 @@ void TFTDisplay::sendColor(uint16_t color, int numPixels)
 
 void TFTDisplay::setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
+  // store the window for future frame buffer updates
+  windowX0 = x0;
+  windowY0 = y0;
+  windowX1 = x1;
+  windowY1 = y1;
+  currentX = x0;
+  currentY = y0;
+
+  // do the TFT window set
   uint8_t data[4];
   #ifdef TFT_X_OFFSET
   x0+=TFT_X_OFFSET;
