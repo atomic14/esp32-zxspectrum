@@ -2,15 +2,15 @@
 
 #include <vector>
 #include "Screen.h"
-#include "../TFT/TFTDisplay.h"
+#include "../TFT/Display.h"
 
 class NavigationStack
 {
   private:
-    TFTDisplay *m_tft;
+    Display *m_tft;
   public:
     std::vector<Screen *> stack;
-    NavigationStack(TFTDisplay *tft) : m_tft(tft) {}
+    NavigationStack(Display *tft) : m_tft(tft) {}
     ~NavigationStack() {}
     Screen *getTop() {
       if (stack.size() > 0) {

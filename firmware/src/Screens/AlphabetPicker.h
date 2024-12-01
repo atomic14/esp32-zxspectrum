@@ -12,7 +12,7 @@ class AlphabetPicker : public PickerScreen<FileLetterCountPtr>
     std::string m_path;
     std::vector<std::string> m_extensions;
   public:
-    AlphabetPicker(std::string title, IFiles *files, TFTDisplay &tft, AudioOutput *audioOutput, std::string path, std::vector<std::string> extensions) 
+    AlphabetPicker(std::string title, IFiles *files, Display &tft, AudioOutput *audioOutput, std::string path, std::vector<std::string> extensions) 
       : m_files(files), PickerScreen(title, tft, audioOutput), m_path(path), m_extensions(extensions)
     {
     }

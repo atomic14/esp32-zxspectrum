@@ -9,7 +9,7 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
   private:
     IFiles *m_files;
   public:
-      GameFilePickerScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files)
+      GameFilePickerScreen(Display &tft, AudioOutput *audioOutput, IFiles *files)
       : PickerScreen("Games", tft, audioOutput), m_files(files) {}
       void onItemSelect(FileInfoPtr item, int index) {
         Serial.printf("Selected %s\n", item->getPath().c_str());

@@ -50,7 +50,7 @@ void EmulatorScreen::triggerLoadTape()
   m_navigationStack->push(alphabetPicker);
 }
 
-EmulatorScreen::EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files)
+EmulatorScreen::EmulatorScreen(Display &tft, AudioOutput *audioOutput, IFiles *files)
     : Screen(tft, audioOutput), m_files(files)
 {
   renderer = new Renderer(tft);

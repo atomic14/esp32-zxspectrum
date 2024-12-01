@@ -7,8 +7,6 @@
 #include "../Emulator/spectrum.h"
 #include "../Emulator/snaps.h"
 
-class TFTDisplay;
-
 class SaveSnapshotScreen : public Screen
 {
 private:
@@ -16,7 +14,7 @@ private:
   std::string filename = "";
 public:
   SaveSnapshotScreen(
-      TFTDisplay &tft,
+      Display &tft,
       AudioOutput *audioOutput,
       ZXSpectrum *machine) : machine(machine), Screen(tft, audioOutput)
   {

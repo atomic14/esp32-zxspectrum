@@ -42,7 +42,7 @@ private:
   int volumeVisible = 0;
 public:
   VideoPlayerScreen(
-      TFTDisplay &tft,
+      Display &tft,
       AudioOutput *audioOutput) : Screen(tft, audioOutput)
   {
   }

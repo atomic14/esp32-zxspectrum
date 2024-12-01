@@ -3,13 +3,12 @@
 #include <vector>
 #include <string>
 #include "Screen.h"
-#include "../TFT/TFTDisplay.h"
+#include "../TFT/Display.h"
 #include "../Emulator/spectrum.h"
 #include "fonts/GillSans_30_vlw.h"
 #include "fonts/GillSans_15_vlw.h"
 #include "images/rainbow_image.h"
 
-class TFTDisplay;
 class ScrollingList;
 
 template <class ItemT>
@@ -29,7 +28,7 @@ private:
 public:
   PickerScreen(
       std::string title,
-      TFTDisplay &tft,
+      Display &tft,
       AudioOutput *audioOutput
   ) : title(title), Screen(tft, audioOutput)
   {

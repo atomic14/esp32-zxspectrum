@@ -33,8 +33,7 @@ protected:
   void writePixelsToFrameBuffer(uint16_t color, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         if (currentX >= 0 && currentX < 320 && currentY >= 0 && currentY < 240) {
-            framebuffer[currentY * 320 + currentX] = color; // Write to framebuffer
-            isRowDirty[currentY] = true;
+            framebuffer[currentY * 320 + currentX] = SWAPBYTES(color); // Write to framebuffer
         }
 
         // Move to the next pixel in the window
@@ -49,8 +48,7 @@ protected:
   void writePixelsToFrameBuffer(const uint16_t *buffer, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         if (currentX >= 0 && currentX < 320 && currentY >= 0 && currentY < 240) {
-            framebuffer[currentY * 320 + currentX] = buffer[i]; // Write pixel from buffer
-            isRowDirty[currentY] = true;
+            framebuffer[currentY * 320 + currentX] = SWAPBYTES(buffer[i]); // Write pixel from buffer
         }
 
         // Move to the next pixel in the window

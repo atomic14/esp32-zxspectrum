@@ -33,7 +33,7 @@ private:
   IFiles *m_files;
 
 public:
-  MainMenuScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
+  MainMenuScreen(Display &tft, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
   {
     // Main menu
     MenuItemVector menuItems = {

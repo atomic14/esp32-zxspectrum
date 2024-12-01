@@ -33,6 +33,7 @@
 #include "TFT/TFTDisplay.h"
 #include "TFT/ST7789.h"
 #include "TFT/ILI9341.h"
+#include "TFT/FrameBufferDisplay.h"
 #ifdef TOUCH_KEYBOARD
 #include "Input/TouchKeyboard.h"
 #endif
@@ -69,12 +70,13 @@ void setup(void)
   vTaskDelay(100);
   #endif
   Serial.println("Starting up");
-    #ifdef TFT_ST7789
-  TFTDisplay *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  #endif
-  #ifdef TFT_ILI9341
-  TFTDisplay *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  #endif
+  // #ifdef TFT_ST7789
+  // Display *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  // #endif
+  // #ifdef TFT_ILI9341
+  // Display *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  // #endif
+  Display *tft = new FrameBufferDisplay(TFT_MOSI, TFT_SCLK, GPIO_NUM_7, TFT_WIDTH, TFT_HEIGHT);
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack(tft);
   // Audio output

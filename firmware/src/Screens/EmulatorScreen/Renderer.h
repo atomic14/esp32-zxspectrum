@@ -1,14 +1,14 @@
 #pragma once
 #include <FreeRTOS.h>
 #include <string.h>
-#include "../../TFT/TFTDisplay.h"
+#include "../../TFT/Display.h"
 #include "../../Serial.h"
 
 void displayTask(void *pvParameters);
 
 class Renderer {
 private:
-    TFTDisplay &m_tft;
+    Display &m_tft;
     // holding area for pixels that are sent to the tft display
     uint16_t *pixelBuffer = nullptr;
     // what's currently on the spectrum screen
@@ -46,7 +46,7 @@ private:
     // keep track of how many frames we've drawn
     uint32_t frameCount = 0;
 public:
-    Renderer(TFTDisplay &tft): m_tft(tft) {
+    Renderer(Display &tft): m_tft(tft) {
       // enough for a row of 8 pixels
       pixelBuffer = (uint16_t *)malloc(256 * 8 * sizeof(uint16_t));
       // the spectrum screen is 256x192 pixels

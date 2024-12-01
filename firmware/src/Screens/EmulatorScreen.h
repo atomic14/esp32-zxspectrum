@@ -3,7 +3,7 @@
 #include <string>
 #include "Screen.h"
 
-class TFTDisplay;
+class Display;
 class AudioOutput;
 class ZXSpectrum;
 class TouchKeyboard;
@@ -27,7 +27,7 @@ class EmulatorScreen : public Screen
     void drawTimeTravel();
     void drawMenu();
   public:
-    EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files);
+    EmulatorScreen(Display &tft, AudioOutput *audioOutput, IFiles *files);
     void updateKey(SpecKeys key, uint8_t state);
     void pressKey(SpecKeys key);
     void run(std::string filename, models_enum model);

@@ -1,11 +1,9 @@
 #pragma once
 
 #include "Screen.h"
-#include "../TFT/TFTDisplay.h"
+#include "../TFT/Display.h"
 #include "fonts/GillSans_30_vlw.h"
 #include "NavigationStack.h"
-
-class TFTDisplay;
 
 class ErrorScreen : public Screen
 {
@@ -15,7 +13,7 @@ private:
 public:
   ErrorScreen(
       std::vector<std::string> messages,
-      TFTDisplay &tft,
+      Display &tft,
       AudioOutput *audioOutput) : m_messages(messages), Screen(tft, audioOutput)
   {
   }

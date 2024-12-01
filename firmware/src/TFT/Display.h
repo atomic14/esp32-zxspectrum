@@ -62,7 +62,7 @@ public:
   {
     sendPixels(data, len);
   }
-  virtual void dmaWait() = 0;
+  virtual void dmaWait() {};
   virtual void drawString(const char *string, int16_t x, int16_t y);
   virtual Point measureString(const char *string);
   virtual void fillScreen(uint16_t color);
