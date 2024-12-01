@@ -50,13 +50,15 @@ class NavigationStack
       }
     };
     void pressKey(SpecKeys key) {
+      #ifdef ENABLE_FRAMEBUFFER
+      if (key == SPECKEY_MENU) {
+        m_tft->saveScreenshot();
+        return;
+      }
+      #endif
       Screen *top = getTop();
       if (top) {
         top->pressKey(key);
       }
-      // TODO: Add some combination of keys to save a screenshot
-      // if (key == SPECKEY_MENU) {
-      //   m_tft->saveScreenshot();
-      // }
     };
 };

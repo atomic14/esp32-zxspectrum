@@ -149,5 +149,6 @@ public:
     m_tft.setWindow(m_tft.width() - rainbowImageWidth, m_tft.height() - rainbowImageHeight, m_tft.width() - 1, m_tft.height() - 1);
     m_tft.pushPixels((uint16_t *) rainbowImageData, rainbowImageWidth * rainbowImageHeight);
     m_tft.endWrite();
+    m_tft.flush();
   }
 };

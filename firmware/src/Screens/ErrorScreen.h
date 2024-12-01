@@ -47,5 +47,6 @@ public:
       m_tft.drawString(m_messages[i].c_str(), startX, startY + (i * 40));
     }
     m_tft.endWrite();
+    m_tft.flush();
   }
 };

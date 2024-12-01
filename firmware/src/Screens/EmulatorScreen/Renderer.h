@@ -1,5 +1,5 @@
 #pragma once
-#include <freertos/FreeRTOS.h>
+#include <FreeRTOS.h>
 #include <string.h>
 #include "../../TFT/TFTDisplay.h"
 #include "../../Serial.h"

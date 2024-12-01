@@ -125,18 +125,11 @@ void EmulatorScreen::pressKey(SpecKeys key)
 {
   if (key == SPECKEY_MENU)
   {
-    // TODO show menu for save snapshot, load snapshot, time travel
-    if (!isInTimeTravelMode)
-    {
-      pause();
-      isInTimeTravelMode = true;
-      machine->startTimeTravel();
-      drawTimeTravel();
-    }
-    // showSaveSnapshotScreen();
-  } else if (isInTimeTravelMode)
+    pause();
+    drawMenu();
+  }
+  if (isInTimeTravelMode)
   {
-    // TODO cancel time travel
     if (key == SPECKEY_ENTER)
     {
       machine->stopTimeTravel();
@@ -154,11 +147,20 @@ void EmulatorScreen::pressKey(SpecKeys key)
       drawTimeTravel();
     }
   }
-}
-
-void EmulatorScreen::showSaveSnapshotScreen()
-{
-  m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine->getMachine()));
+  if (isShowingMenu) 
+  {
+    if (key == SPECKEY_1) {
+      isShowingMenu = false;
+      isInTimeTravelMode = true;
+      machine->startTimeTravel();
+      drawTimeTravel();
+    }
+    else if (key == SPECKEY_2) {
+      isShowingMenu = false;
+      // show the save snapshot UI
+      m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine->getMachine()));
+    }
+  }
 }
 
 void EmulatorScreen::loadTape(std::string filename)
@@ -191,4 +193,16 @@ void EmulatorScreen::drawTimeTravel() {
     Point rightSize = m_tft.measureString("8>");
     int rightX = m_tft.width() - rightSize.x - 5;  // 5 pixels from right edge
     m_tft.drawString("8>", rightX, 0);
+}
+
+void EmulatorScreen::drawMenu() {
+    isShowingMenu = true;
+    m_tft.fillRect(0, 0, m_tft.width(), 20, TFT_BLACK);
+
+    m_tft.loadFont(GillSans_15_vlw);
+    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    
+    Point menuSize = m_tft.measureString("1-Time Travel  2-Snapshot");
+    int centerX = (m_tft.width() - menuSize.x) / 2;
+    m_tft.drawString("1-Time Travel  2-Snapshot", centerX, 0);
 }

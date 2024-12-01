@@ -10,6 +10,7 @@ class TouchKeyboard;
 class Machine;
 class GameLoader;
 class Renderer;
+class IFiles;
 
 class EmulatorScreen : public Screen
 {
@@ -22,7 +23,9 @@ class EmulatorScreen : public Screen
     void triggerLoadTape();
     bool isLoading = false;
     bool isInTimeTravelMode = false;
+    bool isShowingMenu = false;
     void drawTimeTravel();
+    void drawMenu();
   public:
     EmulatorScreen(TFTDisplay &tft, AudioOutput *audioOutput, IFiles *files);
     void updateKey(SpecKeys key, uint8_t state);
@@ -30,7 +33,6 @@ class EmulatorScreen : public Screen
     void run(std::string filename, models_enum model);
     void pause();
     void resume();
-    void showSaveSnapshotScreen();
     void didAppear() {
       resume();
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
+#include <FreeRTOS.h>
 #include <driver/i2s.h>
 
 #include "AudioOutput.h"

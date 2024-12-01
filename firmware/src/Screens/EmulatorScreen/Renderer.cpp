@@ -156,6 +156,7 @@ void Renderer::drawScreen()
     }
   }
   m_tft.endWrite();
+  m_tft.flush();
   drawReady = true;
   firstDraw = false;
   frameCount++;
