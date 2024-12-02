@@ -65,6 +65,18 @@ void Renderer::drawBorder(int startPos, int endPos, int offset, int length, int 
 
 void Renderer::drawScreen()
 {
+  if (m_tft.sendSpectrum(currentScreenBuffer, currentBorderColors)) {
+    drawReady = true;
+    firstDraw = false;
+    frameCount++;
+    flashTimer++;
+    if (flashTimer >= 32)
+    {
+      flashTimer = 0;
+    }
+    return;
+  }
+
   m_tft.startWrite();
 
   if (isLoading)

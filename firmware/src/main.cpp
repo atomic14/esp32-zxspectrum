@@ -76,7 +76,7 @@ void setup(void)
   // #ifdef TFT_ILI9341
   // Display *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   // #endif
-  Display *tft = new FrameBufferDisplay(TFT_MOSI, TFT_SCLK, GPIO_NUM_7, TFT_WIDTH, TFT_HEIGHT);
+  Display *tft = new FrameBufferDisplay(TFT_MOSI, TFT_SCLK, GPIO_NUM_7, TFT_DC, TFT_WIDTH, TFT_HEIGHT);
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack(tft);
   // Audio output

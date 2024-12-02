@@ -7,9 +7,10 @@
 class FrameBufferDisplay : public Display
 {
 public:
-  FrameBufferDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, int width, int height);
+  FrameBufferDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, int width, int height);
   void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
   void flush();
+  bool sendSpectrum(uint8_t *spectrumDisplay, uint8_t *borderColors);
 protected:
   void init();
   void sendCmd(uint8_t cmd);
@@ -21,6 +22,7 @@ protected:
   gpio_num_t mosi;
   gpio_num_t clk;
   gpio_num_t cs;
+  gpio_num_t dc;
   spi_device_handle_t spi;
 
   // Frame buffer rendering
