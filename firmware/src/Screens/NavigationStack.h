@@ -3,14 +3,17 @@
 #include <vector>
 #include "Screen.h"
 #include "../TFT/Display.h"
+#include "../TFT/HDMIDisplay.h"
+
 
 class NavigationStack
 {
   private:
     Display *m_tft;
+    HDMIDisplay *m_hdmiDisplay;
   public:
     std::vector<Screen *> stack;
-    NavigationStack(Display *tft) : m_tft(tft) {}
+    NavigationStack(Display *tft, HDMIDisplay *hdmiDisplay) : m_tft(tft), m_hdmiDisplay(hdmiDisplay) {}
     ~NavigationStack() {}
     Screen *getTop() {
       if (stack.size() > 0) {

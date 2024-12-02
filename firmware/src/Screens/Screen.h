@@ -7,7 +7,8 @@
 #include "sounds/error.h"
 #include "sounds/click.h"
 #include "images/busy.h"
-#include "../TFT/TFTDisplay.h"
+#include "../TFT/Display.h"
+#include "../TFT/HDMIDisplay.h"
 
 class Display;
 class AudioOutput;
@@ -19,9 +20,10 @@ class Screen {
   protected:
     NavigationStack *m_navigationStack = nullptr;
     Display &m_tft;
+    HDMIDisplay *m_hdmiDisplay = nullptr;
     AudioOutput *m_audioOutput;
   public:
-  Screen(Display &tft, AudioOutput *audioOutput) : m_tft(tft), m_audioOutput(audioOutput) {}
+  Screen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput) : m_tft(tft), m_hdmiDisplay(hdmiDisplay), m_audioOutput(audioOutput) {}
   // input
   virtual void updateKey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};

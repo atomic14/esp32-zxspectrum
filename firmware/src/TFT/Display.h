@@ -49,10 +49,6 @@ public:
   {
     // nothing to do
   }
-  // very specific to FrameBufferDisplay
-  virtual bool sendSpectrum(uint8_t *spectrumDisplay, uint8_t *borderColors) { return false; }
-  virtual void flush() {};
-
   virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   virtual void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1) = 0;

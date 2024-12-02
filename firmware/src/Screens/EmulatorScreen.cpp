@@ -30,6 +30,7 @@ void EmulatorScreen::triggerLoadTape()
     ErrorScreen *errorScreen = new ErrorScreen(
         no_sd_card_error,
         m_tft,
+        m_hdmiDisplay,
         m_audioOutput);
     m_navigationStack->push(errorScreen);
     return;
@@ -41,19 +42,20 @@ void EmulatorScreen::triggerLoadTape()
     ErrorScreen *errorScreen = new ErrorScreen(
         no_files_error,
         m_tft,
+        m_hdmiDisplay,
         m_audioOutput);
     m_navigationStack->push(errorScreen);
     return;
   }
-  AlphabetPicker<GameFilePickerScreen> *alphabetPicker = new AlphabetPicker<GameFilePickerScreen>("Select Tape File", m_files, m_tft, m_audioOutput, "/", tap_extensions);
+  AlphabetPicker<GameFilePickerScreen> *alphabetPicker = new AlphabetPicker<GameFilePickerScreen>("Select Tape File", m_files, m_tft, m_hdmiDisplay, m_audioOutput, "/", tap_extensions);
   alphabetPicker->setItems(fileLetterCounts);
   m_navigationStack->push(alphabetPicker);
 }
 
-EmulatorScreen::EmulatorScreen(Display &tft, AudioOutput *audioOutput, IFiles *files)
-    : Screen(tft, audioOutput), m_files(files)
+EmulatorScreen::EmulatorScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
+    : Screen(tft, hdmiDisplay, audioOutput), m_files(files)
 {
-  renderer = new Renderer(tft);
+  renderer = new Renderer(tft, hdmiDisplay);
   machine = new Machine(renderer, audioOutput, [&]()
                         {
     Serial.println("ROM loading routine hit");
@@ -158,7 +160,7 @@ void EmulatorScreen::pressKey(SpecKeys key)
     else if (key == SPECKEY_2) {
       isShowingMenu = false;
       // show the save snapshot UI
-      m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_audioOutput, machine->getMachine()));
+      m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine()));
     }
   }
 }

@@ -43,7 +43,8 @@ private:
 public:
   VideoPlayerScreen(
       Display &tft,
-      AudioOutput *audioOutput) : Screen(tft, audioOutput)
+      HDMIDisplay *hdmiDisplay,
+      AudioOutput *audioOutput) : Screen(tft, hdmiDisplay, audioOutput)
   {
   }
   void play(const char *aviFilename);

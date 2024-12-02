@@ -15,8 +15,9 @@ private:
 public:
   SaveSnapshotScreen(
       Display &tft,
+      HDMIDisplay *hdmiDisplay,
       AudioOutput *audioOutput,
-      ZXSpectrum *machine) : machine(machine), Screen(tft, audioOutput)
+      ZXSpectrum *machine) : machine(machine), Screen(tft, hdmiDisplay, audioOutput)
   {
   }
 

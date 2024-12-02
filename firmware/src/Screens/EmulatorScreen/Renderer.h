@@ -6,9 +6,12 @@
 
 void displayTask(void *pvParameters);
 
+class HDMIDisplay;
+
 class Renderer {
 private:
     Display &m_tft;
+    HDMIDisplay *m_HDMIDisplay = nullptr;
     // holding area for pixels that are sent to the tft display
     uint16_t *pixelBuffer = nullptr;
     // what's currently on the spectrum screen
@@ -46,7 +49,7 @@ private:
     // keep track of how many frames we've drawn
     uint32_t frameCount = 0;
 public:
-    Renderer(Display &tft): m_tft(tft) {
+    Renderer(Display &tft, HDMIDisplay *hdmiDisplay): m_tft(tft), m_HDMIDisplay(hdmiDisplay) {
       // enough for a row of 8 pixels
       pixelBuffer = (uint16_t *)malloc(256 * 8 * sizeof(uint16_t));
       // the spectrum screen is 256x192 pixels

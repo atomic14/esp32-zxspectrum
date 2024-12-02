@@ -33,7 +33,7 @@
 #include "TFT/TFTDisplay.h"
 #include "TFT/ST7789.h"
 #include "TFT/ILI9341.h"
-#include "TFT/FrameBufferDisplay.h"
+#include "TFT/HDMIDisplay.h"
 #ifdef TOUCH_KEYBOARD
 #include "Input/TouchKeyboard.h"
 #endif
@@ -70,15 +70,36 @@ void setup(void)
   vTaskDelay(100);
   #endif
   Serial.println("Starting up");
-  // #ifdef TFT_ST7789
-  // Display *tft = new ST7789(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  // #endif
-  // #ifdef TFT_ILI9341
-  // Display *tft = new ILI9341(TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
-  // #endif
-  Display *tft = new FrameBufferDisplay(TFT_MOSI, TFT_SCLK, GPIO_NUM_7, TFT_DC, TFT_WIDTH, TFT_HEIGHT);
+  #ifdef TFT_MOSI
+  Serial.println("Starting up SPI");
+  // Initialize SPI
+  spi_bus_config_t buscfg = {
+      .mosi_io_num = TFT_MOSI,
+      .miso_io_num = -1,
+      .sclk_io_num = TFT_SCLK,
+      .quadwp_io_num = -1,
+      .quadhd_io_num = -1,
+      .data4_io_num = -1,
+      .data5_io_num = -1,
+      .data6_io_num = -1,
+      .data7_io_num = -1,
+      .max_transfer_sz = 65535,
+      .flags = SPICOMMON_BUSFLAG_MASTER,
+      //.isr_cpu_id = ESP_INTR_CPU_AFFINITY_1,
+      .intr_flags = 0,
+  };
+  ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
+  Serial.println("SPI initialized");
+  #endif
+  #ifdef TFT_ST7789
+  Display *tft = new ST7789(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  #endif
+  #ifdef TFT_ILI9341
+  Display *tft = new ILI9341(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
+  #endif
+  HDMIDisplay *hdmiDisplay = new HDMIDisplay(GPIO_NUM_7);
   // navigation stack
-  NavigationStack *navigationStack = new NavigationStack(tft);
+  NavigationStack *navigationStack = new NavigationStack(tft, hdmiDisplay);
   // Audio output
 #ifdef USE_DAC_AUDIO
   AudioOutput *audioOutput = new DACOutput(I2S_NUM_0);
@@ -136,7 +157,7 @@ void setup(void)
 #endif
   // create the directory structure
   files->createDirectory("/snapshots");
-  MainMenuScreen menuPicker(*tft, audioOutput, files);
+  MainMenuScreen menuPicker(*tft, hdmiDisplay, audioOutput, files);
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
   SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)

@@ -80,18 +80,37 @@ public:
   }
 };
 
-TFTDisplay::TFTDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
-    : Display(width, height), mosi(mosi), clk(clk), cs(cs), dc(dc), rst(rst), bl(bl), spi(nullptr)
+TFTDisplay::TFTDisplay(gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
+    : Display(width, height), cs(cs), dc(dc), rst(rst), bl(bl), spi(nullptr)
 {
   pinMode(rst, OUTPUT);
   pinMode(dc, OUTPUT);
-  // gpio_set_direction(rst, GPIO_MODE_OUTPUT);
-  // gpio_set_direction(dc, GPIO_MODE_OUTPUT);
   if (bl != GPIO_NUM_NC)
   {
     gpio_set_direction(bl, GPIO_MODE_OUTPUT);
     gpio_set_level(bl, 1); // Turn on backlight
   }
+
+  spi_device_interface_config_t devcfg = {
+      .command_bits = 0,
+      .address_bits = 0,
+      .dummy_bits = 0,
+      .mode = 0, // SPI mode 0
+      //.clock_source = SPI_CLK_SRC_DEFAULT,                   // Use the same frequency as the APB bus
+      .duty_cycle_pos = 128,
+      .cs_ena_pretrans = 0,
+      .cs_ena_posttrans = 0,
+      .clock_speed_hz = TFT_SPI_FREQUENCY,
+      .input_delay_ns = 0,
+      .spics_io_num = cs, // CS pin
+      .flags = SPI_DEVICE_NO_DUMMY,
+      .queue_size = 1,
+      .pre_cb = nullptr,
+      .post_cb = nullptr
+  };
+
+  ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &devcfg, &spi));
+
   _transaction = new SPITransactionInfo(DMA_BUFFER_SIZE);
   Serial.println("TFTDisplay created");
 }

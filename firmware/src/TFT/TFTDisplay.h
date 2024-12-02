@@ -56,9 +56,17 @@ class SPITransactionInfo;
 class TFTDisplay : public Display
 {
 public:
-  TFTDisplay(gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height);
+  TFTDisplay(gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height);
   void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
   void dmaWait();
+  void startWrite() {
+    dmaWait();
+    spi_device_acquire_bus(spi, portMAX_DELAY);
+  }
+  void endWrite() {
+    dmaWait();
+    spi_device_release_bus(spi);
+  }
 protected:
   void init();
   void sendCmd(uint8_t cmd);
@@ -71,8 +79,6 @@ protected:
   SPITransactionInfo *_transaction;
   void sendTransaction(SPITransactionInfo *trans);
 
-  gpio_num_t mosi;
-  gpio_num_t clk;
   gpio_num_t cs;
   gpio_num_t dc;
   gpio_num_t rst;

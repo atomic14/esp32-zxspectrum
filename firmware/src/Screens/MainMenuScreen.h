@@ -33,7 +33,7 @@ private:
   IFiles *m_files;
 
 public:
-  MainMenuScreen(Display &tft, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, audioOutput)
+  MainMenuScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, hdmiDisplay, audioOutput)
   {
     // Main menu
     MenuItemVector menuItems = {
@@ -62,14 +62,14 @@ public:
 
   void run48K()
   {
-    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput, m_files);
+    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
     emulatorScreen->run("", models_enum::SPECMDL_48K);
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
   }
   void run128K()
   {
-    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput, m_files);
+    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
     emulatorScreen->run("", models_enum::SPECMDL_128K);
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
@@ -88,6 +88,7 @@ public:
       ErrorScreen *errorScreen = new ErrorScreen(
           no_sd_card_error,
           m_tft,
+          m_hdmiDisplay,
           m_audioOutput);
       m_navigationStack->push(errorScreen);
       return;
@@ -99,11 +100,12 @@ public:
       ErrorScreen *errorScreen = new ErrorScreen(
         no_files_error,
         m_tft,
+        m_hdmiDisplay,
         m_audioOutput);
       m_navigationStack->push(errorScreen);
       return;
     }
-    AlphabetPicker<FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<FilterPickerScreen_T>(title, m_files,  m_tft, m_audioOutput, path, extensions);
+    AlphabetPicker<FilterPickerScreen_T> *alphabetPicker = new AlphabetPicker<FilterPickerScreen_T>(title, m_files,  m_tft, m_hdmiDisplay, m_audioOutput, path, extensions);
     alphabetPicker->setItems(fileLetterCounts);
     m_navigationStack->push(alphabetPicker);
   }

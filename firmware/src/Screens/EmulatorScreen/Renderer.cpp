@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "../../TFT/HDMIDisplay.h"
 #include "../../emulator/spectrum.h"
 
 void displayTask(void *pvParameters) {
@@ -65,20 +66,11 @@ void Renderer::drawBorder(int startPos, int endPos, int offset, int length, int 
 
 void Renderer::drawScreen()
 {
-  if (m_tft.sendSpectrum(currentScreenBuffer, currentBorderColors)) {
-    drawReady = true;
-    firstDraw = false;
-    frameCount++;
-    flashTimer++;
-    if (flashTimer >= 32)
-    {
-      flashTimer = 0;
-    }
-    return;
+  if (m_HDMIDisplay) {
+    m_tft.dmaWait();
+    m_HDMIDisplay->sendSpectrum(currentScreenBuffer, currentBorderColors);
   }
-
   m_tft.startWrite();
-
   if (isLoading)
   {
     int position = loadProgress * screenWidth / 100;
@@ -168,7 +160,6 @@ void Renderer::drawScreen()
     }
   }
   m_tft.endWrite();
-  m_tft.flush();
   drawReady = true;
   firstDraw = false;
   frameCount++;

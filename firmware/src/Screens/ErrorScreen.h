@@ -14,7 +14,8 @@ public:
   ErrorScreen(
       std::vector<std::string> messages,
       Display &tft,
-      AudioOutput *audioOutput) : m_messages(messages), Screen(tft, audioOutput)
+      HDMIDisplay *hdmiDisplay,
+      AudioOutput *audioOutput) : m_messages(messages), Screen(tft, hdmiDisplay, audioOutput)
   {
   }
 
@@ -45,6 +46,5 @@ public:
       m_tft.drawString(m_messages[i].c_str(), startX, startY + (i * 40));
     }
     m_tft.endWrite();
-    m_tft.flush();
   }
 };

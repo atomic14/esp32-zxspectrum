@@ -9,8 +9,8 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
   private:
     IFiles *m_files;
   public:
-      GameFilePickerScreen(Display &tft, AudioOutput *audioOutput, IFiles *files)
-      : PickerScreen("Games", tft, audioOutput), m_files(files) {}
+      GameFilePickerScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
+      : PickerScreen("Games", tft, hdmiDisplay, audioOutput), m_files(files) {}
       void onItemSelect(FileInfoPtr item, int index) {
         Serial.printf("Selected %s\n", item->getPath().c_str());
         // locate the emaulator screen if it's on the stack already
@@ -35,7 +35,7 @@ class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
         }
         Serial.println("Starting new emulator screen");
         drawBusy();
-        emulatorScreen = new EmulatorScreen(m_tft, m_audioOutput, m_files);
+        emulatorScreen = new EmulatorScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
         // TODO - we should pick the machine to run on - 48k or 128k
         // there's no way to know from the file name or the file contents
         emulatorScreen->run(item->getPath(), models_enum::SPECMDL_48K);
