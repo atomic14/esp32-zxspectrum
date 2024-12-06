@@ -67,6 +67,53 @@ SDCard::SDCard(const char *mountPoint, gpio_num_t clk, gpio_num_t cmd, gpio_num_
   #endif
 }
 
+SDCard::SDCard(const char *mountPoint, gpio_num_t cs) {
+  m_mountPoint = mountPoint;
+  m_host.max_freq_khz = SDMMC_FREQ_52M;
+  esp_err_t ret;
+  // Options for mounting the filesystem.
+  // If format_if_mount_failed is set to true, SD card will be partitioned and
+  // formatted in case when mounting fails.
+  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+      .format_if_mount_failed = false,
+      .max_files = 5,
+      .allocation_unit_size = 16 * 1024};
+
+  Serial.println("Initializing SD card");
+
+  // This initializes the slot without card detect (CD) and write protect (WP) signals.
+  // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
+  sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+  slot_config.gpio_cs = cs;
+  slot_config.host_id = spi_host_device_t(m_host.slot);
+
+  ret = esp_vfs_fat_sdspi_mount(mountPoint, &m_host, &slot_config, &mount_config, &m_card);
+  if (ret != ESP_OK)
+  {
+    if (ret == ESP_FAIL)
+    {
+      Serial.println("Failed to mount filesystem. "
+                    "If you want the card to be formatted, set the EXAMPLE_FORMAT_IF_MOUNT_FAILED menuconfig option.");
+    }
+    else
+    {
+      Serial.printf("Failed to initialize the card (%s). "
+                    "Make sure SD card lines have pull-up resistors in place.\n",
+               esp_err_to_name(ret));
+    }
+    return;
+  }
+  Serial.printf("SDCard mounted at: %s\n", mountPoint);
+  // Card has been initialized, print its properties
+  sdmmc_card_print_info(stdout, m_card);
+  _isMounted = true;
+
+  m_sector_count = m_card->csd.capacity;
+  m_sector_size = m_card->csd.sector_size;
+  
+  m_mutex = xSemaphoreCreateMutex();
+}
+
 SDCard::SDCard(const char *mountPoint, gpio_num_t miso, gpio_num_t mosi, gpio_num_t clk, gpio_num_t cs)
 {
   m_mountPoint = mountPoint;

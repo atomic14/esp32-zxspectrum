@@ -83,12 +83,21 @@
 ST7789::ST7789(gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
     : TFTDisplay(cs, dc, rst, bl, width, height)
 {
+    pinMode(rst, OUTPUT);
+    if (bl != GPIO_NUM_NC) {
+        pinMode(bl, OUTPUT);
+        digitalWrite(bl, 0);
+        delay(3);
+        digitalWrite(bl, 1);
+    }
     // Reset the display
-    digitalWrite(rst, LOW);
-    // gpio_set_level(rst, 0);
+    if (rst != GPIO_NUM_NC) {
+        digitalWrite(rst, LOW);
+    }
     vTaskDelay(pdMS_TO_TICKS(100));
-    digitalWrite(rst, HIGH);
-    // gpio_set_level(rst, 1);
+    if (rst != GPIO_NUM_NC) {
+        digitalWrite(rst, HIGH);
+    }
     vTaskDelay(pdMS_TO_TICKS(100));
 
     SEND_CMD_DATA(ST7789_SLPOUT); // Sleep out

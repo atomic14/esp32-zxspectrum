@@ -5,6 +5,7 @@
 
 Flash::Flash(const char *mountPoint)
 {
+  m_mountPoint = mountPoint;
   if (SPIFFS.begin(true, mountPoint))
   {
     _isMounted = true;

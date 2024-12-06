@@ -4,7 +4,7 @@ class Flash
 {
 private:
   bool _isMounted;
-  const char *_mountPoint;
+  std::string m_mountPoint;
 public:
   Flash(const char *mountPoint);
   ~Flash();
@@ -12,6 +12,6 @@ public:
     return _isMounted;
   }
   const char *mountPoint() {
-    return _mountPoint;
+    return m_mountPoint.c_str();
   }
 };

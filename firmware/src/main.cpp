@@ -30,6 +30,7 @@
 #include "Input/SerialKeyboard.h"
 #include "Input/Nunchuck.h"
 #include "Input/AdafruitSeeSaw.h"
+#include "Input/TDeckKeyboard.h"
 #include "TFT/TFTDisplay.h"
 #include "TFT/ST7789.h"
 #include "TFT/ILI9341.h"
@@ -45,22 +46,16 @@ const char *MOUNT_POINT = "/fs";
 
 void setup(void)
 {
-    // Files
-#ifdef USE_SDCARD
-#ifdef USE_SDIO
-  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-  IFiles *files = new FilesImplementation<SDCard>(fileSystem);
-  setupUSB(fileSystem);
-#else
-  SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
-  IFiles *files = new FilesImplementation<SDCard>(fileSystem);
-#endif
+  #ifdef BOARD_POWERON
+  pinMode(BOARD_POWERON, OUTPUT);
+  digitalWrite(BOARD_POWERON, HIGH);
+  #endif
   Serial.begin(115200);
-  // for(int i = 0; i < 5; i++) {
-  //   BusyLight bl;
-  //   vTaskDelay(pdMS_TO_TICKS(1000));
-  //   Serial.println("Booting...");
-  // }
+  for(int i = 0; i < 5; i++) {
+    BusyLight bl;
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    Serial.println("Booting...");
+  }
   // print out avialable ram
   Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
   Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
@@ -75,7 +70,7 @@ void setup(void)
   // Initialize SPI
   spi_bus_config_t buscfg = {
       .mosi_io_num = TFT_MOSI,
-      .miso_io_num = -1,
+      .miso_io_num = TFT_MISO,
       .sclk_io_num = TFT_SCLK,
       .quadwp_io_num = -1,
       .quadhd_io_num = -1,
@@ -91,6 +86,25 @@ void setup(void)
   ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
   Serial.println("SPI initialized");
   #endif
+  // Files
+  #ifdef USE_SDCARD
+  #ifdef USE_SDIO
+    SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
+    IFiles *files = new FilesImplementation<SDCard>(fileSystem);
+    setupUSB(fileSystem);
+  #else
+    #ifdef SD_CARD_MISO
+      SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+    #else
+      // SD Card shares the SPI bus with the TFT
+      SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CS);
+    #endif
+    IFiles *files = new FilesImplementation<SDCard>(fileSystem);
+  #endif
+  #else
+    Flash *fileSystem = new Flash(MOUNT_POINT);
+    IFiles *files = new FilesImplementation<Flash>(fileSystem);
+  #endif
   #ifdef TFT_ST7789
   Display *tft = new ST7789(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
@@ -101,11 +115,12 @@ void setup(void)
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack(tft, hdmiDisplay);
   // Audio output
+  AudioOutput *audioOutput = nullptr;
 #ifdef USE_DAC_AUDIO
-  AudioOutput *audioOutput = new DACOutput(I2S_NUM_0);
+  audioOutput = new DACOutput(I2S_NUM_0);
 #endif
 #ifdef BUZZER_GPIO_NUM
-  AudioOutput *audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
+  audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
 #endif
 #ifdef PDM_GPIO_NUM
   // i2s speaker pins
@@ -114,7 +129,7 @@ void setup(void)
       .ws_io_num = GPIO_NUM_0,
       .data_out_num = BUZZER_GPIO_NUM,
       .data_in_num = I2S_PIN_NO_CHANGE};
-  AudioOutput *audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
+  audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
 #endif
 #ifdef I2S_SPEAKER_SERIAL_CLOCK
 #ifdef SPK_MODE
@@ -127,7 +142,7 @@ void setup(void)
       .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
       .data_out_num = I2S_SPEAKER_SERIAL_DATA,
       .data_in_num = I2S_PIN_NO_CHANGE};
-  AudioOutput *audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
+  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
 #endif
 #ifdef TOUCH_KEYBOARD
   TouchKeyboard *touchKeyboard = new TouchKeyboard(
@@ -148,13 +163,16 @@ void setup(void)
       { navigationStack->pressKey(key); });
   touchKeyboard->start();
 #endif
+#ifdef LILYGO_T_KEYBOARD
+  TDeckKeyboard *tDeckKeyboard = new TDeckKeyboard([&](SpecKeys key, bool down)
+                                                { navigationStack->updateKey(key, down); },
+                                                [&](SpecKeys key)
+                                                { navigationStack->pressKey(key); });
+  tDeckKeyboard->start();
+#endif
   if (audioOutput) {
     audioOutput->start(15625);
   }
-#else
-  Flash *fileSystem = new Flash(MOUNT_POINT);
-  Files<Flash> *files = new Files<Flash>(fileSystem);
-#endif
   // create the directory structure
   files->createDirectory("/snapshots");
   MainMenuScreen menuPicker(*tft, hdmiDisplay, audioOutput, files);
