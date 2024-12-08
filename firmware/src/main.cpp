@@ -51,11 +51,11 @@ void setup(void)
   digitalWrite(BOARD_POWERON, HIGH);
   #endif
   Serial.begin(115200);
-  for(int i = 0; i < 5; i++) {
-    BusyLight bl;
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    Serial.println("Booting...");
-  }
+  // for(int i = 0; i < 5; i++) {
+  //   BusyLight bl;
+  //   vTaskDelay(pdMS_TO_TICKS(1000));
+  //   Serial.println("Booting...");
+  // }
   // print out avialable ram
   Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
   Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());

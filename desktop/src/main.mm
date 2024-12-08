@@ -152,7 +152,7 @@ void handleEvents(bool &isRunning)
             auto it = sdl_to_spec.find(e.key.keysym.sym);
             if (it != sdl_to_spec.end())
             {
-                machine->updatekey(it->second, 1);
+                machine->updateKey(it->second, 1);
             }
         }
         if (e.type == SDL_KEYUP)
@@ -160,7 +160,7 @@ void handleEvents(bool &isRunning)
             auto it = sdl_to_spec.find(e.key.keysym.sym);
             if (it != sdl_to_spec.end())
             {
-                machine->updatekey(it->second, 0);
+                machine->updateKey(it->second, 0);
             }
         }
     }
@@ -256,7 +256,7 @@ void main_loop()
     handleEvents(isRunning);
     count++;
     // fill out the framebuffer
-    fillFrameBuffer(frameBuffer, machine->mem.currentScreen, machine->hwopt.BorderColor);
+    fillFrameBuffer(frameBuffer, machine->mem.currentScreen->data, machine->hwopt.BorderColor);
     updateAndRender(renderer, texture, frameBuffer);
     #ifndef __EMSCRIPTEN__
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -293,11 +293,11 @@ int main()
         machine->runForFrame(nullptr, nullptr);
     }
     // press the enter key to trigger tape loading
-    machine->updatekey(SPECKEY_ENTER, 1);
+    machine->updateKey(SPECKEY_ENTER, 1);
     for(int i = 0; i < 10; i++) {
         machine->runForFrame(nullptr, nullptr);
     }
-    machine->updatekey(SPECKEY_ENTER, 0);
+    machine->updateKey(SPECKEY_ENTER, 0);
     for(int i = 0; i < 10; i++) {
         machine->runForFrame(nullptr, nullptr);
     }

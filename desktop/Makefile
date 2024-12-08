@@ -20,7 +20,7 @@ CXXFLAGS = \
 LDFLAGS = -L/usr/local/lib -framework Cocoa
 
 # Target executable name
-TARGET = sdl_app
+TARGET = zx_emulator
 
 SRCS = \
   ../firmware/src/Emulator/128k_rom.cpp \
