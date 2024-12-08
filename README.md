@@ -11,7 +11,11 @@ The code is designed for my board, but will run on pretty much any ESP32 board.
 
 This is currently a work in progress and is under active development. So, I can't guarantee that the code will be stable.
 
+# Bulding the firmware
+
 You will need to install [Visual Studio Code](https://code.visualstudio.com/download) and [PlatformIO](https://platformio.org/install) to build the code.
+
+The firmware lives in the `firmware` directory. Open this folder in [Visual Studio Code](https://code.visualstudio.com/download) and PlatformIO will take care of the rest.
 
 # Supported boards
 
@@ -23,7 +27,7 @@ To add a new board make a copy of an existing board section in the file and modi
 - Cheap Yellow Display (CYD)
 - LilyGo T-Deck
 
-Pretty much any ESP32 board should work, you just need a 320x240 TFT display and either I2S amplifier or speaker driven with a transistor.
+Pretty much any ESP32 board should work, you just need a 320x240 TFT display and either an I2S amplifier or speaker driven with a transistor. If you don't have any sound output options, then just specify a dummy pin for the buzzer.
 
 # Input
 
