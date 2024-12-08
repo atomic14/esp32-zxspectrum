@@ -6,12 +6,23 @@ from pynput import keyboard
 key_map = {
     '1': 1, '2': 2, '3': 3, '4': 4, '5': 5,
     '6': 6, '7': 7, '8': 8, '9': 9, '0': 10,
+    # handle shift behaviour - we still want to send the numbers..
+    '!': 1, '@': 2, '#': 3, '$': 4, '%': 5,
+    '^': 6, '&': 7, '*': 8, '(': 9, ')': 10,
+    # letters
     'q': 11, 'w': 12, 'e': 13, 'r': 14, 't': 15,
     'y': 16, 'u': 17, 'i': 18, 'o': 19, 'p': 20,
     'a': 21, 's': 22, 'd': 23, 'f': 24, 'g': 25,
     'h': 26, 'j': 27, 'k': 28, 'l': 29, 'enter': 30,
     'shift': 31, 'z': 32, 'x': 33, 'c': 34, 'v': 35,
-    'b': 36, 'n': 37, 'm': 38, 'space': 40,
+    'b': 36, 'n': 37, 'm': 38, 'sym':  39, 'space': 40,
+    # upper case letters
+    'Q': 11, 'W': 12, 'E': 13, 'R': 14, 'T': 15,
+    'Y': 16, 'U': 17, 'I': 18, 'O': 19, 'P': 20,
+    'A': 21, 'S': 22, 'D': 23, 'F': 24, 'G': 25,
+    'H': 26, 'J': 27, 'K': 28, 'L': 29,
+    'Z': 32, 'X': 33, 'C': 34, 'V': 35,
+    'B': 36, 'N': 37, 'M': 38,
     # Add any additional keys you need to map
 }
 
@@ -26,6 +37,9 @@ def get_key_value(key):
             return key_map['space']
         elif key == keyboard.Key.shift:
             return key_map['shift']
+        elif key == keyboard.Key.shift_r:
+            return key_map['sym']
+        # map cursor keys to cursor joystick
         elif key == keyboard.Key.left:
             return key_map['5']
         elif key == keyboard.Key.right:
