@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 #include "AudioOutput.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
