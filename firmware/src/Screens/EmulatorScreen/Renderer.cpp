@@ -1,6 +1,6 @@
 #include "Renderer.h"
 #include "../../TFT/HDMIDisplay.h"
-#include "../../emulator/spectrum.h"
+#include "../../Emulator/spectrum.h"
 
 void displayTask(void *pvParameters) {
   Renderer *renderer = (Renderer *)pvParameters;
