@@ -12,28 +12,24 @@
 #include "RawAudioListener.h"
 #include "DummyListener.h"
 #include "ZXSpectrumTapeListener.h"
+#include <fstream>
+#include <vector>
 
-void loadGame(std::string filename, ZXSpectrum *machine) {
-    // check the extension for z80 or sna
-    if (filename.find(".z80") != std::string::npos || filename.find(".Z80") != std::string::npos
-    || filename.find(".sna") != std::string::npos || filename.find(".SNA") != std::string::npos) {
-        Load(machine, filename.c_str());
+void loadGame(const std::string& filename, ZXSpectrum* machine) {
+    // Read file into buffer
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
         return;
     }
+    
+    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(file), {});
+    loadGame(buffer.data(), buffer.size(), filename, machine);
+}
+
+void loadGame(uint8_t* tzx_data, size_t file_size, const std::string& filename, ZXSpectrum* machine) {
     // time how long it takes to load the tape
     int start = SDL_GetTicks();
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (fp == NULL)
-    {
-        std::cout << "Error: Could not open file." << std::endl;
-        return;
-    }
-    fseek(fp, 0, SEEK_END);
-    long file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    uint8_t *tzx_data = (uint8_t*)malloc(file_size);
-    fread(tzx_data, 1, file_size, fp);
-    fclose(fp);
     // load the tape
     TzxCas tzxCas;
     DummyListener *dummyListener = new DummyListener();
