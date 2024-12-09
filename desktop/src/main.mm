@@ -316,7 +316,7 @@ int main()
     audioOutput->start(15600);
     isRunning = true;
     #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(main_loop, 50, 1);
+    emscripten_set_main_loop(main_loop, 0, false);
     #else
     while (isRunning)
     {
