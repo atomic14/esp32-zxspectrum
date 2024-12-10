@@ -22,13 +22,17 @@ class ZXSpectrumTapeListener:public TapeListener {
   }
   inline virtual void setMicHigh() {
   #ifndef __DESKTOP__
+  #ifdef DBUZZER_GPIO_NU
     ledcWrite(0, 50);
+  #endif
   #endif
     this->spectrum->setMicHigh();
   }
   inline virtual void setMicLow() {
   #ifndef __DESKTOP__
+  #ifdef DBUZZER_GPIO_NU
     ledcWrite(0, 0);
+  #endif
   #endif
     this->spectrum->setMicLow();
   }
