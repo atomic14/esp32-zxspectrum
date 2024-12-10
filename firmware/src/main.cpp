@@ -111,7 +111,7 @@ void setup(void)
   #ifdef TFT_ILI9341
   Display *tft = new ILI9341(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
-  HDMIDisplay *hdmiDisplay = new HDMIDisplay(GPIO_NUM_7);
+  HDMIDisplay *hdmiDisplay = nullptr; // new HDMIDisplay(GPIO_NUM_7);
   // navigation stack
   NavigationStack *navigationStack = new NavigationStack(tft, hdmiDisplay);
   // Audio output
