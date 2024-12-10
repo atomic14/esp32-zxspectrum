@@ -24,28 +24,33 @@ void TDeckKeyboard::readKeyboardTask(void *pvParameters) {
 }
 
 void TDeckKeyboard::readKeyboard() {
-  SpecKeys lastKey = SpecKeys::SPECKEY_NONE;
-  unsigned long lastKeyPress = 0;
+  std::vector<SpecKeys> keysPressed;
+  unsigned long lastPress = 0;
   while(true) {
     char keyValue = 0;
     Wire.requestFrom(0x55, 1);
     while (Wire.available() > 0) {
         keyValue = Wire.read();
         if (keyValue != (char)0x00) {
+            Serial.println(keyValue);
             // is it a valid spec key?
             // convert to uppercase
-            if (letterToSpecKey.find(keyValue) != letterToSpecKey.end()) {
-              SpecKeys key = letterToSpecKey.at(keyValue);
-              m_keyPressedEvent(key);
-              m_keyEvent(key, true);
-              lastKey = key;
-              lastKeyPress = millis();
+            if (letterToSpecKeys.find(keyValue) != letterToSpecKeys.end()) {
+              std::vector<SpecKeys> keys = letterToSpecKeys.at(keyValue);
+              for (SpecKeys key : keys) {
+                keysPressed.push_back(key);
+                m_keyPressedEvent(key);
+                m_keyEvent(key, true);
+                lastPress = millis();
+              }
             }
         }
         // release any pressed keys
-        if (lastKey != SpecKeys::SPECKEY_NONE && millis() - lastKeyPress > 100) {
-          m_keyEvent(lastKey, false);
-          lastKey = SpecKeys::SPECKEY_NONE;
+        if (millis() - lastPress > 100) {
+          for (SpecKeys key : keysPressed) {
+            m_keyEvent(key, false);
+          }
+          keysPressed.clear();
         }
     }
     vTaskDelay(10);
