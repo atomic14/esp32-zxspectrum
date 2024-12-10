@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ZX Spectrum Emulator</title>
+    <style>
+      body { 
+        margin: 0;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .emscripten {
+        padding-right: 0;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+      }
+      #canvas {
+        border: 0px none;
+        background-color: black;
+      }
+      #drop-zone {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        background: rgba(0,0,0,0.7);
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+      }
+      .active {
+        display: flex !important;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <div id="drop-zone">Drop TAP, TZX, or Z80 file here</div>
+    <script>
+      var Module = {
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          return canvas;
+        })()
+      };
+
+      // Drag and drop handling
+      const dropZone = document.getElementById('drop-zone');
+      
+      document.body.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('active');
+      });
+
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+      });
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
+      dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+        
+        const file = e.dataTransfer.files[0];
+        const arrayBuffer = await file.arrayBuffer();
+        Module.loadDroppedFile(file.name, arrayBuffer);
+      });
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html> 

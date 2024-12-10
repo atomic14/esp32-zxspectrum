@@ -16,7 +16,16 @@ CXXFLAGS = \
 	-I../firmware/src \
 	-D__DESKTOP__ \
 	-s USE_SDL=2 \
-	-sSTACK_SIZE=200000
+	-sSTACK_SIZE=200000 \
+	--shell-file src/shell.html \
+	-s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
+	-s EXPORTED_FUNCTIONS="['_main']" \
+	-s DISABLE_EXCEPTION_CATCHING=0 \
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s NO_EXIT_RUNTIME=1 \
+	-s "EXTRA_EXPORTED_RUNTIME_METHODS=['ccall', 'cwrap']" \
+	-s WASM=1 \
+	-lembind
 
 # Linker flags (including Cocoa framework for macOS file picker support)
 LDFLAGS = -L/usr/local/lib
@@ -49,7 +58,7 @@ all: $(TARGET)
 
 # Create executable from object files
 $(TARGET): $(OBJS) Makefile
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs` $(LDFLAGS) --embed-file filesystem
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs` $(LDFLAGS) --embed-file filesystem -lembind
 
 # Object file rules (object files are placed next to the source files)
 %.o: %.cpp Makefile

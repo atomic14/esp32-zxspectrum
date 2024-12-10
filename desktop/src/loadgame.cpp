@@ -24,10 +24,10 @@ void loadGame(const std::string& filename, ZXSpectrum* machine) {
     }
     
     std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(file), {});
-    loadGame(buffer.data(), buffer.size(), filename, machine);
+    loadTapeGame(buffer.data(), buffer.size(), filename, machine);
 }
 
-void loadGame(uint8_t* tzx_data, size_t file_size, const std::string& filename, ZXSpectrum* machine) {
+void loadTapeGame(uint8_t* tzx_data, size_t file_size, const std::string& filename, ZXSpectrum* machine) {
     // time how long it takes to load the tape
     int start = SDL_GetTicks();
     // load the tape

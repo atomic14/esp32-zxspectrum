@@ -1,6 +1,8 @@
 #include <SDL.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/bind.h>
+#include <emscripten/val.h>
 #endif
 #ifndef __EMSCRIPTEN__
 #import <Cocoa/Cocoa.h>
@@ -262,6 +264,84 @@ void main_loop()
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     #endif
 }
+
+#ifdef __EMSCRIPTEN__
+void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer) {
+    machine->reset();
+    machine->init_spectrum(SPECMDL_48K);
+    machine->reset_spectrum(machine->z80Regs);
+    for(int i = 0; i < 200; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    // we need to do load ""
+    machine->updateKey(SPECKEY_J, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_J, 0);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_SYMB, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_P, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_P, 0);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_P, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_P, 0);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_SYMB, 0);
+    // press enter
+    machine->updateKey(SPECKEY_ENTER, 1);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+    machine->updateKey(SPECKEY_ENTER, 0);
+    for(int i = 0; i < 10; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
+
+
+    // press the enter key to trigger tape loading
+    // machine->updateKey(SPECKEY_ENTER, 1);
+    // for(int i = 0; i < 10; i++) {
+    //     machine->runForFrame(nullptr, nullptr);
+    // }
+    // machine->updateKey(SPECKEY_ENTER, 0);
+    // for(int i = 0; i < 10; i++) {
+    //     machine->runForFrame(nullptr, nullptr);
+    // }
+
+    size_t length = arrayBuffer["byteLength"].as<size_t>();
+    uint8_t* data = (uint8_t*)malloc(length);
+    
+    // Copy data from JS ArrayBuffer to C++ memory
+    emscripten::val memoryView = emscripten::val::global("Uint8Array").new_(arrayBuffer);
+    for (size_t i = 0; i < length; i++) {
+        data[i] = memoryView[i].as<uint8_t>();
+    }
+    isLoading = true;
+    loadGame(data, length, filename, machine);
+    isLoading = false;
+    free(data);
+}
+
+EMSCRIPTEN_BINDINGS(module) {
+    emscripten::function("loadDroppedFile", &loadDroppedFile);
+}
+#endif
 
 // Main function
 int main()
