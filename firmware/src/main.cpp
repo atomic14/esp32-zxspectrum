@@ -42,8 +42,6 @@
 #include "Input/TouchKeyboardV2.h"
 #endif
 
-const char *MOUNT_POINT = "/fs";
-
 void setup(void)
 {
   #ifdef BOARD_POWERON
@@ -87,24 +85,26 @@ void setup(void)
   Serial.println("SPI initialized");
   #endif
   // Files
+  SDCard *sdFileSystem = nullptr;
   #ifdef USE_SDCARD
-  #ifdef USE_SDIO
-    SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
-    IFiles *files = new FilesImplementation<SDCard>(fileSystem);
-    setupUSB(fileSystem);
-  #else
-    #ifdef SD_CARD_MISO
-      SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+    #ifdef USE_SDIO
+      sdFileSystem = new SDCard(SDCard::DEFAULT_MOUNT_POINT, SD_CARD_CLK, SD_CARD_CMD, SD_CARD_D0, SD_CARD_D1, SD_CARD_D2, SD_CARD_D3);
+      // TODO setupUSB(fileSystem);
     #else
-      // SD Card shares the SPI bus with the TFT
-      SDCard *fileSystem = new SDCard(MOUNT_POINT, SD_CARD_CS);
+      #ifdef SD_CARD_MISO
+        sdFileSystem = new SDCard(SDCard::DEFAULT_MOUNT_POINT, SD_CARD_MISO, SD_CARD_MOSI, SD_CARD_CLK, SD_CARD_CS);
+      #else
+        // SD Card shares the SPI bus with the TFT
+        sdFileSystem = new SDCard(SDCard::DEFAULT_MOUNT_POINT, SD_CARD_CS);
+      #endif
     #endif
-    IFiles *files = new FilesImplementation<SDCard>(fileSystem);
   #endif
-  #else
-    Flash *fileSystem = new Flash(MOUNT_POINT);
-    IFiles *files = new FilesImplementation<Flash>(fileSystem);
-  #endif
+  IFiles *sdFiles = new FilesImplementation<SDCard>(sdFileSystem);
+  Flash *flashFileSystem = new Flash(Flash::DEFAULT_MOUNT_POINT);
+  IFiles *spiffsFiles = new FilesImplementation<Flash>(flashFileSystem);
+
+  IFiles *files = new UnifiedStorage(spiffsFiles, sdFiles);
+  
   #ifdef TFT_ST7789
   Display *tft = new ST7789(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif

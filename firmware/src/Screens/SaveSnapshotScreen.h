@@ -7,6 +7,8 @@
 #include "../Emulator/spectrum.h"
 #include "../Emulator/snaps.h"
 
+class IFiles;
+
 class SaveSnapshotScreen : public Screen
 {
 private:
@@ -17,7 +19,8 @@ public:
       Display &tft,
       HDMIDisplay *hdmiDisplay,
       AudioOutput *audioOutput,
-      ZXSpectrum *machine) : machine(machine), Screen(tft, hdmiDisplay, audioOutput)
+      ZXSpectrum *machine,
+      IFiles *files) : machine(machine), Screen(tft, hdmiDisplay, audioOutput, files)
   {
   }
 
@@ -35,7 +38,8 @@ public:
     if (filename.length() > 0) {
         auto bl = BusyLight();
         drawBusy();
-        saveZ80(machine, ("/fs/snapshots/" + filename + ".Z80").c_str());
+        std::string fname = m_files->getPath("/snapshots") + "/" + filename + ".Z80";
+        saveZ80(machine, fname.c_str());
         playSuccessBeep();
         vTaskDelay(500 / portTICK_PERIOD_MS);
         m_navigationStack->pop();

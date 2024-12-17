@@ -29,11 +29,9 @@ using MenuItemVector = std::vector<MenuItemPtr>;
 
 class MainMenuScreen : public PickerScreen<MenuItemPtr>
 {
-private:
-  IFiles *m_files;
-
 public:
-  MainMenuScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files) : m_files(files), PickerScreen("Main Menu", tft, hdmiDisplay, audioOutput)
+  MainMenuScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files) 
+  : PickerScreen("Main Menu", tft, hdmiDisplay, audioOutput, files)
   {
     // Main menu
     MenuItemVector menuItems = {
@@ -89,7 +87,8 @@ public:
           no_sd_card_error,
           m_tft,
           m_hdmiDisplay,
-          m_audioOutput);
+          m_audioOutput,
+          m_files);
       m_navigationStack->push(errorScreen);
       return;
     }
@@ -101,7 +100,8 @@ public:
         no_files_error,
         m_tft,
         m_hdmiDisplay,
-        m_audioOutput);
+        m_audioOutput,
+        m_files);
       m_navigationStack->push(errorScreen);
       return;
     }

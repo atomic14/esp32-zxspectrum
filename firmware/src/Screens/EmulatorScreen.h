@@ -20,7 +20,6 @@ class EmulatorScreen : public Screen
     Machine *machine = nullptr;
     GameLoader *gameLoader = nullptr;
     FILE *audioFile = nullptr;
-    IFiles *m_files;
     void triggerLoadTape();
     bool isLoading = false;
     bool isInTimeTravelMode = false;

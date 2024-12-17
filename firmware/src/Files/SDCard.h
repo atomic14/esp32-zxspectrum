@@ -20,6 +20,7 @@ private:
   int m_sector_size = 0;
   int m_sector_count = 0;
 public:
+  static constexpr const char* DEFAULT_MOUNT_POINT = "/sdcard";
   bool isMounted() { return _isMounted; }
   const char *mountPoint() {
     return m_mountPoint.c_str();

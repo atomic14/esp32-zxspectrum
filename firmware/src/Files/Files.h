@@ -237,6 +237,7 @@ public:
   virtual void createDirectory(const char *folder) = 0;
   virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions) = 0;
   virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions) = 0;
+  virtual std::string getPath(const char *path) = 0;
 };
 
 template <class FileSystemT>
@@ -252,13 +253,18 @@ public:
 
   bool isAvailable()
   {
-    return fileSystem->isMounted();
+    return fileSystem && fileSystem->isMounted();
+  }
+
+  std::string getPath(const char *path)
+  {
+    return std::string(fileSystem->mountPoint()) + path;
   }
 
   void createDirectory(const char *folder)
   {
     auto bl = BusyLight();
-    if (!fileSystem->isMounted())
+    if (!fileSystem || !fileSystem->isMounted())
     {
       return;
     }
@@ -280,7 +286,7 @@ public:
   {
     auto bl = BusyLight();
     FileLetterCountVector fileLetters;
-    if (!fileSystem->isMounted())
+    if (!fileSystem || !fileSystem->isMounted())
     {
       return fileLetters;
     }
@@ -316,7 +322,7 @@ public:
   {
     auto bl = BusyLight();
     FileInfoVector files;
-    if (!fileSystem->isMounted())
+    if (!fileSystem || !fileSystem->isMounted())
     {
       return files;
     }
@@ -335,5 +341,114 @@ public:
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)
               { return a->getTitle() < b->getTitle(); });
     return files;
+  }
+};
+
+class UnifiedStorage : public IFiles {
+private:
+  IFiles *flashFiles;
+  IFiles *sdFiles;
+
+public:
+  UnifiedStorage(IFiles* flash, IFiles* sd) 
+    : flashFiles(flash), sdFiles(sd) {}
+
+  bool isAvailable() override {
+    return (flashFiles->isAvailable()) || (sdFiles->isAvailable());
+  }
+
+  std::string getPath(const char *path) override {
+    if (sdFiles->isAvailable()) {
+      return sdFiles->getPath(path);
+    }
+    return flashFiles->getPath(path);
+  }
+
+  void createDirectory(const char *folder) override {
+    if (sdFiles->isAvailable()) {
+      sdFiles->createDirectory(folder);
+      return;
+    }
+    // fallback to flash
+    if (flashFiles->isAvailable()) {
+      flashFiles->createDirectory(folder);
+    }
+  }
+
+  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions) override {
+    std::map<std::string, int> letterCountMap;
+    
+    // Get files from both sources
+    if (flashFiles->isAvailable()) {
+      auto flashLetters = flashFiles->getFileLetters(folder, extensions);
+      for (const auto& letterCount : flashLetters) {
+        letterCountMap[letterCount->getLetter()] = letterCount->getTitle().find_first_of("0123456789");
+      }
+    }
+    
+    if (sdFiles->isAvailable()) {
+      auto sdLetters = sdFiles->getFileLetters(folder, extensions);
+      for (const auto& letterCount : sdLetters) {
+        auto it = letterCountMap.find(letterCount->getLetter());
+        if (it != letterCountMap.end()) {
+          // Extract numbers from both counts and add them
+          int existingCount = it->second;
+          int newCount = letterCount->getTitle().find_first_of("0123456789");
+          letterCountMap[letterCount->getLetter()] = existingCount + newCount;
+        } else {
+          letterCountMap[letterCount->getLetter()] = letterCount->getTitle().find_first_of("0123456789");
+        }
+      }
+    }
+
+    // Convert map back to vector
+    FileLetterCountVector combined;
+    for (const auto& pair : letterCountMap) {
+      combined.push_back(std::make_shared<FileLetterCount>(pair.first, pair.second));
+    }
+    
+    // Sort alphabetically
+    std::sort(combined.begin(), combined.end(), 
+      [](const FileLetterCountPtr& a, const FileLetterCountPtr& b) {
+        return a->getLetter() < b->getLetter();
+      });
+    
+    return combined;
+  }
+
+  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions) override {
+    FileInfoVector combined;
+    std::map<std::string, FileInfoPtr> uniqueFiles;
+
+    // Get files from both sources
+    if (flashFiles->isAvailable()) {
+      auto flashFiles = this->flashFiles->getFileStartingWithPrefix(folder, prefix, extensions);
+      for (const auto& file : flashFiles) {
+        uniqueFiles[file->getTitle()] = file;
+      }
+    }
+
+    if (sdFiles->isAvailable()) {
+      auto sdFiles = this->sdFiles->getFileStartingWithPrefix(folder, prefix, extensions);
+      for (const auto& file : sdFiles) {
+        // Only add if not already present from flash
+        if (uniqueFiles.find(file->getTitle()) == uniqueFiles.end()) {
+          uniqueFiles[file->getTitle()] = file;
+        }
+      }
+    }
+
+    // Convert map back to vector
+    for (const auto& pair : uniqueFiles) {
+      combined.push_back(pair.second);
+    }
+
+    // Sort alphabetically
+    std::sort(combined.begin(), combined.end(),
+      [](const FileInfoPtr& a, const FileInfoPtr& b) {
+        return a->getTitle() < b->getTitle();
+      });
+
+    return combined;
   }
 };

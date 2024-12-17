@@ -8,12 +8,11 @@ template <class FilePickerScreen_T>
 class AlphabetPicker : public PickerScreen<FileLetterCountPtr>
 {
   private:
-    IFiles *m_files;
     std::string m_path;
     std::vector<std::string> m_extensions;
   public:
     AlphabetPicker(std::string title, IFiles *files, Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, std::string path, std::vector<std::string> extensions) 
-      : m_files(files), PickerScreen(title, tft, hdmiDisplay, audioOutput), m_path(path), m_extensions(extensions)
+      : PickerScreen(title, tft, hdmiDisplay, audioOutput, files), m_path(path), m_extensions(extensions)
     {
     }
     void onItemSelect(FileLetterCountPtr item, int index) override

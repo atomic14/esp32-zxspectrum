@@ -15,7 +15,8 @@ public:
       std::vector<std::string> messages,
       Display &tft,
       HDMIDisplay *hdmiDisplay,
-      AudioOutput *audioOutput) : m_messages(messages), Screen(tft, hdmiDisplay, audioOutput)
+      AudioOutput *audioOutput,
+      IFiles *files) : m_messages(messages), Screen(tft, hdmiDisplay, audioOutput, files)
   {
   }
 

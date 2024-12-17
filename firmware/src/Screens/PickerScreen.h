@@ -30,8 +30,9 @@ public:
       std::string title,
       Display &tft,
       HDMIDisplay *hdmiDisplay,
-      AudioOutput *audioOutput
-  ) : title(title), Screen(tft, hdmiDisplay, audioOutput)
+      AudioOutput *audioOutput,
+      IFiles *files
+  ) : title(title), Screen(tft, hdmiDisplay, audioOutput, files)
   {
   }
 

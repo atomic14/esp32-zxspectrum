@@ -13,8 +13,11 @@
 class Display;
 class AudioOutput;
 class NavigationStack;
+class IFiles;
 
 const uint8_t click[] = { 50, 50, 50, 0 };
+
+class IFiles;
 
 class Screen {
   protected:
@@ -22,8 +25,10 @@ class Screen {
     Display &m_tft;
     HDMIDisplay *m_hdmiDisplay = nullptr;
     AudioOutput *m_audioOutput;
+    IFiles *m_files;
   public:
-  Screen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput) : m_tft(tft), m_hdmiDisplay(hdmiDisplay), m_audioOutput(audioOutput) {}
+  Screen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files) 
+  : m_tft(tft), m_hdmiDisplay(hdmiDisplay), m_audioOutput(audioOutput), m_files(files) {}
   // input
   virtual void updateKey(SpecKeys key, uint8_t state) {};
   virtual void pressKey(SpecKeys key) {};

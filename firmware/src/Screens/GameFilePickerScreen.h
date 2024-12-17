@@ -6,11 +6,9 @@
 
 class GameFilePickerScreen : public PickerScreen<FileInfoPtr>
 {
-  private:
-    IFiles *m_files;
   public:
       GameFilePickerScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
-      : PickerScreen("Games", tft, hdmiDisplay, audioOutput), m_files(files) {}
+      : PickerScreen("Games", tft, hdmiDisplay, audioOutput, files) {}
       void onItemSelect(FileInfoPtr item, int index) {
         Serial.printf("Selected %s\n", item->getPath().c_str());
         // locate the emaulator screen if it's on the stack already

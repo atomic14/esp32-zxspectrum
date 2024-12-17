@@ -31,7 +31,8 @@ void EmulatorScreen::triggerLoadTape()
         no_sd_card_error,
         m_tft,
         m_hdmiDisplay,
-        m_audioOutput);
+        m_audioOutput,
+        m_files);
     m_navigationStack->push(errorScreen);
     return;
   }
@@ -43,7 +44,8 @@ void EmulatorScreen::triggerLoadTape()
         no_files_error,
         m_tft,
         m_hdmiDisplay,
-        m_audioOutput);
+        m_audioOutput,
+        m_files);
     m_navigationStack->push(errorScreen);
     return;
   }
@@ -53,7 +55,7 @@ void EmulatorScreen::triggerLoadTape()
 }
 
 EmulatorScreen::EmulatorScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
-    : Screen(tft, hdmiDisplay, audioOutput), m_files(files)
+    : Screen(tft, hdmiDisplay, audioOutput, files)
 {
   renderer = new Renderer(tft, hdmiDisplay);
   machine = new Machine(renderer, audioOutput, [&]()
@@ -160,7 +162,7 @@ void EmulatorScreen::pressKey(SpecKeys key)
     else if (key == SPECKEY_2) {
       isShowingMenu = false;
       // show the save snapshot UI
-      m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine()));
+      m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine(), m_files));
     }
   }
 }
