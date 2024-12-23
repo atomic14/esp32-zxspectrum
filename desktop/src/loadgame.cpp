@@ -42,6 +42,9 @@ void loadTapeGame(uint8_t* tzx_data, size_t file_size, const std::string& filena
       {
         // printf("Total execution time: %fs\n", (float) listener->getTotalExecutionTime() / 1000000.0f);
         // printf("Total machine time: %f\n", (float) listener->getTotalTicks() / 3500000.0f);
+        // if (totalTicks == 0) {
+        //   return;
+        // }
         // printf("Progress: %lld\n", progress * 100 / totalTicks);
       });
     listener->start();

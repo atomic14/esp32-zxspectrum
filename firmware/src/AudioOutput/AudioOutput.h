@@ -9,6 +9,7 @@ protected:
   int mVolume = 10;
 public:
   AudioOutput() {};
+  virtual ~AudioOutput() {};
   virtual void start(uint32_t sample_rate) = 0;
   virtual void stop() = 0;
   virtual void pause() {};

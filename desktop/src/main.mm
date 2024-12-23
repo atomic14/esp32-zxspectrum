@@ -58,6 +58,10 @@ std::string OpenFileDialog() {
 }
 #endif
 
+#ifdef __EMSCRIPTEN__
+void stop();
+#endif
+
 void enforceAspectRatio(SDL_Window* window, int newWidth, int newHeight) {
     // Calculate the new dimensions while keeping the aspect ratio
     int adjustedWidth = newWidth;
@@ -113,9 +117,35 @@ SDL_Texture *createTexture(SDL_Renderer *renderer)
 // Updates and renders the frame buffer to the screen
 void updateAndRender(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *frameBuffer)
 {
+    // Get the window dimensions
+    int windowWidth, windowHeight;
+    SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+
+    // Calculate aspect ratio
+    float textureAspect = static_cast<float>(WIDTH) / HEIGHT;
+    float windowAspect = static_cast<float>(windowWidth) / windowHeight;
+
+    // Destination rectangle for rendering
+    SDL_Rect destRect;
+
+    // Fit the texture inside the window while preserving aspect ratio
+    if (windowAspect > textureAspect) {
+        // Window is wider than the texture
+        destRect.h = windowHeight;
+        destRect.w = static_cast<int>(windowHeight * textureAspect);
+        destRect.x = (windowWidth - destRect.w) / 2;
+        destRect.y = 0;
+    } else {
+        // Window is taller or has the same aspect ratio as the texture
+        destRect.w = windowWidth;
+        destRect.h = static_cast<int>(windowWidth / textureAspect);
+        destRect.x = 0;
+        destRect.y = (windowHeight - destRect.h) / 2;
+    }
+
     SDL_UpdateTexture(texture, nullptr, frameBuffer, WIDTH * sizeof(uint16_t));
     SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+    SDL_RenderCopy(renderer, texture, nullptr, &destRect);
     SDL_RenderPresent(renderer);
 }
 
@@ -127,11 +157,15 @@ void handleEvents(bool &isRunning)
     {
         if (e.type == SDL_QUIT)
         {
-            isRunning = false;
+            printf("****** Quitting\n");
+            #ifdef __EMSCRIPTEN__
+            stop();
+            #endif
         }
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
             int newWidth = e.window.data1;
             int newHeight = e.window.data2;
+            printf("Window resized %d, %d\n", newWidth, newHeight);
             enforceAspectRatio(window, newWidth, newHeight);
         }
         if (e.type == SDL_KEYDOWN)
@@ -266,80 +300,105 @@ void main_loop()
 }
 
 #ifdef __EMSCRIPTEN__
-void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer) {
-    machine->reset();
-    machine->init_spectrum(SPECMDL_48K);
-    machine->reset_spectrum(machine->z80Regs);
-    for(int i = 0; i < 200; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    // we need to do load ""
-    machine->updateKey(SPECKEY_J, 1);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_J, 0);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_SYMB, 1);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_P, 1);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_P, 0);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_P, 1);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_P, 0);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_SYMB, 0);
-    // press enter
-    machine->updateKey(SPECKEY_ENTER, 1);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-    machine->updateKey(SPECKEY_ENTER, 0);
-    for(int i = 0; i < 10; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
-
-
-    // press the enter key to trigger tape loading
-    // machine->updateKey(SPECKEY_ENTER, 1);
-    // for(int i = 0; i < 10; i++) {
-    //     machine->runForFrame(nullptr, nullptr);
-    // }
-    // machine->updateKey(SPECKEY_ENTER, 0);
-    // for(int i = 0; i < 10; i++) {
-    //     machine->runForFrame(nullptr, nullptr);
-    // }
-
+void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer, bool is128k) {
     size_t length = arrayBuffer["byteLength"].as<size_t>();
     uint8_t* data = (uint8_t*)malloc(length);
-    
+
     // Copy data from JS ArrayBuffer to C++ memory
     emscripten::val memoryView = emscripten::val::global("Uint8Array").new_(arrayBuffer);
     for (size_t i = 0; i < length; i++) {
         data[i] = memoryView[i].as<uint8_t>();
     }
-    isLoading = true;
-    loadGame(data, length, filename, machine);
-    isLoading = false;
+
+    bool isZ80 = filename.find(".z80") != std::string::npos || filename.find(".Z80") != std::string::npos;
+    bool isSNA = filename.find(".sna") != std::string::npos || filename.find(".SNA") != std::string::npos;
+    bool isTAP = filename.find(".tap") != std::string::npos || filename.find(".TAP") != std::string::npos;
+    bool isTZX = filename.find(".tzx") != std::string::npos || filename.find(".TZX") != std::string::npos;
+    // check to see if this is a z80 file or sna file
+    if (isZ80 || isSNA) {
+        const char *fname = isZ80 ? "temp.z80": "temp.sna";
+        // write the data to a temp file
+        FILE *file = fopen(fname, "wb");
+        fwrite(data, 1, length, file);
+        fclose(file);
+        // now load the z80 file using our normal load game function
+        Load(machine, fname);
+    }
+    if (isTAP || isTZX) {
+        machine->reset();
+        if (is128k) {
+            machine->init_spectrum(SPECMDL_128K);
+            machine->reset_spectrum(machine->z80Regs);
+            for(int i = 0; i < 200; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+        } else {
+            machine->init_spectrum(SPECMDL_48K);
+            machine->reset_spectrum(machine->z80Regs);
+            for(int i = 0; i < 200; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            // we need to do load ""
+            machine->updateKey(SPECKEY_J, 1);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_J, 0);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_SYMB, 1);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_P, 1);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_P, 0);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_P, 1);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_P, 0);
+            for(int i = 0; i < 10; i++) {
+                machine->runForFrame(nullptr, nullptr);
+            }
+            machine->updateKey(SPECKEY_SYMB, 0);
+        }
+        // press enter
+        machine->updateKey(SPECKEY_ENTER, 1);
+        for(int i = 0; i < 10; i++) {
+            machine->runForFrame(nullptr, nullptr);
+        }
+        machine->updateKey(SPECKEY_ENTER, 0);
+        for(int i = 0; i < 10; i++) {
+            machine->runForFrame(nullptr, nullptr);
+        }
+        isLoading = true;
+        loadTapeGame(data, length, filename, machine);
+        isLoading = false;
+    }
     free(data);
+    // start running the audio
+    audioOutput = new SDLAudioOutput(machine);
+    isRunning = true;
+    audioOutput->start(15600);
+}
+
+// add a binding to shut down the audio
+void stop() {
+    printf("Stopping audio\n");
+    audioOutput->stop();
+    isRunning = false;
 }
 
 EMSCRIPTEN_BINDINGS(module) {
     emscripten::function("loadDroppedFile", &loadDroppedFile);
+    emscripten::function("stop", &stop);
 }
 #endif
 
@@ -365,14 +424,13 @@ int main()
         SDL_Quit();
         return -1;
     }
-
+    for(int i = 0; i < 200; i++) {
+        machine->runForFrame(nullptr, nullptr);
+    }
     #ifndef __EMSCRIPTEN__
     // run the spectrum for 4 second so that it boots up
     int start = SDL_GetTicks();
 
-    for(int i = 0; i < 200; i++) {
-        machine->runForFrame(nullptr, nullptr);
-    }
     // press the enter key to trigger tape loading
     machine->updateKey(SPECKEY_ENTER, 1);
     for(int i = 0; i < 10; i++) {
@@ -389,12 +447,11 @@ int main()
     isLoading = true;
     loadGame(filename, machine);
     isLoading = false;
-    #endif
-    audioOutput = new SDLAudioOutput(machine);
     audioOutput->start(15600);
     isRunning = true;
+    #endif
     #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(main_loop, 0, false);
+    emscripten_set_main_loop(main_loop, 0, true);
     #else
     while (isRunning)
     {

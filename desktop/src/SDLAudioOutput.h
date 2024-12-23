@@ -44,6 +44,9 @@ public:
   SDLAudioOutput(ZXSpectrum *machine) : mMachine(machine)
   {
   };
+  virtual ~SDLAudioOutput() {
+    SDL_CloseAudioDevice(audioDevice);
+  }
   static void fillAudioBuffer(void *userdata, uint8_t *stream, int len) {
     SDLAudioOutput *audioOutput = static_cast<SDLAudioOutput *>(userdata);
     // run the machine for a frame - this will populate the audio buffer
@@ -83,7 +86,15 @@ public:
     // Start audio playback
     SDL_PauseAudioDevice(audioDevice, 0);
   }
-  virtual void stop() {}
+  virtual void stop() {
+    SDL_CloseAudioDevice(audioDevice);
+  }
+  virtual void pause() {
+    SDL_PauseAudioDevice(audioDevice, 1);
+  }
+  virtual void resume() {
+    SDL_PauseAudioDevice(audioDevice, 0);
+  }
   // override this in derived classes to turn the sample into
   // something the output device expects - for the default case
   // this is simply a pass through

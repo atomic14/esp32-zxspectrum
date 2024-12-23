@@ -3,7 +3,7 @@ CXX = emcc
 
 # Compiler flags
 CXXFLAGS = \
-  -g \
+	-Ofast \
 	-Wall \
 	-Wextra \
 	-std=c++17 \
@@ -25,6 +25,7 @@ CXXFLAGS = \
 	-s NO_EXIT_RUNTIME=1 \
 	-s "EXTRA_EXPORTED_RUNTIME_METHODS=['ccall', 'cwrap']" \
 	-s WASM=1 \
+	-s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0 \
 	-lembind
 
 # Linker flags (including Cocoa framework for macOS file picker support)
