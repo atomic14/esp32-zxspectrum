@@ -396,9 +396,17 @@ void stop() {
     isRunning = false;
 }
 
+void updateKey(std::string key, bool value) {
+    auto it = string_to_spec.find(key);
+    if (it != string_to_spec.end()) {
+        machine->updateKey(it->second, value);
+    }
+}
+
 EMSCRIPTEN_BINDINGS(module) {
     emscripten::function("loadDroppedFile", &loadDroppedFile);
     emscripten::function("stop", &stop);
+    emscripten::function("updateKey", &updateKey);
 }
 #endif
 

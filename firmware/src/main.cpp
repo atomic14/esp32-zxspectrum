@@ -41,6 +41,7 @@
 #ifdef TOUCH_KEYBOARD_V2
 #include "Input/TouchKeyboardV2.h"
 #endif
+#include "SerialInterface/PacketHandler.h"
 
 void setup(void)
 {
