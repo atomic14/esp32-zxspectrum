@@ -14,6 +14,7 @@ protected:
   ProgressEvent progressEvent;
 public:
   TapeListener(ProgressEvent progressEvent) : progressEvent(progressEvent) {}
+  virtual ~TapeListener() {}
   virtual void start() = 0;
   virtual void toggleMicLevel() = 0;
   virtual void setMicHigh() = 0;

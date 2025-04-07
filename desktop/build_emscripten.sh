@@ -27,4 +27,5 @@ source ./emsdk_env.sh
 
 cd ..
 
-make -f Makefile.ems
+# make -f Makefile.ems
+make -f Makefile.tap.ems
