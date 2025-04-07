@@ -1,3 +1,6 @@
 zx_emulator
 zx_emulator.*
 emsdk
+tap_to_z80
+tap_to_z80.js
+tap_to_z80.wasm

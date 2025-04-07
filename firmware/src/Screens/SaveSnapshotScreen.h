@@ -39,7 +39,8 @@ public:
         auto bl = BusyLight();
         drawBusy();
         std::string fname = m_files->getPath("/snapshots") + "/" + filename + ".Z80";
-        saveZ80(machine, fname.c_str());
+        Z80FileWriter writer(machine, fname.c_str());
+        writer.saveZ80();
         playSuccessBeep();
         vTaskDelay(500 / portTICK_PERIOD_MS);
         m_navigationStack->pop();

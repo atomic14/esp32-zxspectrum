@@ -1,0 +1,66 @@
+# Emscripten compiler
+CXX = em++
+
+# Compiler flags
+CXXFLAGS = \
+	-O2 \
+	-Wall \
+	-Wextra \
+	-std=c++17 \
+	-I../firmware/src/Emulator \
+	-I../firmware/src/AudioOutput \
+	-I../firmware/src/TZX \
+	-I../firmware/src \
+	-D__DESKTOP__ \
+	-s WASM=1 \
+	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s NO_EXIT_RUNTIME=1 \
+	-s ENVIRONMENT=web \
+	-s MODULARIZE=1 \
+	-s EXPORT_NAME=tap2z80Module \
+	--bind \
+	--no-entry
+
+# Target executable name
+TARGET = tap_to_z80.js
+
+# Source files
+SRCS = \
+	src/tap_to_z80.cpp \
+  ../firmware/src/Emulator/128k_rom.cpp \
+  ../firmware/src/Emulator/48k_rom.cpp \
+  ../firmware/src/Emulator/spectrum.cpp \
+  ../firmware/src/Emulator/z80/z80.cpp \
+	../firmware/src/Emulator/snaps.cpp \
+  ../firmware/src/AySound/AySound.cpp \
+	../firmware/src/Serial.cpp \
+	../firmware/src/TZX/tzx_cas.cpp \
+	src/loadgame.cpp
+
+# Object files
+OBJS = $(SRCS:.cpp=.o)
+
+# Dependency files
+DEPS = $(OBJS:.o=.d)
+
+# Default rule
+all: $(TARGET)
+
+# Create executable from object files
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+
+# Object file rules
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+
+# Include dependency files
+-include $(DEPS)
+
+# Clean up build files
+clean:
+	rm -f $(OBJS) $(DEPS) $(TARGET) tap_to_audio.wasm
+
+# Phony targets
+.PHONY: all clean 
