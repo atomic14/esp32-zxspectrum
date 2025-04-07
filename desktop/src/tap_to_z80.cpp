@@ -20,12 +20,14 @@ Z80MemoryWriter *write(std::string filename, uint8_t *data, size_t length, bool 
     ZXSpectrum *machine = new ZXSpectrum();
     machine->reset();
     if (is128k) {
+        std::cout << "Using 128k machine" << std::endl;
         machine->init_spectrum(SPECMDL_128K);
         machine->reset_spectrum(machine->z80Regs);
         for(int i = 0; i < 200; i++) {
             machine->runForFrame(nullptr, nullptr);
         }
     } else {
+        std::cout << "Using 48k machine" << std::endl;
         machine->init_spectrum(SPECMDL_48K);
         machine->reset_spectrum(machine->z80Regs);
         for(int i = 0; i < 200; i++) {

@@ -71,8 +71,8 @@ public:
 class Memory {
   public:
     uint8_t hwBank = 0;
-    MemoryPage *rom[2];
-    MemoryPage *banks[8];
+    MemoryPage *rom[2] = {0};
+    MemoryPage *banks[8] = {0};
     // track is a memory bank is dirty
     MemoryPage *currentScreen;
     MemoryPage *mappedMemory[4];

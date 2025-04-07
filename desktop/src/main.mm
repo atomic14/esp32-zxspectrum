@@ -22,6 +22,8 @@
 #include <thread>
 #include <chrono>
 
+void stop();
+
 bool isLoading = false;
 bool isRunning = false;
 uint16_t flashTimer = 0;
@@ -56,10 +58,6 @@ std::string OpenFileDialog() {
     }
     return "";
 }
-#endif
-
-#ifdef __EMSCRIPTEN__
-void stop();
 #endif
 
 void enforceAspectRatio(SDL_Window* window, int newWidth, int newHeight) {
@@ -158,9 +156,7 @@ void handleEvents(bool &isRunning)
         if (e.type == SDL_QUIT)
         {
             printf("****** Quitting\n");
-            #ifdef __EMSCRIPTEN__
             stop();
-            #endif
         }
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
             int newWidth = e.window.data1;
@@ -316,6 +312,7 @@ void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer, b
     bool isTZX = filename.find(".tzx") != std::string::npos || filename.find(".TZX") != std::string::npos;
     // check to see if this is a z80 file or sna file
     if (isZ80 || isSNA) {
+        std::cout << "Loading z80 or sna file" << std::endl;
         const char *fname = isZ80 ? "temp.z80": "temp.sna";
         // write the data to a temp file
         FILE *file = fopen(fname, "wb");
@@ -325,6 +322,7 @@ void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer, b
         Load(machine, fname);
     }
     if (isTAP || isTZX) {
+        std::cout << "Loading tap or tzx file" << std::endl;
         machine->reset();
         if (is128k) {
             machine->init_spectrum(SPECMDL_128K);
@@ -389,6 +387,13 @@ void loadDroppedFile(std::string filename, const emscripten::val& arrayBuffer, b
     audioOutput->start(15600);
 }
 
+EMSCRIPTEN_BINDINGS(module) {
+    emscripten::function("loadDroppedFile", &loadDroppedFile);
+    emscripten::function("stop", &stop);
+}
+#endif
+
+
 // add a binding to shut down the audio
 void stop() {
     printf("Stopping audio\n");
@@ -396,11 +401,6 @@ void stop() {
     isRunning = false;
 }
 
-EMSCRIPTEN_BINDINGS(module) {
-    emscripten::function("loadDroppedFile", &loadDroppedFile);
-    emscripten::function("stop", &stop);
-}
-#endif
 
 // Main function
 int main()
@@ -445,10 +445,15 @@ int main()
     // load a tap file
     std::string filename = OpenFileDialog();
     isLoading = true;
-    loadGame(filename, machine);
+    if (filename.find(".z80")) {
+        Load(machine, filename.c_str());
+    } else {
+        loadGame(filename, machine);
+    }
     isLoading = false;
-    audioOutput->start(15600);
+    audioOutput = new SDLAudioOutput(machine);
     isRunning = true;
+    audioOutput->start(15600);
     #endif
     #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, true);

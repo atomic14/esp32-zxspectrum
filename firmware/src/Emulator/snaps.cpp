@@ -331,18 +331,23 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
     // if the data is compressed, we need to uncompress it
     if (length == 0xFFFF)
     {
-      printf("Reading page %d\n", page);
-      fread(pageMap[page], actualLength, 1, fp);
+      printf("Reading page %d %d\n", page, actualLength);
+      fread(pageMap[page]->data, actualLength, 1, fp);
+      pageMap[page]->isDirty = true;
+      printf("Read page %d\n", page);
     } else {
       printf("Decompressing page %d\n", page);
       decompressZ80BlockV2orV3(fp, length, pageMap[page]->data, 0x4000);
+      pageMap[page]->isDirty = true;
     }
   }
+  printf("Setting the PC registers\n");
   speccy->z80Regs->PC.B.l = buffer[32];
   speccy->z80Regs->PC.B.h = buffer[33];
   printf("PC set to %x\n", speccy->z80Regs->PC.W);
   if (hwmodel == SPECMDL_128K)
   {
+    printf("Setting paging to %d\n", buffer[35]);
     speccy->mem.page(buffer[35], true);
   }
   else
@@ -350,6 +355,7 @@ bool loadZ80Version2or3(ZXSpectrum *speccy, uint8_t *buffer, int version, FILE *
     // disable paging
     speccy->mem.page(32, true);
   }
+  printf("Loding registers\n");
   loadZ80Regs(speccy, buffer);
   return true;
 }
