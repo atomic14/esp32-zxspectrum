@@ -105,6 +105,11 @@ emscripten::val tap_to_z80(std::string filename, const emscripten::val& arrayBuf
 }
 #endif
 
+// Bind the JavaScript interface
+EMSCRIPTEN_BINDINGS(tape_module) {
+    emscripten::function("convertTapeToZ80", &tap_to_z80);
+}
+
 #ifndef __EMSCRIPTEN__
 // test main file - takes a tap file as the first argument a machine type for the second argument (48k or 128k) and writes a z80 version
 int main(int argc, char *argv[])
