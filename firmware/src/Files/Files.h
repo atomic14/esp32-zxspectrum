@@ -70,7 +70,11 @@ public:
   DirectoryIterator() : dirp(nullptr), entry(nullptr) {}
 
   // Construct iterator for directory path with optional file prefix and extension filter
-  DirectoryIterator(const std::string &path, const char *prefix, std::vector<std::string> extensions) : dirp(opendir(path.c_str())), prefix(prefix), extensions(extensions)
+  DirectoryIterator(const std::string &path, const char *prefix, std::vector<std::string> extensions, bool includeDirectories = false)
+  : dirp(opendir(path.c_str())), 
+    prefix(prefix), 
+    extensions(extensions),
+    includeDirectories(includeDirectories)
   {
     if (!dirp)
     {
@@ -84,7 +88,7 @@ public:
 
   // Allow move construction
   DirectoryIterator(DirectoryIterator &&other) noexcept
-      : dirp(other.dirp), entry(other.entry), extensions(other.extensions)
+      : dirp(other.dirp), entry(other.entry), extensions(other.extensions), prefix(other.prefix), includeDirectories(other.includeDirectories)
   {
     other.dirp = nullptr;
     other.entry = nullptr;
@@ -134,12 +138,13 @@ private:
   pointer entry;
   std::vector<std::string> extensions;
   const char *prefix;
+  bool includeDirectories = false;
 
   bool isValidEntry()
   {
-    if (entry->d_type != DT_REG)
+    if (!(entry->d_type == DT_REG || (includeDirectories && entry->d_type == DT_DIR)))
     {
-      return false; // Not a regular file
+      return false; // Not a file or directory
     }
 
     std::string filename = entry->d_name;
@@ -176,7 +181,6 @@ private:
         return false; // Prefix does not match
       }
     }
-
     return true; // Entry is valid
   }
 };
@@ -185,8 +189,8 @@ private:
 class FileInfo
 {
 public:
-  FileInfo(const std::string &title, const std::string &path)
-      : title(title), path(path) {}
+  FileInfo(const std::string &title, const std::string &path, bool isDirectory)
+      : title(title), path(path), _isDirectory(isDirectory) {}
   std::string getTitle() const { return title; }
   std::string getPath() const { return path; }
   std::string getExtension() const
@@ -199,10 +203,11 @@ public:
     }
     return "";
   }
-
+  bool isDirectory() { return _isDirectory; }
 private:
   std::string title;
   std::string path;
+  bool _isDirectory;
 };
 
 using FileInfoPtr = std::shared_ptr<FileInfo>;
@@ -235,8 +240,8 @@ class IFiles
 public:
   virtual bool isAvailable() = 0;
   virtual void createDirectory(const char *folder) = 0;
-  virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions) = 0;
-  virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions) = 0;
+  virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
+  virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
   virtual std::string getPath(const char *path) = 0;
 };
 
@@ -282,7 +287,7 @@ public:
     }
   }
 
-  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions)
+  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false)
   {
     auto bl = BusyLight();
     FileLetterCountVector fileLetters;
@@ -318,7 +323,7 @@ public:
     return fileLetters;
   }
 
-  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions)
+  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions, bool includeDirectories = false)
   {
     auto bl = BusyLight();
     FileInfoVector files;
@@ -333,9 +338,9 @@ public:
       std::cout << "Extension: " << extension << std::endl;
     }
 
-    for (DirectoryIterator it(full_path, prefix, extensions); it != DirectoryIterator(); ++it)
+    for (DirectoryIterator it(full_path, prefix, extensions, includeDirectories); it != DirectoryIterator(); ++it)
     {
-      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), full_path + it->d_name)));
+      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), full_path + it->d_name, it->d_type == DT_DIR)));
     }
     // sort the files - is this needed? Maybe they are already alphabetically sorted
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)
@@ -375,19 +380,19 @@ public:
     }
   }
 
-  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions) override {
+  FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false) override {
     std::map<std::string, int> letterCountMap;
     
     // Get files from both sources
     if (flashFiles->isAvailable()) {
-      auto flashLetters = flashFiles->getFileLetters(folder, extensions);
+      auto flashLetters = flashFiles->getFileLetters(folder, extensions, includeDirectories);
       for (const auto& letterCount : flashLetters) {
         letterCountMap[letterCount->getLetter()] = letterCount->getTitle().find_first_of("0123456789");
       }
     }
     
     if (sdFiles->isAvailable()) {
-      auto sdLetters = sdFiles->getFileLetters(folder, extensions);
+      auto sdLetters = sdFiles->getFileLetters(folder, extensions, includeDirectories);
       for (const auto& letterCount : sdLetters) {
         auto it = letterCountMap.find(letterCount->getLetter());
         if (it != letterCountMap.end()) {
@@ -416,20 +421,20 @@ public:
     return combined;
   }
 
-  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions) override {
+  FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions, bool includeDirectories = false) override {
     FileInfoVector combined;
     std::map<std::string, FileInfoPtr> uniqueFiles;
 
     // Get files from both sources
     if (flashFiles->isAvailable()) {
-      auto flashFiles = this->flashFiles->getFileStartingWithPrefix(folder, prefix, extensions);
+      auto flashFiles = this->flashFiles->getFileStartingWithPrefix(folder, prefix, extensions, includeDirectories);
       for (const auto& file : flashFiles) {
         uniqueFiles[file->getTitle()] = file;
       }
     }
 
     if (sdFiles->isAvailable()) {
-      auto sdFiles = this->sdFiles->getFileStartingWithPrefix(folder, prefix, extensions);
+      auto sdFiles = this->sdFiles->getFileStartingWithPrefix(folder, prefix, extensions, includeDirectories);
       for (const auto& file : sdFiles) {
         // Only add if not already present from flash
         if (uniqueFiles.find(file->getTitle()) == uniqueFiles.end()) {

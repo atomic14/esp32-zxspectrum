@@ -41,6 +41,27 @@
 #ifdef TOUCH_KEYBOARD_V2
 #include "Input/TouchKeyboardV2.h"
 #endif
+#include "SerialInterface/PacketHandler.h"
+#include "SerialInterface/SerialTransport.h"
+#include "SerialInterface/Messages/GetVersion.h"
+#include "SerialInterface/Messages/ListFolder.h"
+#include "SerialInterface/Messages/WriteFile.h"
+#include "SerialInterface/Messages/ReadFile.h"
+
+void SerialInterfaceTask(void *arg) {
+  IFiles *files = (IFiles *)arg;
+  SerialTransport *serialTransport = new SerialTransport();
+  PacketHandler *packetHandler = new PacketHandler(*serialTransport);
+  packetHandler->registerMessageHandler(new GetVersionMessageReciever(packetHandler, 1, 2, 3), MessageId::GetVersionRequest);
+  packetHandler->registerMessageHandler(new ListFolderMessageReceiver(files, packetHandler), MessageId::ListFolderRequest);
+  packetHandler->registerMessageHandler(new WriteFileMessageReceiver(packetHandler), MessageId::WriteFileRequest);
+  packetHandler->registerMessageHandler(new ReadFileMessageReceiver(packetHandler), MessageId::ReadFileRequest);
+
+  while(true) {
+    packetHandler->loop();
+    vTaskDelay(1);
+  }
+}
 
 void setup(void)
 {
@@ -48,7 +69,7 @@ void setup(void)
   pinMode(BOARD_POWERON, OUTPUT);
   digitalWrite(BOARD_POWERON, HIGH);
   #endif
-  Serial.begin(115200);
+  Serial.begin(460800);
   // for(int i = 0; i < 5; i++) {
   //   BusyLight bl;
   //   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -178,8 +199,8 @@ void setup(void)
   MainMenuScreen menuPicker(*tft, hdmiDisplay, audioOutput, files);
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
-  SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
-                                                { navigationStack->updateKey(key, down); if (down) { navigationStack->pressKey(key); } });
+  // SerialKeyboard *keyboard = new SerialKeyboard([&](SpecKeys key, bool down)
+  //                                               { navigationStack->updateKey(key, down); if (down) { navigationStack->pressKey(key); } });
 
 // start up the nunchuk controller and feed events into the active screen
 #ifdef NUNCHUK_CLOCK
@@ -197,6 +218,16 @@ void setup(void)
   //                                   { navigationStack->pressKey(key); });
   // seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
 #endif
+
+  xTaskCreatePinnedToCore(
+    SerialInterfaceTask,
+    "SerialInterface",
+    16384,
+    files,
+    1,
+    nullptr,
+    1
+  );
 
   Serial.println("Running on core: " + String(xPortGetCoreID()));
   // use the boot pin to open the emulator menu
