@@ -6,14 +6,22 @@ class WriteFileMessageReceiver : public MessageReciever
 {
 private:
   std::string filename;
+  IFiles *flashFiles;
+  IFiles *sdFiles;
   FILE *file = nullptr;
   bool readingFilename = true;
 
 public:
-  WriteFileMessageReceiver(PacketHandler *packetHandler) : MessageReciever(packetHandler) {};
+  WriteFileMessageReceiver(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler) 
+  : MessageReciever(packetHandler),
+    flashFiles(flashFiles),
+    sdFiles(sdFiles)
+  {};
   void messageStart(size_t dataLength) override
   {
+    Serial.printf("Message length is %d\n", dataLength);
     readingFilename = true;
+    filename = "";
   }
 
   void messageData(uint8_t *data, size_t length) override
@@ -27,7 +35,7 @@ public:
         if (data[i] == '\0')
         {
           readingFilename = false;
-          file = fopen(filename.c_str(), "wb");
+          file = flashFiles->open(filename.c_str(), "wb");
           // write the rest of the data to the file
           if (file)
           {
@@ -58,7 +66,7 @@ public:
     {
       if (file) {
         // respond with success
-        packetHandler->sendPacket(MessageId::WriteFileResponse, (uint8_t *)"OK", 2);
+        sendSuccess(MessageId::WriteFileResponse);
         if (file)
         {
           fclose(file);
@@ -68,11 +76,13 @@ public:
       else
       {
         // respond with failure
-        packetHandler->sendPacket(MessageId::WriteFileResponse, (uint8_t *)"FAIL_FILE", 9);
+        sendFailure(MessageId::WriteFileResponse, "Could not open file");
+        readingFilename = false;
       }
     }
     else
     {
+      Serial.println("File write invalid");
       // delete the file if it was created
       if (file)
       {
@@ -81,7 +91,7 @@ public:
         remove(filename.c_str());
       }
       // respond with failure
-      packetHandler->sendPacket(MessageId::WriteFileResponse, (uint8_t *)"FAIL", 4);
+      sendFailure(MessageId::WriteFileResponse, "Invalid message");
       readingFilename = false;
     }
   }

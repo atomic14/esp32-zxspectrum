@@ -32,7 +32,7 @@ private:
     EXPECTING_FRAME_BYTE
   };
 
-  static constexpr uint16_t PACKET_DATA_BUFFER_SIZE = 256;
+  static constexpr uint16_t PACKET_DATA_BUFFER_SIZE = 1024;
 
   State state = State::WAITING_FOR_START_BYTE;
 
@@ -80,6 +80,7 @@ public:
     {
       messageHandlers[messageType]->messageFinished(isValid);
     }
+    resetState();
     return State::WAITING_FOR_START_BYTE;
   }
 
@@ -91,6 +92,8 @@ public:
     receivedCrc = 0;
     receivedCrcLength = 0;
     totalRead = 0;
+    totalRead = 0;
+    bufferPosition = 0;
     calculatedCrc = 0xFFFFFFFF;
     // update the calculated CRC to include the packet type
     calculatedCrc = updateCRC32(calculatedCrc, data);
@@ -129,7 +132,7 @@ public:
       dataBuffer[bufferPosition++] = data;
       totalRead++;
       // buffer is full or we've read all the data
-      if (bufferPosition > PACKET_DATA_BUFFER_SIZE || totalRead == messageLength)
+      if (bufferPosition >= PACKET_DATA_BUFFER_SIZE || totalRead == messageLength)
       {
         if (messageHandlers.find(messageType) != messageHandlers.end())
         {
@@ -182,8 +185,9 @@ public:
           {
             messageHandlers[messageType]->messageFinished(false);
           }
+          resetState();
           state = State::WAITING_FOR_START_BYTE;
-          return;
+          continue;
         }
         // handle escape sequences
         if (escapeNextByte)
@@ -194,7 +198,7 @@ public:
         else if (data == ESCAPE_BYTE)
         {
           escapeNextByte = true;
-          return;
+          continue;
         }
         // hanndle the packet state machine
         switch (state)
@@ -213,10 +217,22 @@ public:
           break;
         default:
           // should not reach here unless something went wrong
+          resetState();
           state = State::WAITING_FOR_START_BYTE;
         }
       }
     }
+  }
+
+  void resetState() {
+    lengthByteCount = 0;
+    messageLength = 0;
+    receivedCrc = 0;
+    receivedCrcLength = 0;
+    totalRead = 0;
+    totalRead = 0;
+    bufferPosition = 0;
+    calculatedCrc = 0xFFFFFFFF;
   }
 
   /**

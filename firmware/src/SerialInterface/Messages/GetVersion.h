@@ -1,3 +1,4 @@
+#include <ArduinoJson.h>
 #include "Message.h"
 #include "../PacketHandler.h"
 
@@ -16,12 +17,21 @@ class GetVersionMessageReciever : public SimpleMessageReciever
     {
       if (isValid)
       {
-        // respond with the version information
-        uint8_t response[] = {
-            major,
-            minor,
-            build};
-        packetHandler->sendPacket(MessageId::GetVersionResponse, response, sizeof(response));
+        JsonDocument doc;
+        doc["success"] = true;
+        doc["result"]["version"]["major"] = major;
+        doc["result"]["version"]["minor"] = minor;
+        doc["result"]["version"]["build"] = build;
+
+
+
+        std::stringstream response;
+        serializeJson(doc, response);
+
+        std::string responseString = response.str();
+        size_t responseLength = responseString.length();
+
+        packetHandler->sendPacket(MessageId::GetVersionResponse, (uint8_t *) responseString.c_str(), responseLength);
       }
     }
 };

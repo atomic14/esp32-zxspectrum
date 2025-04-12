@@ -1,13 +1,15 @@
 #include <Arduino.h>
 #include <SPIFFS.h>
-#include "Flash.h"
+#include "FlashSPIFFS.h"
 #include "Serial.h"
 
-Flash::Flash(const char *mountPoint)
+FlashSPIFFS::FlashSPIFFS(const char *mountPoint)
 {
   m_mountPoint = mountPoint;
+  Serial.println("Initialising flash filesystem");
   if (SPIFFS.begin(true, mountPoint))
   {
+    Serial.println("Flash filesystem mounted successfully");
     _isMounted = true;
   } else
   {

@@ -12,7 +12,8 @@
 #include <cstring>
 #include <iostream>
 #include "SDCard.h"
-#include "Flash.h"
+#include "FlashSPIFFS.h"
+#include "FlashLittleFS.h"
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -147,6 +148,7 @@ private:
       return false; // Not a file or directory
     }
 
+
     std::string filename = entry->d_name;
     if (filename[0] == '.')
     {
@@ -189,10 +191,12 @@ private:
 class FileInfo
 {
 public:
-  FileInfo(const std::string &title, const std::string &path, bool isDirectory)
-      : title(title), path(path), _isDirectory(isDirectory) {}
+  FileInfo(const std::string &title, const std::string &name, const std::string &path, bool isDirectory, size_t size)
+      : title(title), name(name), path(path), _isDirectory(isDirectory), size(size) {}
   std::string getTitle() const { return title; }
+  std::string getName() const { return name; }
   std::string getPath() const { return path; }
+  size_t getSize() const { return size; }
   std::string getExtension() const
   {
     size_t pos = title.find_last_of('.');
@@ -206,7 +210,9 @@ public:
   bool isDirectory() { return _isDirectory; }
 private:
   std::string title;
+  std::string name;
   std::string path;
+  size_t size;
   bool _isDirectory;
 };
 
@@ -239,7 +245,10 @@ class IFiles
 {
 public:
   virtual bool isAvailable() = 0;
-  virtual void createDirectory(const char *folder) = 0;
+  virtual bool createDirectory(const char *folder) = 0;
+  virtual FILE *open(const char *filename, const char *mode) = 0;
+  virtual void rename(const char *oldFilename, const char *newFilename) = 0;
+  virtual void remove(const char *filename) = 0;
   virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
   virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
   virtual std::string getPath(const char *path) = 0;
@@ -266,12 +275,46 @@ public:
     return std::string(fileSystem->mountPoint()) + path;
   }
 
-  void createDirectory(const char *folder)
+  FILE *open(const char *filename, const char *mode)
+  {
+    auto bl = BusyLight();
+    if (!fileSystem || !fileSystem->isMounted())
+    {
+      return nullptr;
+    }
+    std::string full_path = std::string(fileSystem->mountPoint()) + filename;
+    Serial.printf("Opening file %s\n", full_path.c_str());
+    return fopen(full_path.c_str(), mode);
+  }
+  void rename(const char *oldFilename, const char *newFilename)
   {
     auto bl = BusyLight();
     if (!fileSystem || !fileSystem->isMounted())
     {
       return;
+    }
+    std::string full_old_path = getPath(oldFilename);
+    std::string full_new_path = getPath(newFilename);
+    Serial.printf("Renaming file %s to %s\n", full_old_path.c_str(), full_new_path.c_str());
+    ::rename(full_old_path.c_str(), full_new_path.c_str());
+  }
+  void remove(const char *filename)
+  {
+    auto bl = BusyLight();
+    if (!fileSystem || !fileSystem->isMounted())
+    {
+      return;
+    }
+    std::string full_path = std::string(fileSystem->mountPoint()) + filename;
+    Serial.printf("Removing file %s\n", full_path.c_str());
+    ::remove(full_path.c_str());
+  }
+  bool createDirectory(const char *folder)
+  {
+    auto bl = BusyLight();
+    if (!fileSystem || !fileSystem->isMounted())
+    {
+      return -1;
     }
     std::string full_path = std::string(fileSystem->mountPoint()) + folder;
     // check to see if the folder exists
@@ -279,12 +322,10 @@ public:
     if (stat(full_path.c_str(), &st) == -1)
     {
       Serial.printf("Creating folder %s\n", full_path.c_str());
-      mkdir(full_path.c_str(), 0777);
+      return mkdir(full_path.c_str(), 0777) == -0;
     }
-    else
-    {
-      Serial.printf("Folder %s already exists\n", full_path.c_str());
-    }
+    Serial.printf("Folder %s already exists\n", full_path.c_str());
+    return false;
   }
 
   FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false)
@@ -340,7 +381,16 @@ public:
 
     for (DirectoryIterator it(full_path, prefix, extensions, includeDirectories); it != DirectoryIterator(); ++it)
     {
-      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), full_path + it->d_name, it->d_type == DT_DIR)));
+      size_t size = 0;
+      if (it->d_type == DT_REG) {
+        std::string fullFilePath = full_path + it->d_name;
+        struct stat st;
+        if (stat(fullFilePath.c_str(), &st) == 0)
+        {
+          size = st.st_size;
+        }
+      }
+      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), it->d_name, full_path + it->d_name, it->d_type == DT_DIR, size)));
     }
     // sort the files - is this needed? Maybe they are already alphabetically sorted
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)
@@ -369,14 +419,43 @@ public:
     return flashFiles->getPath(path);
   }
 
-  void createDirectory(const char *folder) override {
+  bool createDirectory(const char *folder) override {
     if (sdFiles->isAvailable()) {
-      sdFiles->createDirectory(folder);
+      return sdFiles->createDirectory(folder);
+    }
+    // fallback to flash
+    if (flashFiles->isAvailable()) {
+      return flashFiles->createDirectory(folder);
+    }
+    return -1;
+  }
+
+  FILE *open(const char *filename, const char *mode) override {
+    if (sdFiles->isAvailable()) {
+      return sdFiles->open(filename, mode);
+    }
+    return flashFiles->open(filename, mode);
+  }
+
+  void rename(const char *oldFilename, const char *newFilename) override {
+    if (sdFiles->isAvailable()) {
+      sdFiles->rename(oldFilename, newFilename);
       return;
     }
     // fallback to flash
     if (flashFiles->isAvailable()) {
-      flashFiles->createDirectory(folder);
+      flashFiles->rename(oldFilename, newFilename);
+    }
+  }
+
+  void remove(const char *filename) override {
+    if (sdFiles->isAvailable()) {
+      sdFiles->remove(filename);
+      return;
+    }
+    // fallback to flash
+    if (flashFiles->isAvailable()) {
+      flashFiles->remove(filename);
     }
   }
 

@@ -18,21 +18,24 @@ class ListFolderMessageReceiver : public MemoryMessageReciever
 
         FileInfoVector filesVector = files->getFileStartingWithPrefix((const char *) getBuffer(), nullptr, {}, true);
 
-        // loop through the files and create the response
-        std::string response = "";
+        ArduinoJson::JsonDocument doc;
+        doc["success"] = true;
+        auto filesResult = doc["result"]["files"].to<JsonArray>();
+
         for (auto file : filesVector)
         {
-          if (response.length() > 0)
-          {
-            response += "|";
-          }
-          response += file->getPath();
-          if (file->isDirectory())
-          {
-            response += "/";
-          }
+          ArduinoJson::JsonObject fileObject = filesResult.add<JsonObject>();
+          fileObject["name"] = file->getName();
+          fileObject["isDirectory"] = file->isDirectory();
+          fileObject["size"] = file->getSize();
         }
-        packetHandler->sendPacket(MessageId::ListFolderResponse, (uint8_t *) response.c_str(), response.size());
+        std::stringstream response;
+        serializeJson(doc, response);
+
+        std::string responseString = response.str();
+        size_t responseLength = responseString.length();
+
+        packetHandler->sendPacket(MessageId::ListFolderResponse, (uint8_t *) responseString.c_str(), responseLength);
       }
     }
 };

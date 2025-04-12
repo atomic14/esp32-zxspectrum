@@ -47,16 +47,12 @@
 #include "SerialInterface/Messages/ListFolder.h"
 #include "SerialInterface/Messages/WriteFile.h"
 #include "SerialInterface/Messages/ReadFile.h"
+#include "SerialInterface/Messages/DeleteFile.h"
+#include "SerialInterface/Messages/MakeDirectory.h"
+#include "SerialInterface/Messages/RenameFile.h"
 
 void SerialInterfaceTask(void *arg) {
-  IFiles *files = (IFiles *)arg;
-  SerialTransport *serialTransport = new SerialTransport();
-  PacketHandler *packetHandler = new PacketHandler(*serialTransport);
-  packetHandler->registerMessageHandler(new GetVersionMessageReciever(packetHandler, 1, 2, 3), MessageId::GetVersionRequest);
-  packetHandler->registerMessageHandler(new ListFolderMessageReceiver(files, packetHandler), MessageId::ListFolderRequest);
-  packetHandler->registerMessageHandler(new WriteFileMessageReceiver(packetHandler), MessageId::WriteFileRequest);
-  packetHandler->registerMessageHandler(new ReadFileMessageReceiver(packetHandler), MessageId::ReadFileRequest);
-
+  PacketHandler *packetHandler = (PacketHandler *) arg;
   while(true) {
     packetHandler->loop();
     vTaskDelay(1);
@@ -69,7 +65,7 @@ void setup(void)
   pinMode(BOARD_POWERON, OUTPUT);
   digitalWrite(BOARD_POWERON, HIGH);
   #endif
-  Serial.begin(460800);
+  Serial.begin(115200);
   // for(int i = 0; i < 5; i++) {
   //   BusyLight bl;
   //   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -121,8 +117,8 @@ void setup(void)
     #endif
   #endif
   IFiles *sdFiles = new FilesImplementation<SDCard>(sdFileSystem);
-  Flash *flashFileSystem = new Flash(Flash::DEFAULT_MOUNT_POINT);
-  IFiles *spiffsFiles = new FilesImplementation<Flash>(flashFileSystem);
+  FlashLittleFS *spiffsFileSystem = new FlashLittleFS(FlashLittleFS::DEFAULT_MOUNT_POINT);
+  IFiles *spiffsFiles = new FilesImplementation<FlashLittleFS>(spiffsFileSystem);
 
   IFiles *files = new UnifiedStorage(spiffsFiles, sdFiles);
   
@@ -195,7 +191,10 @@ void setup(void)
     audioOutput->start(15625);
   }
   // create the directory structure
-  files->createDirectory("/snapshots");
+  if (!files->createDirectory("/snapshots"))
+  {
+    Serial.println("Failed to create /snapshots directory");
+  }
   MainMenuScreen menuPicker(*tft, hdmiDisplay, audioOutput, files);
   navigationStack->push(&menuPicker);
   // start off the keyboard and feed keys into the active scene
@@ -218,12 +217,21 @@ void setup(void)
   //                                   { navigationStack->pressKey(key); });
   // seeSaw->begin(SEESAW_DATA, SEESAW_CLOCK);
 #endif
+  SerialTransport *serialTransport = new SerialTransport();
+  PacketHandler *packetHandler = new PacketHandler(*serialTransport);
+  packetHandler->registerMessageHandler(new GetVersionMessageReciever(packetHandler, 1, 2, 3), MessageId::GetVersionRequest);
+  packetHandler->registerMessageHandler(new ListFolderMessageReceiver(spiffsFiles, packetHandler), MessageId::ListFolderRequest);
+  packetHandler->registerMessageHandler(new WriteFileMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileRequest);
+  packetHandler->registerMessageHandler(new ReadFileMessageReceiver(spiffsFiles, packetHandler), MessageId::ReadFileRequest);
+  packetHandler->registerMessageHandler(new DeleteFileMessageReceiver(spiffsFiles, packetHandler), MessageId::DeleteFileRequest);
+  packetHandler->registerMessageHandler(new MakeDirectoryMessageReceiver(spiffsFiles, packetHandler), MessageId::MakeDirectoryRequest);
+  packetHandler->registerMessageHandler(new RenameFileMessageReceiver(spiffsFiles, packetHandler), MessageId::RenameFileRequest);
 
   xTaskCreatePinnedToCore(
     SerialInterfaceTask,
     "SerialInterface",
     16384,
-    files,
+    packetHandler,
     1,
     nullptr,
     1

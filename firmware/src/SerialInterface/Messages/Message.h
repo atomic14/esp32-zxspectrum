@@ -15,6 +15,14 @@ enum class MessageId
   WriteFileResponse = 0x06,
   ReadFileRequest = 0x07,
   ReadFileResponse = 0x08,
+  DeleteFileRequest = 0x09,
+  DeleteFileResponse = 0x0A,
+  MakeDirectoryRequest = 0x0B,
+  MakeDirectoryResponse = 0x0C,
+  RenameFileRequest = 0x0D,
+  RenameFileResponse = 0x0E,
+  GetFileInfoRequest = 0x0F,
+  GetFileInfoResponse = 0x10,
 };
 
 class PacketHandler;
@@ -29,6 +37,9 @@ public:
   virtual void messageStart(size_t dataLength) = 0;
   virtual void messageData(uint8_t *data, size_t length) = 0;
   virtual void messageFinished(bool isValid) = 0;
+
+  virtual void sendSuccess(MessageId type);
+  virtual void sendFailure(MessageId type, const char *errorMessage);
 };
 
 // This is a simple message reciever that doesn't need expect any data

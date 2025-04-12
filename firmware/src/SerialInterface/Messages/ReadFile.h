@@ -5,14 +5,15 @@
 class ReadFileMessageReceiver : public MemoryMessageReciever
 {
 private:
+  IFiles *files = nullptr;
 public:
-ReadFileMessageReceiver(PacketHandler *packetHandler) : MemoryMessageReciever(packetHandler) {};
+  ReadFileMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
   void messageFinished(bool isValid) override
   {
     // filename will be in the buffer
     if (isValid)
     {
-      FILE *file = fopen((const char *) getBuffer(), "rb");
+      FILE *file = files->open((const char *) getBuffer(), "rb");
       if (file)
       {
         // read the file into the buffer
