@@ -1,4 +1,5 @@
 #pragma once
+#include <ArduinoJson.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -11,18 +12,22 @@ enum class MessageId
   GetVersionResponse = 0x03,
   ListFolderRequest = 0x02,
   ListFolderResponse = 0x04,
-  WriteFileRequest = 0x05,
-  WriteFileResponse = 0x06,
-  ReadFileRequest = 0x07,
-  ReadFileResponse = 0x08,
-  DeleteFileRequest = 0x09,
-  DeleteFileResponse = 0x0A,
-  MakeDirectoryRequest = 0x0B,
-  MakeDirectoryResponse = 0x0C,
-  RenameFileRequest = 0x0D,
-  RenameFileResponse = 0x0E,
-  GetFileInfoRequest = 0x0F,
-  GetFileInfoResponse = 0x10,
+  WriteFileStartRequest = 0x05,
+  WriteFileStartResponse = 0x06,
+  WriteFileDataRequest = 0x07,
+  WriteFileDataResponse = 0x08,
+  WriteFileEndRequest = 0x09,
+  WriteFileEndResponse = 0x0A,
+  ReadFileRequest = 0x0B,
+  ReadFileResponse = 0x0C,
+  DeleteFileRequest = 0x0D,
+  DeleteFileResponse = 0x0E,
+  MakeDirectoryRequest = 0x0F,
+  MakeDirectoryResponse = 0x10,
+  RenameFileRequest = 0x11,
+  RenameFileResponse = 0x12,
+  GetFileInfoRequest = 0x13,
+  GetFileInfoResponse = 0x14,
 };
 
 class PacketHandler;
@@ -39,6 +44,7 @@ public:
   virtual void messageFinished(bool isValid) = 0;
 
   virtual void sendSuccess(MessageId type);
+  virtual void sendSuccess(MessageId type, ArduinoJson::JsonDocument &doc);
   virtual void sendFailure(MessageId type, const char *errorMessage);
 };
 

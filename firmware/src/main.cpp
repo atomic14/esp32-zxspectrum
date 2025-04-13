@@ -219,9 +219,11 @@ void setup(void)
 #endif
   SerialTransport *serialTransport = new SerialTransport();
   PacketHandler *packetHandler = new PacketHandler(*serialTransport);
-  packetHandler->registerMessageHandler(new GetVersionMessageReciever(packetHandler, 1, 2, 3), MessageId::GetVersionRequest);
+  packetHandler->registerMessageHandler(new GetVersionMessageReciever(spiffsFiles, sdFiles, packetHandler), MessageId::GetVersionRequest);
   packetHandler->registerMessageHandler(new ListFolderMessageReceiver(spiffsFiles, packetHandler), MessageId::ListFolderRequest);
-  packetHandler->registerMessageHandler(new WriteFileMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileRequest);
+  packetHandler->registerMessageHandler(new WriteFileStartMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileStartRequest);
+  packetHandler->registerMessageHandler(new WriteFileDataMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileDataRequest);
+  packetHandler->registerMessageHandler(new WriteFileEndMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileEndRequest);
   packetHandler->registerMessageHandler(new ReadFileMessageReceiver(spiffsFiles, packetHandler), MessageId::ReadFileRequest);
   packetHandler->registerMessageHandler(new DeleteFileMessageReceiver(spiffsFiles, packetHandler), MessageId::DeleteFileRequest);
   packetHandler->registerMessageHandler(new MakeDirectoryMessageReceiver(spiffsFiles, packetHandler), MessageId::MakeDirectoryRequest);

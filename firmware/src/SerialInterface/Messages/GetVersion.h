@@ -1,17 +1,19 @@
 #include <ArduinoJson.h>
 #include "Message.h"
 #include "../PacketHandler.h"
+#include "version_info.h"
 
 class GetVersionMessageReciever : public SimpleMessageReciever
 {
+  private:
+    IFiles *flashFiles;
+    IFiles *sdFiles;
   public:
-    uint8_t major, minor, build;
-
-    GetVersionMessageReciever(PacketHandler *packetHandler, uint8_t major, uint8_t minor, uint8_t build) : SimpleMessageReciever(packetHandler)
+    GetVersionMessageReciever(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler)
+    : flashFiles(flashFiles), 
+      sdFiles(sdFiles),
+      SimpleMessageReciever(packetHandler)
     {
-      this->major = major;
-      this->minor = minor;
-      this->build = build;
     }
     void messageFinished(bool isValid) override
     {
@@ -19,19 +21,20 @@ class GetVersionMessageReciever : public SimpleMessageReciever
       {
         JsonDocument doc;
         doc["success"] = true;
-        doc["result"]["version"]["major"] = major;
-        doc["result"]["version"]["minor"] = minor;
-        doc["result"]["version"]["build"] = build;
+        doc["result"]["firmwareVersion"] = FIRMWARE_VERSION_STRING;
+        doc["result"]["hardwareVersion"] = HARDWARE_VERSION_STRING;
+        auto flash = doc["result"]["flash"].as<JsonObject>();
+        flash["available"] = flashFiles->isAvailable();
+        size_t total = 0, used = 0;
+        flashFiles->getSpace(total, used);
+        flash["total"] = total;
+        flash["used"] = used;
+        auto sd = doc["result"]["sd"].as<JsonObject>();
+        sd["available"] = sdFiles->isAvailable();
+        sdFiles->getSpace(total, used);
+        sd["total"] = total;
 
-
-
-        std::stringstream response;
-        serializeJson(doc, response);
-
-        std::string responseString = response.str();
-        size_t responseLength = responseString.length();
-
-        packetHandler->sendPacket(MessageId::GetVersionResponse, (uint8_t *) responseString.c_str(), responseLength);
+        sendSuccess(MessageId::GetVersionResponse, doc);
       }
     }
 };

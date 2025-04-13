@@ -6,8 +6,7 @@ class SerialTransport : public Transport
 public:
   SerialTransport() {
     Serial.setTimeout(1);
-    Serial.setTxTimeoutMs(1);
-    Serial.setTxBufferSize(4096);
+    Serial.setTxBufferSize(16384);
     Serial.setRxBufferSize(16384);
   }
 

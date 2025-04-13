@@ -8,6 +8,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Generate version info
+        id: version
+        run: |
+          # Get version from the latest tag, fallback to 0.0.0 if no tag
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          
+          # Short commit hash
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+
+          # GitHub build number
+          BUILD_NUMBER=${GITHUB_RUN_NUMBER}
+
+          # Composite version string
+          FULL_VERSION="${VERSION}+build${BUILD_NUMBER}-${COMMIT_HASH}"
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
+
+      - name: Write version to header
+        run: |
+          cat <<EOF > firmware/src/version.h
+          #pragma once
+          #define FIRMWARE_VERSION         "${VERSION}"
+          #define FIRMWARE_COMMIT_HASH     "${COMMIT_HASH}"
+          #define FIRMWARE_BUILD_NUM       "${BUILD_NUMBER}"
+          #define FIRMWARE_VERSION_STRING  "${FULL_VERSION}"
+          EOF
+
       - uses: actions/cache@v3
         with:
           path: |

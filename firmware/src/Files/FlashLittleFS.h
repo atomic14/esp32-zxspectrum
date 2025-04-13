@@ -14,6 +14,7 @@ public:
   bool isMounted() {
     return _isMounted;
   }
+  bool getSpace(size_t &total, size_t &used);
   const char *mountPoint() {
     return m_mountPoint.c_str();
   }

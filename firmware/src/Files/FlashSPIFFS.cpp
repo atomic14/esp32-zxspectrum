@@ -17,3 +17,14 @@ FlashSPIFFS::FlashSPIFFS(const char *mountPoint)
     Serial.println("An error occurred while mounting SPIFFS");
   }
 }
+
+
+bool FlashSPIFFS::getSpace(size_t &total, size_t &used) {
+  if (!_isMounted)
+  {
+    return false;
+  }
+  total = SPIFFS.totalBytes();
+  used = SPIFFS.usedBytes();
+  return true;
+}

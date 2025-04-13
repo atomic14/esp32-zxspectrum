@@ -32,5 +32,6 @@ public:
   bool readSectors(uint8_t *dst, size_t start_sector, size_t sector_count);
   size_t getSectorSize() { return m_sector_size; }
   size_t getSectorCount() { return m_sector_count; }
+  bool getSpace(size_t &total, size_t &used);
   ~SDCard();
 };

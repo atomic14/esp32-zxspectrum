@@ -245,6 +245,7 @@ class IFiles
 {
 public:
   virtual bool isAvailable() = 0;
+  virtual bool getSpace(size_t &total, size_t &used) = 0;
   virtual bool createDirectory(const char *folder) = 0;
   virtual FILE *open(const char *filename, const char *mode) = 0;
   virtual void rename(const char *oldFilename, const char *newFilename) = 0;
@@ -268,6 +269,15 @@ public:
   bool isAvailable()
   {
     return fileSystem && fileSystem->isMounted();
+  }
+
+  bool getSpace(size_t &total, size_t &used)
+  {
+    if (!fileSystem || !fileSystem->isMounted())
+    {
+      return false;
+    }
+    return fileSystem->getSpace(total, used);
   }
 
   std::string getPath(const char *path)
@@ -410,6 +420,13 @@ public:
 
   bool isAvailable() override {
     return (flashFiles->isAvailable()) || (sdFiles->isAvailable());
+  }
+
+  bool getSpace(size_t &total, size_t &used) override {
+    if (sdFiles->isAvailable()) {
+      return sdFiles->getSpace(total, used);
+    }
+    return flashFiles->getSpace(total, used);
   }
 
   std::string getPath(const char *path) override {

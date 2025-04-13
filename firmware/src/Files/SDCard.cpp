@@ -208,3 +208,13 @@ bool SDCard::readSectors(uint8_t *dst, size_t start_sector, size_t sector_count)
   xSemaphoreGive(m_mutex);
   return res == ESP_OK;
 }
+
+bool SDCard::getSpace(size_t &total, size_t &used) {
+  if (!_isMounted) {
+    return false;
+  }
+  total = m_sector_count * m_sector_size;
+  // no easy way to get the used space
+  used = 0;
+  return true;
+}
