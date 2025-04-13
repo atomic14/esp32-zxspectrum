@@ -19,10 +19,10 @@ jobs:
         with:
           fetch-depth: 0  # Need full git history for version info
 
-      # - name: Setup SDL2
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y libsdl2-dev
+      - name: Setup SDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev:i386
 
       - name: Build Emscripten Apps
         working-directory: desktop
