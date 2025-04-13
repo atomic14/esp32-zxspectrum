@@ -31,7 +31,7 @@ jobs:
           ./build_emscripten.sh
 
       - name: Upload Emscripten builds
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: emscripten-builds
           path: |

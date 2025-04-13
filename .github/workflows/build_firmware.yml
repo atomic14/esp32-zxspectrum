@@ -78,7 +78,7 @@ jobs:
         run: pio run --project-dir firmware
         
       - name: Upload Firmware Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: esp32-rainbow-firmware
           path: |
