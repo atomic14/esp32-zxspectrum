@@ -7,8 +7,6 @@ CXXFLAGS = \
 	-Wall \
 	-Wextra \
 	-std=c++17 \
-	`sdl2-config --cflags` \
-	-I/opt/homebrew/Cellar/sdl2/2.30.8/include \
 	-I../firmware/src/Emulator \
 	-I../firmware/src/AudioOutput \
 	-I../firmware/src/Emulator/z80 \
@@ -16,7 +14,6 @@ CXXFLAGS = \
 	-I../firmware/src \
 	-D__DESKTOP__ \
 	-s USE_SDL=2 \
-	-sSTACK_SIZE=200000 \
 	--shell-file src/shell.html \
 	-s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
 	-s EXPORTED_FUNCTIONS="['_main']" \
@@ -59,7 +56,7 @@ all: $(TARGET)
 
 # Create executable from object files
 $(TARGET): $(OBJS) Makefile.emu.ems
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs` $(LDFLAGS) --embed-file filesystem -lembind
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS) --embed-file filesystem -lembind
 
 # Object file rules (object files are placed next to the source files)
 %.o: %.cpp Makefile.emu.ems

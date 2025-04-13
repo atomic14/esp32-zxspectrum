@@ -27,6 +27,9 @@ source ./emsdk_env.sh
 
 cd ..
 
+# Ensure Emscripten's SDL2 port is used
+export EM_SDL_CONFIG=no
+
 make -f Makefile.emu.ems clean
 make -f Makefile.tap2wav.ems clean
 make -f Makefile.tap2z80.ems clean
