@@ -51,6 +51,22 @@ jobs:
         run: |
           cat firmware/src/version.h
 
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Build PlatformIO Project
+        run: pio run --project-dir firmware
+        
       - name: Create version JSON file
         run: |
           cat <<EOF > firmware/.pio/build/atomic14-esp32-rainbow-01/version.json
@@ -62,21 +78,6 @@ jobs:
           }
           EOF
 
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/pip
-            ~/.platformio/.cache
-          key: ${{ runner.os }}-pio
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Install PlatformIO Core
-        run: pip install --upgrade platformio
-
-      - name: Build PlatformIO Project
-        run: pio run --project-dir firmware
-        
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:

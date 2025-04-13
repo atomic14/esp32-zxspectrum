@@ -30,13 +30,7 @@ jobs:
         with:
           name: emscripten-builds
           path: |
-            desktop/zx_emulator.html
-            desktop/zx_emulator.js
-            desktop/zx_emulator.wasm
-            desktop/tap2wav.html
-            desktop/tap2wav.js
-            desktop/tap2wav.wasm
-            desktop/tap2z80.html
-            desktop/tap2z80.js
-            desktop/tap2z80.wasm
+            desktop/*.html
+            desktop/*.js
+            desktop/*.wasm
           if-no-files-found: error 
