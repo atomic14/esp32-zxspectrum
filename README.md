@@ -1,6 +1,8 @@
 
 [![Build Firmware](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml)
 
+[![Build Emscripten Desktop Apps](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml)
+
 # ESP32 Rainbow
 
 This repository contains the software for the [ESP32 Rainbow project](https://www.crowdsupply.com/atomic14/esp32-rainbow).
