@@ -231,7 +231,7 @@ public:
     return title.str();
   }
   std::string getLetter() const { return letter; }
-
+  int getFileCount() const { return fileCount; }
 private:
   std::string letter;
   int fileCount;
@@ -483,7 +483,7 @@ public:
     if (flashFiles->isAvailable()) {
       auto flashLetters = flashFiles->getFileLetters(folder, extensions, includeDirectories);
       for (const auto& letterCount : flashLetters) {
-        letterCountMap[letterCount->getLetter()] = letterCount->getTitle().find_first_of("0123456789");
+        letterCountMap[letterCount->getLetter()] = letterCount->getFileCount();
       }
     }
     
@@ -492,12 +492,9 @@ public:
       for (const auto& letterCount : sdLetters) {
         auto it = letterCountMap.find(letterCount->getLetter());
         if (it != letterCountMap.end()) {
-          // Extract numbers from both counts and add them
-          int existingCount = it->second;
-          int newCount = letterCount->getTitle().find_first_of("0123456789");
-          letterCountMap[letterCount->getLetter()] = existingCount + newCount;
+          letterCountMap[letterCount->getLetter()] = it->second + letterCount->getFileCount();
         } else {
-          letterCountMap[letterCount->getLetter()] = letterCount->getTitle().find_first_of("0123456789");
+          letterCountMap[letterCount->getLetter()] = letterCount->getFileCount();
         }
       }
     }
