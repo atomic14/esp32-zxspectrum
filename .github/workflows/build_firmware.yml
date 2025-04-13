@@ -82,8 +82,7 @@ jobs:
         with:
           name: esp32-rainbow-firmware
           path: |
-            firmware/.pio/build/atomic14-esp32-rainbow-01/bootloader.bin
-            firmware/.pio/build/atomic14-esp32-rainbow-01/firmware.bin
-            firmware/.pio/build/atomic14-esp32-rainbow-01/partitions.bin
+            firmware/.pio/build/atomic14-esp32-rainbow-01/*.bin
             firmware/version.json
+          overwrite: true
           if-no-files-found: error
