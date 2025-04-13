@@ -39,6 +39,10 @@ jobs:
           #define FIRMWARE_VERSION_STRING  "${FULL_VERSION}"
           EOF
 
+      - name: Echo version info
+        run: |
+          cat firmware/src/version.h
+
       - uses: actions/cache@v3
         with:
           path: |
