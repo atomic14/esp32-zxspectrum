@@ -48,11 +48,11 @@ DEPS = $(OBJS:.o=.d)
 all: $(TARGET)
 
 # Create executable from object files
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS) Makefile.tap2z80.ems
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
 # Object file rules
-%.o: %.cpp
+%.o: %.cpp Makefile.tap2z80.ems
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 # Include dependency files

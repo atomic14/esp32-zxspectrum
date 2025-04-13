@@ -1,6 +1,14 @@
 name: Build Firmware
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/build_firmware.yml'
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/build_firmware.yml'
 
 jobs:
   build:
@@ -43,6 +51,17 @@ jobs:
         run: |
           cat firmware/src/version.h
 
+      - name: Create version JSON file
+        run: |
+          cat <<EOF > firmware/version.json
+          {
+            "version": "$VERSION",
+            "commit_hash": "$COMMIT_HASH",
+            "build_number": "$BUILD_NUMBER",
+            "full_version": "$FULL_VERSION"
+          }
+          EOF
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -57,4 +76,14 @@ jobs:
 
       - name: Build PlatformIO Project
         run: pio run --project-dir firmware
-          
+        
+      - name: Upload Firmware Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: esp32-rainbow-firmware
+          path: |
+            firmware/.pio/build/atomic14-esp32-rainbow-01/bootloader.bin
+            firmware/.pio/build/atomic14-esp32-rainbow-01/firmware.bin
+            firmware/.pio/build/atomic14-esp32-rainbow-01/partitions.bin
+            firmware/version.json
+          if-no-files-found: error

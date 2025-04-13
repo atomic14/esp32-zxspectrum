@@ -46,15 +46,15 @@ DEPS = $(OBJS:.o=.d)
 all: $(TARGET)
 
 # Create executable from object files
-$(TARGET): $(OBJS) Makefile
+$(TARGET): $(OBJS) Makefile.emu
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) `sdl2-config --libs` $(LDFLAGS)
 
 # Object file rules (object files are placed next to the source files)
-%.o: %.cpp Makefile
+%.o: %.cpp Makefile.emu
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 # Rules for .mm files (for Objective-C++)
-%.o: %.mm Makefile
+%.o: %.mm Makefile.emu
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 # Include dependency files

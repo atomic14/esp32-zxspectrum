@@ -1,0 +1,47 @@
+name: Build Emscripten Desktop Apps
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build_emscripten.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build_emscripten.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Need full git history for version info
+
+      - name: Setup SDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
+      - name: Build Emscripten Apps
+        working-directory: desktop
+        run: |
+          chmod +x build_emscripten.sh
+          ./build_emscripten.sh
+
+      - name: Upload Emscripten builds
+        uses: actions/upload-artifact@v3
+        with:
+          name: emscripten-builds
+          path: |
+            desktop/zx_emulator.html
+            desktop/zx_emulator.js
+            desktop/zx_emulator.wasm
+            desktop/tap2wav.html
+            desktop/tap2wav.js
+            desktop/tap2wav.wasm
+            desktop/tap2z80.html
+            desktop/tap2z80.js
+            desktop/tap2z80.wasm
+          if-no-files-found: error 

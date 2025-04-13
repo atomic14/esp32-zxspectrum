@@ -27,8 +27,10 @@ source ./emsdk_env.sh
 
 cd ..
 
-make clean
+make -f Makefile.emu.ems clean
+make -f Makefile.tap2wav.ems clean
+make -f Makefile.tap2z80.ems clean
 
-# make -f Makefile.ems
-# make -f Makefile.tap2wav.ems
+make -f Makefile.emu.ems
+make -f Makefile.tap2wav.ems
 make -f Makefile.tap2z80.ems
