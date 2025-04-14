@@ -25,12 +25,9 @@ public:
     updateDisplay();
   }
   
-  void updateKey(SpecKeys key, uint8_t state)
+  void pressKey(SpecKeys key) override
   {
-    if (state == 1)
-    {
-        m_navigationStack->pop();
-    }
+    m_navigationStack->pop();
   }
 
   void updateDisplay()
