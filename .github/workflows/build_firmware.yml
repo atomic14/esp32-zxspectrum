@@ -39,7 +39,7 @@ jobs:
 
       - name: Write version to header
         run: |
-          cat <<EOF > firmware/src/version.h
+          cat <<EOF > firmware/src/version_info.h
           #pragma once
           #define FIRMWARE_VERSION         "${VERSION}"
           #define FIRMWARE_COMMIT_HASH     "${COMMIT_HASH}"
