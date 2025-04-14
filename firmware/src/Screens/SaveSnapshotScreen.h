@@ -2,7 +2,7 @@
 
 #include "Screen.h"
 #include "../TFT/TFTDisplay.h"
-#include "fonts/GillSans_30_vlw.h"
+#include "fonts/GillSans_25_vlw.h"
 #include "fonts/GillSans_15_vlw.h"
 #include "../Emulator/spectrum.h"
 #include "../Emulator/snaps.h"
@@ -96,7 +96,7 @@ public:
   {
     const int yMargin = 100;
     const int xMargin = 76;
-    m_tft.loadFont(GillSans_30_vlw);
+    m_tft.loadFont(GillSans_25_vlw);
     m_tft.startWrite();
     m_tft.fillRect(xMargin/2, yMargin/2, m_tft.width() - xMargin, m_tft.height() - yMargin, TFT_BLACK);
     m_tft.drawRect(xMargin/2, yMargin/2, m_tft.width() - xMargin, m_tft.height() - yMargin, TFT_WHITE);

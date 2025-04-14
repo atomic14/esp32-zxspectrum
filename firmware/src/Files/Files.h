@@ -393,6 +393,11 @@ public:
     {
       size_t size = 0;
       if (it->d_type == DT_REG) {
+        // do we need a slash at the end of the path?
+        if (full_path[full_path.length() - 1] != '/')
+        {
+          full_path += "/";
+        }
         std::string fullFilePath = full_path + it->d_name;
         struct stat st;
         if (stat(fullFilePath.c_str(), &st) == 0)

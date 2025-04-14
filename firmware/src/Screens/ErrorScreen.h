@@ -2,7 +2,7 @@
 
 #include "Screen.h"
 #include "../TFT/Display.h"
-#include "fonts/GillSans_30_vlw.h"
+#include "fonts/GillSans_25_vlw.h"
 #include "NavigationStack.h"
 
 class ErrorScreen : public Screen
@@ -35,7 +35,7 @@ public:
 
   void updateDisplay()
   {
-    m_tft.loadFont(GillSans_30_vlw);
+    m_tft.loadFont(GillSans_25_vlw);
     m_tft.startWrite();
     m_tft.fillScreen(TFT_RED);
     m_tft.setTextColor(TFT_WHITE, TFT_RED);
