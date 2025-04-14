@@ -6,6 +6,8 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 #include "SDCard.h"
+#include "ff.h"      // FatFS header for f_getfree
+#include "diskio.h"  // FatFS disk I/O
 
 #define SPI_DMA_CHAN SPI_DMA_CH_AUTO
 
@@ -209,12 +211,37 @@ bool SDCard::readSectors(uint8_t *dst, size_t start_sector, size_t sector_count)
   return res == ESP_OK;
 }
 
-bool SDCard::getSpace(size_t &total, size_t &used) {
+bool SDCard::getSpace(uint64_t &total, uint64_t &used) {
   if (!_isMounted) {
     return false;
   }
-  total = m_sector_count * m_sector_size;
-  // no easy way to get the used space
+  
+  // Total space calculation from sectors
+  total = (uint64_t)m_sector_count * 512;
+  
+  // Use FatFS f_getfree to get free space information
+  FATFS* fs;
+  DWORD free_clusters = 0;
+  char driveStr[3] = {'0', ':', 0}; // Default drive
+  
+  FRESULT res = f_getfree(driveStr, &free_clusters, &fs);
+  if (res == FR_OK) {
+    uint64_t total_clusters = (uint64_t)(fs->n_fatent - 2);
+    uint64_t cluster_size = (uint64_t)(fs->csize) * 512; // Sector size is 512 bytes
+    
+    uint64_t total_size = total_clusters * cluster_size;
+    uint64_t free_size = (uint64_t)free_clusters * cluster_size;
+    
+    // Sanity check
+    if (total_size > 0 && free_size <= total_size) {
+      // Update with calculated values for better accuracy
+      total = total_size;
+      used = total_size - free_size;
+      return true;
+    }
+  }
+  
+  // If f_getfree fails, fall back to just reporting total space
   used = 0;
   return true;
 }

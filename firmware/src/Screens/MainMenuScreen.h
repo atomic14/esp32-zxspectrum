@@ -7,6 +7,7 @@
 #include "EmulatorScreen.h"
 #include "VideoFilePickerScreen.h"
 #include "GameFilePickerScreen.h"
+#include "AboutScreen.h"
 
 static const std::vector<std::string> gameValidExtensions = {".z80", ".sna", ".tap", ".tzx"};
 static const std::vector<std::string> videoValidExtensions = {".avi"};
@@ -45,6 +46,8 @@ public:
                                    { this->showSnapshots(); }),
         std::make_shared<MenuItem>("Video Player", [&]()
                                    { this->showVideos(); }),
+        std::make_shared<MenuItem>("About", [&]()
+                                   { this->showAbout(); }),
 #ifdef ENABLE_MSC
         std::make_shared<MenuItem>("Mount SD Card", [&]()
                                   { this->mountSDCard(); }),
@@ -146,5 +149,11 @@ public:
   void mountSDCard()
   {
     startMSC();
+  }
+
+  void showAbout()
+  {
+    AboutScreen *aboutScreen = new AboutScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
+    m_navigationStack->push(aboutScreen);
   }
 };

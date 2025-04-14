@@ -240,12 +240,19 @@ private:
 using FileLetterCountPtr = std::shared_ptr<FileLetterCount>;
 using FileLetterCountVector = std::vector<FileLetterCountPtr>;
 
+// Storage type enum for selecting flash or SD card
+enum class StorageType {
+  AUTO,  // Automatically select SD card if available, otherwise flash
+  FLASH, // Force flash storage
+  SD     // Force SD card storage
+};
+
 // Files class to list files in a directory
 class IFiles
 {
 public:
   virtual bool isAvailable() = 0;
-  virtual bool getSpace(size_t &total, size_t &used) = 0;
+  virtual bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO) = 0;
   virtual bool createDirectory(const char *folder) = 0;
   virtual FILE *open(const char *filename, const char *mode) = 0;
   virtual void rename(const char *oldFilename, const char *newFilename) = 0;
@@ -271,7 +278,7 @@ public:
     return fileSystem && fileSystem->isMounted();
   }
 
-  bool getSpace(size_t &total, size_t &used)
+  bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO)
   {
     if (!fileSystem || !fileSystem->isMounted())
     {
@@ -427,11 +434,26 @@ public:
     return (flashFiles->isAvailable()) || (sdFiles->isAvailable());
   }
 
-  bool getSpace(size_t &total, size_t &used) override {
-    if (sdFiles->isAvailable()) {
-      return sdFiles->getSpace(total, used);
+  bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO) override {
+    if (storageType == StorageType::FLASH) {
+      // Force flash storage
+      return flashFiles->getSpace(total, used);
+    } else if (storageType == StorageType::SD) {
+      // Force SD card storage
+      if (sdFiles->isAvailable()) {
+        return sdFiles->getSpace(total, used);
+      }
+      // SD card not available
+      total = 0;
+      used = 0;
+      return false;
+    } else {
+      // Auto mode - use SD card if available, otherwise use flash
+      if (sdFiles->isAvailable()) {
+        return sdFiles->getSpace(total, used);
+      }
+      return flashFiles->getSpace(total, used);
     }
-    return flashFiles->getSpace(total, used);
   }
 
   std::string getPath(const char *path) override {

@@ -20,14 +20,21 @@ FlashLittleFS::FlashLittleFS(const char *mountPoint)
   }
 }
 
-bool FlashLittleFS::getSpace(size_t &total, size_t &used)
+bool FlashLittleFS::getSpace(uint64_t &total, uint64_t &used)
 {
   if (!_isMounted)
   {
     return false;
   }
-  if (esp_littlefs_info("spiffs", &total, &used))
+  
+  // esp_littlefs_info uses size_t, so we need to use temporary variables
+  size_t temp_total = 0, temp_used = 0;
+  
+  if (esp_littlefs_info("spiffs", &temp_total, &temp_used) == ESP_OK)
   {
-    return 0;
+    total = temp_total;
+    used = temp_used;
+    return true;
   }
+  return false;
 }

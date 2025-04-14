@@ -17,5 +17,5 @@ public:
   const char *mountPoint() {
     return m_mountPoint.c_str();
   }
-  bool getSpace(size_t &total, size_t &used);
+  bool getSpace(uint64_t &total, uint64_t &used);
 };

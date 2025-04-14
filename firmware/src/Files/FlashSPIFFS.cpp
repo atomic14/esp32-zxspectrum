@@ -19,7 +19,7 @@ FlashSPIFFS::FlashSPIFFS(const char *mountPoint)
 }
 
 
-bool FlashSPIFFS::getSpace(size_t &total, size_t &used) {
+bool FlashSPIFFS::getSpace(uint64_t &total, uint64_t &used) {
   if (!_isMounted)
   {
     return false;

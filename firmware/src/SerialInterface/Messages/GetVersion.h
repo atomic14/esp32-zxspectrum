@@ -25,14 +25,20 @@ class GetVersionMessageReciever : public SimpleMessageReciever
         doc["result"]["hardwareVersion"] = HARDWARE_VERSION_STRING;
         auto flash = doc["result"]["flash"].as<JsonObject>();
         flash["available"] = flashFiles->isAvailable();
-        size_t total = 0, used = 0;
+        uint64_t total = 0, used = 0;
         flashFiles->getSpace(total, used);
         flash["total"] = total;
         flash["used"] = used;
         auto sd = doc["result"]["sd"].as<JsonObject>();
         sd["available"] = sdFiles->isAvailable();
-        sdFiles->getSpace(total, used);
-        sd["total"] = total;
+        if (sdFiles->isAvailable()) {
+          sdFiles->getSpace(total, used);
+          sd["total"] = total;
+          sd["used"] = used;
+        } else {
+          sd["total"] = 0;
+          sd["used"] = 0;
+        }
 
         sendSuccess(MessageId::GetVersionResponse, doc);
       }
