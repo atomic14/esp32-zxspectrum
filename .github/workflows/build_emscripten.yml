@@ -9,6 +9,8 @@ on:
     paths:
       - 'desktop/**'
       - '.github/workflows/build_emscripten.yml'
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -33,4 +35,25 @@ jobs:
             desktop/*.html
             desktop/*.js
             desktop/*.wasm
-          if-no-files-found: error 
+          if-no-files-found: error
+
+  upload-to-release:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download emscripten builds
+        uses: actions/download-artifact@v4
+        with:
+          name: emscripten-builds
+          path: emscripten-builds
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            emscripten-builds/*.html
+            emscripten-builds/*.js
+            emscripten-builds/*.wasm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

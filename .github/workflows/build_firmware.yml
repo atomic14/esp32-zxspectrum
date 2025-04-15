@@ -69,7 +69,7 @@ jobs:
       - name: Build PlatformIO Project
         run: pio run --project-dir firmware
         
-      - name: Create version JSON file
+      - name: Create version JSON file for Atomic14 Rainbow
         run: |
           cat <<EOF > firmware/.pio/build/atomic14-esp32-rainbow-01/version.json
           {
@@ -79,6 +79,9 @@ jobs:
             "full_version": "$FULL_VERSION"
           }
           EOF
+
+      - name: Create version JSON file for Cheap Yellow Display
+        run: |
           cat <<EOF > firmware/.pio/build/cheap-yellow-display/version.json
           {
             "version": "$VERSION",
