@@ -51,7 +51,7 @@ jobs:
 
       - name: Echo version info
         run: |
-          cat firmware/src/version.h
+          cat firmware/src/version_info.h
 
       - uses: actions/cache@v3
         with:
