@@ -148,7 +148,6 @@ private:
       return false; // Not a file or directory
     }
 
-
     std::string filename = entry->d_name;
     if (filename[0] == '.')
     {
@@ -156,6 +155,7 @@ private:
     }
 
     std::string lowerCaseFilename = StringUtils::downcase(filename);
+    // Note: We do not filter by first character here; bucketing for non-alphabetic is handled in getFileLetters.
     if (extensions.size() > 0)
     {
       bool validExtension = false;
@@ -177,10 +177,18 @@ private:
     if (prefix != nullptr)
     {
       std::string lowerCasePrefix = StringUtils::downcase(prefix);
-      if (lowerCaseFilename.length() < lowerCasePrefix.length() ||
-          lowerCaseFilename.substr(0, lowerCasePrefix.length()) != lowerCasePrefix)
-      {
-        return false; // Prefix does not match
+      char firstChar = filename.empty() ? '\0' : filename[0];
+      if (lowerCasePrefix == "#") {
+        // Match files whose first character is NOT an alphabetic letter
+        if (std::isalpha(static_cast<unsigned char>(firstChar))) {
+          return false;
+        }
+      } else {
+        if (lowerCaseFilename.length() < lowerCasePrefix.length() ||
+            lowerCaseFilename.substr(0, lowerCasePrefix.length()) != lowerCasePrefix)
+        {
+          return false; // Prefix does not match
+        }
       }
     }
     return true; // Entry is valid
@@ -364,7 +372,13 @@ public:
       std::string lowerCaseFilename = StringUtils::downcase(filename);
       // get the first letter
       auto name = StringUtils::upcase(filename);
-      auto letter = name.substr(0, 1);
+      char firstChar = name.empty() ? '\0' : name[0];
+      std::string letter;
+      if (std::isalpha(static_cast<unsigned char>(firstChar))) {
+        letter = name.substr(0, 1);
+      } else {
+        letter = "#";
+      }
       if (fileCountByLetter.find(letter) == fileCountByLetter.end())
       {
         fileCountByLetter[letter] = 0;
