@@ -9,6 +9,8 @@ on:
     paths:
       - 'firmware/**'
       - '.github/workflows/build_firmware.yml'
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -77,8 +79,16 @@ jobs:
             "full_version": "$FULL_VERSION"
           }
           EOF
+          cat <<EOF > firmware/.pio/build/cheap-yellow-display/version.json
+          {
+            "version": "$VERSION",
+            "commit_hash": "$COMMIT_HASH",
+            "build_number": "$BUILD_NUMBER",
+            "full_version": "$FULL_VERSION"
+          }
+          EOF
 
-      - name: Upload Firmware Artifacts
+      - name: Upload esp32 rainbow Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: esp32-rainbow-firmware
@@ -89,3 +99,47 @@ jobs:
             firmware/.pio/build/atomic14-esp32-rainbow-01/version.json
           overwrite: true
           if-no-files-found: error
+
+      - name: Upload CYD Firmware Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyd-firmware
+          path: |
+            firmware/.pio/build/cheap-yellow-display/bootloader.bin
+            firmware/.pio/build/cheap-yellow-display/firmware.bin
+            firmware/.pio/build/cheap-yellow-display/partitions.bin
+            firmware/.pio/build/cheap-yellow-display/version.json
+          overwrite: true
+          if-no-files-found: error
+
+  upload-to-release:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download esp32 rainbow firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: esp32-rainbow-firmware
+          path: esp32-rainbow-firmware
+
+      - name: Download CYD firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cyd-firmware
+          path: cyd-firmware
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            esp32-rainbow-firmware/bootloader.bin
+            esp32-rainbow-firmware/firmware.bin
+            esp32-rainbow-firmware/partitions.bin
+            esp32-rainbow-firmware/version.json
+            cyd-firmware/bootloader.bin
+            cyd-firmware/firmware.bin
+            cyd-firmware/partitions.bin
+            cyd-firmware/version.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
