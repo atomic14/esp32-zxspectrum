@@ -1,6 +1,11 @@
 #include "Renderer.h"
 #include "../../TFT/HDMIDisplay.h"
 #include "../../Emulator/spectrum.h"
+#include "../fonts/GillSans_15_vlw.h"
+#include "../../AudioOutput/AudioOutput.h"
+
+static const int VOLUME_BAR_HEIGHT = 45;
+static const int MENU_BAR_HEIGHT = 20;
 
 void displayTask(void *pvParameters) {
   Renderer *renderer = (Renderer *)pvParameters;
@@ -70,7 +75,18 @@ void Renderer::drawScreen()
     m_tft.dmaWait();
     m_HDMIDisplay->sendSpectrum(currentScreenBuffer, currentBorderColors);
   }
+  drawSpectrumScreen();
   m_tft.startWrite();
+  m_tft.dmaWait();
+  if (isShowingMenu) {
+    drawMenu();
+  } else if (isShowingTimeTravel) {
+    drawTimeTravel();
+  }
+  m_tft.endWrite();
+}
+
+void Renderer::drawSpectrumScreen() {
   if (isLoading)
   {
     int position = loadProgress * screenWidth / 100;
@@ -79,14 +95,20 @@ void Renderer::drawScreen()
   }
   int borderOffset = 36;
 
-  // Draw the top border
-  drawBorder(isLoading ? 8 : 0, borderHeight, borderOffset, screenWidth, screenWidth, borderHeight, false);
+  int borderHeightSkip = (isShowingMenu | isShowingTimeTravel) ? MENU_BAR_HEIGHT : isLoading ? 8 : 0;
 
-  // Draw the bottom border
-  drawBorder(screenHeight - borderHeight, screenHeight, borderOffset, screenWidth, screenWidth, borderHeight, false);
+  // Draw the top border
+  drawBorder(borderHeightSkip, borderHeight, borderOffset, screenWidth, screenWidth, borderHeight, false);
+
+  // Draw the bottom border - unless we are showing the menu which includes the bottom volume bar
+  if (!isShowingMenu) {
+    drawBorder(screenHeight - borderHeight, screenHeight, borderOffset, screenWidth, screenWidth, borderHeight, false);
+  }
+
+  int bottomBorderSkip = isShowingMenu ? VOLUME_BAR_HEIGHT : 0;
 
   // Draw the left and right borders
-  drawBorder(borderHeight, screenHeight - borderHeight, borderOffset, borderWidth, screenWidth, borderHeight, true);
+  drawBorder(borderHeightSkip, screenHeight - borderHeight - bottomBorderSkip, borderOffset, borderWidth, screenWidth, borderHeight, true);
   // do the pixels
   uint8_t *attrBase = currentScreenBuffer + 0x1800;
   uint8_t *pixelBase = currentScreenBuffer;
@@ -155,11 +177,12 @@ void Renderer::drawScreen()
     }
     if (dirty || firstDraw)
     {
-      m_tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
-      m_tft.pushPixels(pixelBuffer, 256 * 8);
+      if (!isShowingMenu || borderHeight + attrY * 8 < m_tft.height() - VOLUME_BAR_HEIGHT) { 
+        m_tft.setWindow(borderWidth, borderHeight + attrY * 8, borderWidth + 255, borderHeight + attrY * 8 + 7);
+        m_tft.pushPixels(pixelBuffer, 256 * 8);
+      }
     }
   }
-  m_tft.endWrite();
   drawReady = true;
   firstDraw = false;
   frameCount++;
@@ -168,5 +191,54 @@ void Renderer::drawScreen()
   {
     flashTimer = 0;
   }
+
 }
 
+void Renderer::drawTimeTravel() {
+    m_tft.fillRect(0, 0, m_tft.width(), 20, TFT_BLACK);
+
+    m_tft.loadFont(GillSans_15_vlw);
+    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    
+    // Draw the left control "<5"
+    m_tft.drawString("<5", 5, 0);
+    
+    // Draw the center text "Time Travel - Enter=Jump"
+    Point centerSize = m_tft.measureString("Time Travel - Enter=Jump");
+    int centerX = (m_tft.width() - centerSize.x) / 2;
+    m_tft.drawString("Time Travel - Enter=Jump", centerX, 0);
+    
+    // Draw the right control "8>"
+    Point rightSize = m_tft.measureString("8>");
+    int rightX = m_tft.width() - rightSize.x - 5;  // 5 pixels from right edge
+    m_tft.drawString("8>", rightX, 0);
+}
+
+void Renderer::drawMenu() {
+    m_tft.fillRect(0, 0, m_tft.width(), MENU_BAR_HEIGHT, TFT_BLACK);
+
+    m_tft.loadFont(GillSans_15_vlw);
+    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    
+    Point menuSize = m_tft.measureString("1-Time Travel  2-Snapshot  ENTER-Resume");
+    int centerX = (m_tft.width() - menuSize.x) / 2;
+    m_tft.drawString("1-Time Travel  2-Snapshot  ENTER-Resume", centerX, 0);
+
+    // Draw the volume control
+    const char *volumeText = "<5       Volume       8>";
+    Point volumeSize = m_tft.measureString(volumeText);
+    int volumeX = (m_tft.width() - volumeSize.x) / 2;
+    int volumeY = m_tft.height() - VOLUME_BAR_HEIGHT;
+
+    m_tft.fillRect(0,volumeY, m_tft.width(), VOLUME_BAR_HEIGHT, TFT_BLACK);
+
+    m_tft.drawString(volumeText, volumeX, volumeY + 5);
+
+    int volumeRectX = 10;
+    int volumeRectY = volumeY + volumeSize.y + 10;
+    int volumeRectWidth = m_tft.width() - 20;
+    int volumeRectHeight = 10;
+    m_tft.fillRect(volumeRectX, volumeRectY, volumeRectWidth, volumeRectHeight, TFT_WHITE);
+    int currentVolumeWidth = volumeRectWidth * m_audioOutput->getVolume() / 10;
+    m_tft.fillRect(volumeRectX, volumeRectY, currentVolumeWidth, volumeRectHeight, TFT_GREEN);
+}

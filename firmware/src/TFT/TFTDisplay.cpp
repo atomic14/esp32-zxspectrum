@@ -83,6 +83,8 @@ public:
 TFTDisplay::TFTDisplay(gpio_num_t cs, gpio_num_t dc, gpio_num_t rst, gpio_num_t bl, int width, int height)
     : Display(width, height), cs(cs), dc(dc), rst(rst), bl(bl), spi(nullptr)
 {
+  mDisplayLock = xSemaphoreCreateBinary();
+  xSemaphoreGive(mDisplayLock);
   pinMode(rst, OUTPUT);
   pinMode(dc, OUTPUT);
   if (bl != GPIO_NUM_NC)

@@ -7,10 +7,11 @@
 void displayTask(void *pvParameters);
 
 class HDMIDisplay;
-
+class AudioOutput;
 class Renderer {
 private:
     Display &m_tft;
+    AudioOutput *m_audioOutput = nullptr;
     HDMIDisplay *m_HDMIDisplay = nullptr;
     // holding area for pixels that are sent to the tft display
     uint16_t *pixelBuffer = nullptr;
@@ -38,6 +39,12 @@ private:
     void drawBorder(int startPos, int endPos, int offset, int length, int drawWidth, int drawHeight, bool isSideBorders);
     // draw the screen
     void drawScreen();
+    // draw the spectrum screen
+    void drawSpectrumScreen();
+    // draw the menu
+    void drawMenu();
+    // draw the time travel screen
+    void drawTimeTravel();
     // display task - runs continuously and draws the screen
     // controlled bu the m_displaySemaphore
     friend void displayTask(void *pvParameters);
@@ -49,7 +56,7 @@ private:
     // keep track of how many frames we've drawn
     uint32_t frameCount = 0;
 public:
-    Renderer(Display &tft, HDMIDisplay *hdmiDisplay): m_tft(tft), m_HDMIDisplay(hdmiDisplay) {
+    Renderer(Display &tft, AudioOutput *audioOutput, HDMIDisplay *hdmiDisplay): m_tft(tft), m_audioOutput(audioOutput), m_HDMIDisplay(hdmiDisplay) {
       // enough for a row of 8 pixels
       pixelBuffer = (uint16_t *)malloc(256 * 8 * sizeof(uint16_t));
       // the spectrum screen is 256x192 pixels
@@ -106,10 +113,16 @@ public:
     void setNeedsRedraw() {
       firstDraw = true;
     }
-    void forceRedraw(const uint8_t *currentScreen, const uint8_t *borderColors) {
-      memcpy(currentScreenBuffer, currentScreen, 6912);
-      memcpy(currentBorderColors, borderColors, 312);
+    void forceRedraw(const uint8_t *currentScreen = nullptr, const uint8_t *borderColors = nullptr) {
+      if (currentScreen != nullptr) {
+        memcpy(currentScreenBuffer, currentScreen, 6912);
+      }
+      if (borderColors != nullptr) {
+        memcpy(currentBorderColors, borderColors, 312);
+      }
       firstDraw = true;
       drawScreen();
     }
+    bool isShowingMenu = false;
+    bool isShowingTimeTravel = false;
 };

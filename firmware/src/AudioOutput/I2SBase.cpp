@@ -9,7 +9,7 @@ static const char *TAG = "AUDIO";
 // number of frames to try and send at once (a frame is a left and right sample)
 const size_t NUM_FRAMES_TO_SEND=1024;
 
-I2SBase::I2SBase(i2s_port_t i2s_port) : m_i2s_port(i2s_port)
+I2SBase::I2SBase(i2s_port_t i2s_port, ISettings *settings) : m_i2s_port(i2s_port), AudioOutput(settings)
 {
   m_tmp_frames = (int16_t *)malloc(2 * sizeof(int16_t) * NUM_FRAMES_TO_SEND);
 }

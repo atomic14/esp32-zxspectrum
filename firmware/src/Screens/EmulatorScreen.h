@@ -22,10 +22,6 @@ class EmulatorScreen : public Screen
     FILE *audioFile = nullptr;
     void triggerLoadTape();
     bool isLoading = false;
-    bool isInTimeTravelMode = false;
-    bool isShowingMenu = false;
-    void drawTimeTravel();
-    void drawMenu();
   public:
     EmulatorScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files);
     void updateKey(SpecKeys key, uint8_t state);

@@ -60,12 +60,14 @@ public:
   void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
   void dmaWait();
   void startWrite() {
+    xSemaphoreTake(mDisplayLock, portMAX_DELAY);
     dmaWait();
     spi_device_acquire_bus(spi, portMAX_DELAY);
   }
   void endWrite() {
     dmaWait();
     spi_device_release_bus(spi);
+    xSemaphoreGive(mDisplayLock);
   }
 protected:
   void init();
@@ -84,4 +86,5 @@ protected:
   gpio_num_t rst;
   gpio_num_t bl;
   spi_device_handle_t spi;
+  SemaphoreHandle_t mDisplayLock;
 };

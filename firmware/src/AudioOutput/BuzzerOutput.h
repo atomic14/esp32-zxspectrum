@@ -9,7 +9,7 @@
 #include "driver/timer.h"
 #include <driver/adc.h>
 
-
+class ISettings;
 class BuzzerOutput : public AudioOutput
 {
 private:
@@ -26,7 +26,7 @@ private:
   // queue to hold samples read from the ADC
   xQueueHandle micValueQueue;
 public:
-  BuzzerOutput(gpio_num_t buzzerPin) : AudioOutput()
+  BuzzerOutput(gpio_num_t buzzerPin, ISettings *settings) : AudioOutput(settings)
   {
     // set up the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);

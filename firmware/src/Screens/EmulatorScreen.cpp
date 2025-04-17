@@ -57,7 +57,7 @@ void EmulatorScreen::triggerLoadTape()
 EmulatorScreen::EmulatorScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
     : Screen(tft, hdmiDisplay, audioOutput, files)
 {
-  renderer = new Renderer(tft, hdmiDisplay);
+  renderer = new Renderer(tft, audioOutput, hdmiDisplay);
   machine = new Machine(renderer, audioOutput, [&]()
                         {
     Serial.println("ROM loading routine hit");
@@ -119,7 +119,7 @@ void EmulatorScreen::updateKey(SpecKeys key, uint8_t state)
   //     Serial.printf("Audio file closed\n");
   //   }
   // }
-  if (!isInTimeTravelMode)
+  if (!renderer->isShowingTimeTravel)
   {
     machine->updateKey(key, state);
   }
@@ -129,40 +129,57 @@ void EmulatorScreen::pressKey(SpecKeys key)
 {
   if (key == SPECKEY_MENU)
   {
-    pause();
-    drawMenu();
+    if (renderer->isShowingMenu) {
+      renderer->isShowingMenu = false;
+      renderer->forceRedraw();
+      machine->resume();
+    } else {
+      machine->pause();
+      renderer->isShowingMenu = true;
+    }
   }
-  if (isInTimeTravelMode)
+  if (renderer->isShowingTimeTravel)
   {
     if (key == SPECKEY_ENTER)
     {
       machine->stopTimeTravel();
-      isInTimeTravelMode = false;
-      resume();
+      renderer->isShowingTimeTravel = false;
+      renderer->forceRedraw();
+      machine->resume();
     }
     else
     {
       if (key == SPECKEY_5) {
         machine->stepBack();
+        renderer->forceRedraw();
       }
       if (key == SPECKEY_8) {
         machine->stepForward();
+        renderer->forceRedraw();
       }
-      drawTimeTravel();
     }
-  }
-  if (isShowingMenu) 
+  } else if (renderer->isShowingMenu) 
   {
     if (key == SPECKEY_1) {
-      isShowingMenu = false;
-      isInTimeTravelMode = true;
+      renderer->isShowingMenu = false;
+      renderer->isShowingTimeTravel = true;
       machine->startTimeTravel();
-      drawTimeTravel();
+      renderer->forceRedraw();
     }
     else if (key == SPECKEY_2) {
-      isShowingMenu = false;
+      renderer->isShowingMenu = false;
       // show the save snapshot UI
       m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine(), m_files));
+    } else if (key == SPECKEY_SPACE || key == SPECKEY_ENTER) {
+      renderer->isShowingMenu = false;
+      machine->resume();
+      renderer->forceRedraw();
+    } else if (key == SPECKEY_5) {
+    m_audioOutput->volumeDown();
+      renderer->forceRedraw();
+    } else if (key == SPECKEY_8) {
+      m_audioOutput->volumeUp();
+      renderer->forceRedraw();
     }
   }
 }
@@ -177,36 +194,4 @@ void EmulatorScreen::loadTape(std::string filename)
   renderer->setNeedsRedraw();
   machine->resume();
   isLoading = false;
-}
-
-void EmulatorScreen::drawTimeTravel() {
-    m_tft.fillRect(0, 0, m_tft.width(), 20, TFT_BLACK);
-
-    m_tft.loadFont(GillSans_15_vlw);
-    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    
-    // Draw the left control "<5"
-    m_tft.drawString("<5", 5, 0);
-    
-    // Draw the center text "Time Travel - Enter=Jump"
-    Point centerSize = m_tft.measureString("Time Travel - Enter=Jump");
-    int centerX = (m_tft.width() - centerSize.x) / 2;
-    m_tft.drawString("Time Travel - Enter=Jump", centerX, 0);
-    
-    // Draw the right control "8>"
-    Point rightSize = m_tft.measureString("8>");
-    int rightX = m_tft.width() - rightSize.x - 5;  // 5 pixels from right edge
-    m_tft.drawString("8>", rightX, 0);
-}
-
-void EmulatorScreen::drawMenu() {
-    isShowingMenu = true;
-    m_tft.fillRect(0, 0, m_tft.width(), 20, TFT_BLACK);
-
-    m_tft.loadFont(GillSans_15_vlw);
-    m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    
-    Point menuSize = m_tft.measureString("1-Time Travel  2-Snapshot");
-    int centerX = (m_tft.width() - menuSize.x) / 2;
-    m_tft.drawString("1-Time Travel  2-Snapshot", centerX, 0);
 }

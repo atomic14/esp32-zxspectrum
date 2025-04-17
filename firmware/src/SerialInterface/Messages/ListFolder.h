@@ -27,7 +27,6 @@ class ListFolderMessageReceiver : public MemoryMessageReciever
           ArduinoJson::JsonObject fileObject = filesResult.add<JsonObject>();
           fileObject["name"] = file->getName();
           fileObject["isDirectory"] = file->isDirectory();
-          fileObject["size"] = file->getSize();
         }
         std::stringstream response;
         serializeJson(doc, response);

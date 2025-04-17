@@ -25,6 +25,7 @@
 #include "Emulator/snaps.h"
 #include "Emulator/spectrum.h"
 #include "Files/Files.h"
+#include "Files/Settings.h"
 #include "Screens/NavigationStack.h"
 #include "Screens/MainMenuScreen.h"
 #include "Input/SerialKeyboard.h"
@@ -122,6 +123,8 @@ void setup(void)
 
   IFiles *files = new UnifiedStorage(spiffsFiles, sdFiles);
   
+  ISettings *settings = new Settings(spiffsFiles);
+
   #ifdef TFT_ST7789
   Display *tft = new ST7789(TFT_CS, TFT_DC, TFT_RST, TFT_BL, TFT_WIDTH, TFT_HEIGHT);
   #endif
@@ -134,10 +137,10 @@ void setup(void)
   // Audio output
   AudioOutput *audioOutput = nullptr;
 #ifdef USE_DAC_AUDIO
-  audioOutput = new DACOutput(I2S_NUM_0);
+  audioOutput = new DACOutput(I2S_NUM_0, settings);
 #endif
 #ifdef BUZZER_GPIO_NUM
-  audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM);
+  audioOutput = new BuzzerOutput(BUZZER_GPIO_NUM, settings);
 #endif
 #ifdef PDM_GPIO_NUM
   // i2s speaker pins
@@ -146,7 +149,7 @@ void setup(void)
       .ws_io_num = GPIO_NUM_0,
       .data_out_num = BUZZER_GPIO_NUM,
       .data_in_num = I2S_PIN_NO_CHANGE};
-  audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins);
+  audioOutput = new PDMOutput(I2S_NUM_0, i2s_speaker_pins, settings);
 #endif
 #ifdef I2S_SPEAKER_SERIAL_CLOCK
 #ifdef SPK_MODE
@@ -159,7 +162,7 @@ void setup(void)
       .ws_io_num = I2S_SPEAKER_LEFT_RIGHT_CLOCK,
       .data_out_num = I2S_SPEAKER_SERIAL_DATA,
       .data_in_num = I2S_PIN_NO_CHANGE};
-  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins);
+  audioOutput = new I2SOutput(I2S_NUM_1, i2s_speaker_pins, settings);
 #endif
 #ifdef TOUCH_KEYBOARD
   TouchKeyboard *touchKeyboard = new TouchKeyboard(

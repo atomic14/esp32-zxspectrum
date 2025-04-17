@@ -8,13 +8,14 @@
 /**
  * Base Class for both the DAC and I2S output
  **/
+class ISettings;
 class I2SBase : public AudioOutput
 {
 protected:
   i2s_port_t m_i2s_port = I2S_NUM_0;
   int16_t *m_tmp_frames = NULL;
 public:
-  I2SBase(i2s_port_t i2s_port);
+  I2SBase(i2s_port_t i2s_port, ISettings *settings);
   void stop();
   void write(const uint8_t *samples, int count);
   // override this in derived classes to turn the sample into

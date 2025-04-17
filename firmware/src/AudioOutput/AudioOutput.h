@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Files/ISettings.h"
+
 /**
  * Base Class for both the DAC and I2S output
  **/
@@ -7,8 +9,11 @@ class AudioOutput
 {
 protected:
   int mVolume = 10;
+  ISettings *mSettings;
 public:
-  AudioOutput() {};
+  AudioOutput(ISettings *settings) : mSettings(settings) {
+    mVolume = mSettings->getVolume();
+  };
   virtual ~AudioOutput() {};
   virtual void start(uint32_t sample_rate) = 0;
   virtual void stop() = 0;
@@ -22,21 +27,17 @@ public:
   virtual bool getMicValue() { return false; }
 
   void setVolume(int volume){
-    if (volume > 10 || volume < 0) mVolume = 10;
-    else mVolume = volume;
+    if (volume > 10) volume = 10;
+    if (volume < 0) volume = 0;
+    mVolume = volume;
+    mSettings->setVolume(volume);
   }
 
   void volumeUp() {
-    if (mVolume == 10) {
-      return;
-    }
-    mVolume++;
+    setVolume(mVolume + 1);
   }
   void volumeDown() {
-    if (mVolume == 0) {
-      return;
-    }
-    mVolume--;
+    setVolume(mVolume - 1);
   }
   int getVolume() {
     return mVolume;

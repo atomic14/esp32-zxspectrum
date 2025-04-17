@@ -1,7 +1,7 @@
 
 #include "I2SOutput.h"
 
-I2SOutput::I2SOutput(i2s_port_t i2s_port, i2s_pin_config_t &i2s_pins) : I2SBase(i2s_port), m_i2s_pins(i2s_pins)
+I2SOutput::I2SOutput(i2s_port_t i2s_port, i2s_pin_config_t &i2s_pins, ISettings *settings) : I2SBase(i2s_port, settings), m_i2s_pins(i2s_pins)
 {
 }
 

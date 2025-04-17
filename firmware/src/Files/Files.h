@@ -199,12 +199,11 @@ private:
 class FileInfo
 {
 public:
-  FileInfo(const std::string &title, const std::string &name, const std::string &path, bool isDirectory, size_t size)
-      : title(title), name(name), path(path), _isDirectory(isDirectory), size(size) {}
+  FileInfo(const std::string &title, const std::string &name, const std::string &path, bool isDirectory)
+      : title(title), name(name), path(path), _isDirectory(isDirectory) {}
   std::string getTitle() const { return title; }
   std::string getName() const { return name; }
   std::string getPath() const { return path; }
-  size_t getSize() const { return size; }
   std::string getExtension() const
   {
     size_t pos = title.find_last_of('.');
@@ -220,7 +219,6 @@ private:
   std::string title;
   std::string name;
   std::string path;
-  size_t size;
   bool _isDirectory;
 };
 
@@ -297,7 +295,22 @@ public:
 
   std::string getPath(const char *path)
   {
-    return std::string(fileSystem->mountPoint()) + path;
+    std::string mount = fileSystem->mountPoint();
+    std::string p = path ? path : "";
+
+    // Remove trailing slash from mount unless it's just "/"
+    if (mount.length() > 1 && mount.back() == '/') {
+      mount.pop_back();
+    }
+    // Remove leading slash from path
+    while (!p.empty() && p.front() == '/') {
+      p.erase(0, 1);
+    }
+    // Special case: if mount is "/" (root), don't add extra slash
+    if (mount == "/") {
+      return mount + p;
+    }
+    return mount + "/" + p;
   }
 
   FILE *open(const char *filename, const char *mode)
@@ -307,8 +320,7 @@ public:
     {
       return nullptr;
     }
-    std::string full_path = std::string(fileSystem->mountPoint()) + filename;
-    Serial.printf("Opening file %s\n", full_path.c_str());
+    std::string full_path = getPath(filename);
     return fopen(full_path.c_str(), mode);
   }
   void rename(const char *oldFilename, const char *newFilename)
@@ -320,7 +332,6 @@ public:
     }
     std::string full_old_path = getPath(oldFilename);
     std::string full_new_path = getPath(newFilename);
-    Serial.printf("Renaming file %s to %s\n", full_old_path.c_str(), full_new_path.c_str());
     ::rename(full_old_path.c_str(), full_new_path.c_str());
   }
   void remove(const char *filename)
@@ -330,8 +341,7 @@ public:
     {
       return;
     }
-    std::string full_path = std::string(fileSystem->mountPoint()) + filename;
-    Serial.printf("Removing file %s\n", full_path.c_str());
+    std::string full_path = getPath(filename);
     ::remove(full_path.c_str());
   }
   bool createDirectory(const char *folder)
@@ -341,15 +351,13 @@ public:
     {
       return -1;
     }
-    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
+    std::string full_path = getPath(folder);
     // check to see if the folder exists
     struct stat st;
     if (stat(full_path.c_str(), &st) == -1)
     {
-      Serial.printf("Creating folder %s\n", full_path.c_str());
       return mkdir(full_path.c_str(), 0777) == -0;
     }
-    Serial.printf("Folder %s already exists\n", full_path.c_str());
     return false;
   }
 
@@ -361,7 +369,7 @@ public:
     {
       return fileLetters;
     }
-    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
+    std::string full_path = getPath(folder);
     std::cout << "Listing directory: " << full_path << std::endl;
 
     std::map<std::string, int> fileCountByLetter;
@@ -403,7 +411,7 @@ public:
     {
       return files;
     }
-    std::string full_path = std::string(fileSystem->mountPoint()) + folder;
+    std::string full_path = getPath(folder);
     std::cout << "Listing directory: " << full_path << " for files starting with " << prefix << std::endl;
     for (const std::string &extension : extensions)
     {
@@ -412,7 +420,6 @@ public:
 
     for (DirectoryIterator it(full_path, prefix, extensions, includeDirectories); it != DirectoryIterator(); ++it)
     {
-      size_t size = 0;
       if (it->d_type == DT_REG) {
         // do we need a slash at the end of the path?
         if (full_path[full_path.length() - 1] != '/')
@@ -420,13 +427,8 @@ public:
           full_path += "/";
         }
         std::string fullFilePath = full_path + it->d_name;
-        struct stat st;
-        if (stat(fullFilePath.c_str(), &st) == 0)
-        {
-          size = st.st_size;
-        }
       }
-      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), it->d_name, full_path + it->d_name, it->d_type == DT_DIR, size)));
+      files.push_back(FileInfoPtr(new FileInfo(StringUtils::upcase(it->d_name), it->d_name, full_path + it->d_name, it->d_type == DT_DIR)));
     }
     // sort the files - is this needed? Maybe they are already alphabetically sorted
     std::sort(files.begin(), files.end(), [](FileInfoPtr a, FileInfoPtr b)
