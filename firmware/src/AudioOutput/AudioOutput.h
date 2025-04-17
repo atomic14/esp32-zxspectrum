@@ -9,10 +9,12 @@ class AudioOutput
 {
 protected:
   int mVolume = 10;
-  ISettings *mSettings;
+  ISettings *mSettings = nullptr;
 public:
   AudioOutput(ISettings *settings) : mSettings(settings) {
-    mVolume = mSettings->getVolume();
+    if (mSettings) {
+      mVolume = mSettings->getVolume();
+    }
   };
   virtual ~AudioOutput() {};
   virtual void start(uint32_t sample_rate) = 0;
@@ -30,7 +32,9 @@ public:
     if (volume > 10) volume = 10;
     if (volume < 0) volume = 0;
     mVolume = volume;
-    mSettings->setVolume(volume);
+    if (mSettings) {
+      mSettings->setVolume(volume);
+    }
   }
 
   void volumeUp() {
