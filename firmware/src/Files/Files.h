@@ -261,8 +261,8 @@ public:
   virtual bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO) = 0;
   virtual bool createDirectory(const char *folder) = 0;
   virtual FILE *open(const char *filename, const char *mode) = 0;
-  virtual void rename(const char *oldFilename, const char *newFilename) = 0;
-  virtual void remove(const char *filename) = 0;
+  virtual bool rename(const char *oldFilename, const char *newFilename) = 0;
+  virtual bool remove(const char *filename) = 0;
   virtual FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
   virtual FileInfoVector getFileStartingWithPrefix(const char *folder, const char *prefix, const std::vector<std::string> &extensions, bool includeDirectories = false) = 0;
   virtual std::string getPath(const char *path) = 0;
@@ -298,6 +298,11 @@ public:
     std::string mount = fileSystem->mountPoint();
     std::string p = path ? path : "";
 
+    // Remove any trailing slashes from the path
+    while (!p.empty() && p.back() == '/') {
+      p.pop_back();
+    }
+
     // Remove trailing slash from mount unless it's just "/"
     if (mount.length() > 1 && mount.back() == '/') {
       mount.pop_back();
@@ -323,26 +328,26 @@ public:
     std::string full_path = getPath(filename);
     return fopen(full_path.c_str(), mode);
   }
-  void rename(const char *oldFilename, const char *newFilename)
+  bool rename(const char *oldFilename, const char *newFilename)
   {
     auto bl = BusyLight();
     if (!fileSystem || !fileSystem->isMounted())
     {
-      return;
+      return false;
     }
     std::string full_old_path = getPath(oldFilename);
     std::string full_new_path = getPath(newFilename);
-    ::rename(full_old_path.c_str(), full_new_path.c_str());
+    return ::rename(full_old_path.c_str(), full_new_path.c_str()) == 0;
   }
-  void remove(const char *filename)
+  bool remove(const char *filename)
   {
     auto bl = BusyLight();
     if (!fileSystem || !fileSystem->isMounted())
     {
-      return;
+      return false;
     }
     std::string full_path = getPath(filename);
-    ::remove(full_path.c_str());
+    return ::remove(full_path.c_str()) == 0;
   }
   bool createDirectory(const char *folder)
   {
@@ -497,26 +502,26 @@ public:
     return flashFiles->open(filename, mode);
   }
 
-  void rename(const char *oldFilename, const char *newFilename) override {
+  bool rename(const char *oldFilename, const char *newFilename) override {
     if (sdFiles->isAvailable()) {
-      sdFiles->rename(oldFilename, newFilename);
-      return;
+      return sdFiles->rename(oldFilename, newFilename);
     }
     // fallback to flash
     if (flashFiles->isAvailable()) {
-      flashFiles->rename(oldFilename, newFilename);
+      return flashFiles->rename(oldFilename, newFilename);
     }
+    return false;
   }
 
-  void remove(const char *filename) override {
+  bool remove(const char *filename) override {
     if (sdFiles->isAvailable()) {
-      sdFiles->remove(filename);
-      return;
+      return sdFiles->remove(filename);
     }
     // fallback to flash
     if (flashFiles->isAvailable()) {
-      flashFiles->remove(filename);
+      return flashFiles->remove(filename);
     }
+    return false;
   }
 
   FileLetterCountVector getFileLetters(const char *folder, const std::vector<std::string> &extensions, bool includeDirectories = false) override {

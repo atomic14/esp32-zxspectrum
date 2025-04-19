@@ -9,7 +9,7 @@ class GetVersionMessageReciever : public SimpleMessageReciever
     IFiles *flashFiles;
     IFiles *sdFiles;
   public:
-    GetVersionMessageReciever(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler)
+    GetVersionMessageReciever(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler)
     : flashFiles(flashFiles), 
       sdFiles(sdFiles),
       SimpleMessageReciever(packetHandler)
@@ -23,21 +23,20 @@ class GetVersionMessageReciever : public SimpleMessageReciever
         doc["success"] = true;
         doc["result"]["firmwareVersion"] = FIRMWARE_VERSION_STRING;
         doc["result"]["hardwareVersion"] = HARDWARE_VERSION_STRING;
-        auto flash = doc["result"]["flash"].as<JsonObject>();
-        flash["available"] = flashFiles->isAvailable();
+        doc["result"]["flash"]["available"] = flashFiles->isAvailable();
         uint64_t total = 0, used = 0;
         flashFiles->getSpace(total, used);
-        flash["total"] = total;
-        flash["used"] = used;
-        auto sd = doc["result"]["sd"].as<JsonObject>();
-        sd["available"] = sdFiles->isAvailable();
+        doc["result"]["flash"]["total"] = total;
+        doc["result"]["flash"]["used"] = used;
+
+        doc["result"]["sd"]["available"] = sdFiles->isAvailable();
         if (sdFiles->isAvailable()) {
           sdFiles->getSpace(total, used);
-          sd["total"] = total;
-          sd["used"] = used;
+          doc["result"]["sd"]["total"] = total;
+          doc["result"]["sd"]["used"] = used;
         } else {
-          sd["total"] = 0;
-          sd["used"] = 0;
+          doc["result"]["sd"]["total"] = 0;
+          doc["result"]["sd"]["used"] = 0;
         }
 
         sendSuccess(MessageId::GetVersionResponse, doc);

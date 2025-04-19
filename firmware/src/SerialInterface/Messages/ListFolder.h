@@ -5,22 +5,42 @@
 class ListFolderMessageReceiver : public MemoryMessageReciever
 {
   private:
-    IFiles *files = nullptr;
+    IFiles *sdFiles = nullptr;
+    IFiles *flashFiles = nullptr;
   public:
-    ListFolderMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
+    ListFolderMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) : sdFiles(sdFiles), flashFiles(flashFiles), MemoryMessageReciever(packetHandler) {};
 
     void messageFinished(bool isValid) override
     {
       if (isValid)
       {
-        // the buffer should contain the null terminated path to the folder
-        Serial.printf("List folder: %s\n", getBuffer());
+        JsonDocument doc;
+        auto error = deserializeJson(doc, getBuffer());
+        if (error != DeserializationError::Ok)
+        {
+          sendFailure(MessageId::ListFolderResponse, "Invalid JSON");
+          return;
+        }
+        const char *path = doc["path"];
+        if (!path)
+        {
+          sendFailure(MessageId::ListFolderResponse, "Missing path");
+          return;
+        }
+        bool isFlash = doc["isFlash"];
+        FileInfoVector filesVector;
+        if (isFlash)
+        {
+          filesVector = flashFiles->getFileStartingWithPrefix(path, nullptr, {}, true);
+        }
+        else
+        {
+          filesVector = sdFiles->getFileStartingWithPrefix(path, nullptr, {}, true);
+        }
 
-        FileInfoVector filesVector = files->getFileStartingWithPrefix((const char *) getBuffer(), nullptr, {}, true);
-
-        ArduinoJson::JsonDocument doc;
-        doc["success"] = true;
-        auto filesResult = doc["result"]["files"].to<JsonArray>();
+        ArduinoJson::JsonDocument responseDoc;
+        responseDoc["success"] = true;
+        auto filesResult = responseDoc["result"]["files"].to<JsonArray>();
 
         for (auto file : filesVector)
         {
@@ -28,13 +48,11 @@ class ListFolderMessageReceiver : public MemoryMessageReciever
           fileObject["name"] = file->getName();
           fileObject["isDirectory"] = file->isDirectory();
         }
-        std::stringstream response;
-        serializeJson(doc, response);
-
-        std::string responseString = response.str();
-        size_t responseLength = responseString.length();
-
-        packetHandler->sendPacket(MessageId::ListFolderResponse, (uint8_t *) responseString.c_str(), responseLength);
+        sendSuccess(MessageId::ListFolderResponse, responseDoc);
+      }
+      else
+      {
+        sendFailure(MessageId::ListFolderResponse, "Invalid request");
       }
     }
 };

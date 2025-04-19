@@ -5,22 +5,53 @@
 class RenameFileMessageReceiver : public MemoryMessageReciever
 {
 private:
-  IFiles *files = nullptr;
+  IFiles *sdFiles = nullptr;
+  IFiles *flashFiles = nullptr;
 public:
-  RenameFileMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
+  RenameFileMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) : sdFiles(sdFiles), flashFiles(flashFiles), MemoryMessageReciever(packetHandler) {};
   void messageFinished(bool isValid) override
   {
     // filenames will be in the buffer
     if (isValid)
     {
-      // existing name will be the first null terminated string, new name will be the second null terminated string
-      const char *buffer = (const char *) getBuffer();
-      const char *oldFilename = buffer;
-      const char *newFilename = buffer + strlen(oldFilename) + 1;
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::RenameFileResponse, "Invalid JSON");
+        return;
+      }
+      const char *sourcePath = doc["sourcePath"];
+      if (!sourcePath)
+      {
+        sendFailure(MessageId::RenameFileResponse, "Missing source path");
+        return;
+      }
+      const char *destinationPath = doc["destinationPath"];
+      if (!destinationPath)
+      {
+        sendFailure(MessageId::RenameFileResponse, "Missing destination path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
       // rename the file
-      files->rename(oldFilename, newFilename);
-      // send success response
-      sendSuccess(MessageId::RenameFileResponse);
+      bool success = false;
+      if (isFlash)
+      {
+        success = flashFiles->rename(sourcePath, destinationPath);
+      }
+      else
+      {
+        success = sdFiles->rename(sourcePath, destinationPath);
+      }
+      if (success)
+      {
+        sendSuccess(MessageId::RenameFileResponse);
+      }
+      else
+      {
+        sendFailure(MessageId::RenameFileResponse, "Failed to rename file");
+      }
     }
     else 
     {

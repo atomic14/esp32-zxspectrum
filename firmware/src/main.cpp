@@ -117,9 +117,9 @@ void setup(void)
       #endif
     #endif
   #endif
-  IFiles *sdFiles = new FilesImplementation<SDCard>(sdFileSystem);
+  FilesImplementation<SDCard> *sdFiles = new FilesImplementation<SDCard>(sdFileSystem);
   FlashLittleFS *spiffsFileSystem = new FlashLittleFS(FlashLittleFS::DEFAULT_MOUNT_POINT);
-  IFiles *spiffsFiles = new FilesImplementation<FlashLittleFS>(spiffsFileSystem);
+  FilesImplementation<FlashLittleFS> *spiffsFiles = new FilesImplementation<FlashLittleFS>(spiffsFileSystem);
 
   IFiles *files = new UnifiedStorage(spiffsFiles, sdFiles);
   
@@ -223,14 +223,14 @@ void setup(void)
   SerialTransport *serialTransport = new SerialTransport();
   PacketHandler *packetHandler = new PacketHandler(*serialTransport);
   packetHandler->registerMessageHandler(new GetVersionMessageReciever(spiffsFiles, sdFiles, packetHandler), MessageId::GetVersionRequest);
-  packetHandler->registerMessageHandler(new ListFolderMessageReceiver(spiffsFiles, packetHandler), MessageId::ListFolderRequest);
+  packetHandler->registerMessageHandler(new ListFolderMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::ListFolderRequest);
   packetHandler->registerMessageHandler(new WriteFileStartMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileStartRequest);
   packetHandler->registerMessageHandler(new WriteFileDataMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileDataRequest);
   packetHandler->registerMessageHandler(new WriteFileEndMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::WriteFileEndRequest);
-  packetHandler->registerMessageHandler(new ReadFileMessageReceiver(spiffsFiles, packetHandler), MessageId::ReadFileRequest);
-  packetHandler->registerMessageHandler(new DeleteFileMessageReceiver(spiffsFiles, packetHandler), MessageId::DeleteFileRequest);
-  packetHandler->registerMessageHandler(new MakeDirectoryMessageReceiver(spiffsFiles, packetHandler), MessageId::MakeDirectoryRequest);
-  packetHandler->registerMessageHandler(new RenameFileMessageReceiver(spiffsFiles, packetHandler), MessageId::RenameFileRequest);
+  packetHandler->registerMessageHandler(new ReadFileMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::ReadFileRequest);
+  packetHandler->registerMessageHandler(new DeleteFileMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::DeleteFileRequest);
+  packetHandler->registerMessageHandler(new MakeDirectoryMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::MakeDirectoryRequest);
+  packetHandler->registerMessageHandler(new RenameFileMessageReceiver(spiffsFiles, sdFiles, packetHandler), MessageId::RenameFileRequest);
 
   xTaskCreatePinnedToCore(
     SerialInterfaceTask,

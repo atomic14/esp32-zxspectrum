@@ -1,19 +1,41 @@
 #include "Message.h"
+#include <ArduinoJson.h>
 #include "../PacketHandler.h"
 #include "../../Files/Files.h"
 
 class DeleteFileMessageReceiver : public MemoryMessageReciever
 {
 private:
-  IFiles *files = nullptr;
+  IFiles *sdFiles = nullptr;
+  IFiles *flashFiles = nullptr;
 public:
-  DeleteFileMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
+  DeleteFileMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) : sdFiles(sdFiles), flashFiles(flashFiles), MemoryMessageReciever(packetHandler) {};
   void messageFinished(bool isValid) override
   {
-    // filename will be in the buffer
     if (isValid)
     {
-      files->remove((const char *) getBuffer());
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::DeleteFileResponse, "Invalid JSON");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::DeleteFileResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      if (isFlash)
+      {
+        flashFiles->remove(path);
+      }
+      else
+      {
+        sdFiles->remove(path);
+      }
       sendSuccess(MessageId::DeleteFileResponse);
     }
     else

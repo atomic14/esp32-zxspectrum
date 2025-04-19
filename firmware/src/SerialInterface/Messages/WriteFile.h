@@ -9,7 +9,7 @@ private:
   IFiles *sdFiles;
 
 public:
-  WriteFileStartMessageReceiver(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler) 
+  WriteFileStartMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) 
   : MemoryMessageReciever(packetHandler),
     flashFiles(flashFiles),
     sdFiles(sdFiles)
@@ -18,9 +18,21 @@ public:
   {
     if (isValid)
     {
-      // filename is in the buffer - let's check that we can open it for writing
-      const char *filename = (const char *)getBuffer();
-      FILE *file = flashFiles->open(filename, "wb");
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::WriteFileStartResponse, "Invalid request");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::WriteFileStartResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      FILE *file = isFlash ? flashFiles->open(path, "wb") : sdFiles->open(path, "wb");
       if (file) {
         // respond with success
         sendSuccess(MessageId::WriteFileStartResponse);
@@ -49,7 +61,7 @@ private:
   IFiles *sdFiles;
 
 public:
-  WriteFileDataMessageReceiver(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler) 
+  WriteFileDataMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) 
   : MemoryMessageReciever(packetHandler),
     flashFiles(flashFiles),
     sdFiles(sdFiles)
@@ -58,14 +70,30 @@ public:
   {
     if (isValid)
     {
-      // filename is in the buffer as a null terminated string - open if for appending
-      const char *filename = (const char *)getBuffer();
-      FILE *file = flashFiles->open(filename, "ab");
+      // first part of the buffer is the json object - second part is the data
+      const char *json = (const char *)getBuffer();
+      uint8_t *data = getBuffer() + strlen(json) + 1;
+      size_t dataLength = getBufferSize() - strlen(json) - 1;
+
+      JsonDocument doc;
+      auto error = deserializeJson(doc, json);
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::WriteFileDataResponse, "Invalid request");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::WriteFileDataResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      FILE *file = isFlash ? flashFiles->open(path, "ab") : sdFiles->open(path, "ab");
       if (file) {
         auto bl = BusyLight();
         // write the data to the file - we need to skip past the filename and null terminating byte
-        size_t dataLength = getBufferSize() - strlen(filename) - 1;
-        size_t written = fwrite(getBuffer() + strlen(filename) + 1, 1, dataLength, file);
+        size_t written = fwrite(data, 1, dataLength, file);
         if (written != dataLength)
         {
           // respond with failure
@@ -100,7 +128,7 @@ private:
   IFiles *sdFiles;
 
 public:
-  WriteFileEndMessageReceiver(IFiles *flashFiles, IFiles *sdFiles, PacketHandler *packetHandler) 
+  WriteFileEndMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) 
   : MemoryMessageReciever(packetHandler),
     flashFiles(flashFiles),
     sdFiles(sdFiles)
@@ -109,24 +137,46 @@ public:
   {
     if (isValid)
     {
-      // filename is in the buffer as a null terminated string followed by 4 bytes for the length of file
-      // get the length of the file on disk
-      const char *filename = (const char *)getBuffer();
-      FILE *file = flashFiles->open(filename, "rb");
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::WriteFileEndResponse, "Invalid JSON");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::WriteFileEndResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      size_t expectedSize = doc["size"];
+      if (expectedSize == 0)
+      {
+        sendFailure(MessageId::WriteFileEndResponse, "Missing size");
+        return;
+      }
+      FILE *file = isFlash ? flashFiles->open(path, "rb") : sdFiles->open(path, "rb");
       if (file) {
         // get the length of the file
         fseek(file, 0, SEEK_END);
         size_t fileSize = ftell(file);
         fclose(file);
-        // check the size matches the size in the message
-        size_t expectedSize = *(size_t *)(getBuffer() + strlen(filename) + 1);
         if (fileSize != expectedSize)
         {
           // respond with failure
           char message[1000];
           snprintf(message, sizeof(message), "File size mismatch: %zu != %zu", fileSize, expectedSize);
           sendFailure(MessageId::WriteFileEndResponse, message);
-          flashFiles->remove(filename);
+          if (isFlash)
+          {
+            flashFiles->remove(path);
+          }
+          else
+          {
+            sdFiles->remove(path);
+          }
           return;
         }
         // respond with success
@@ -134,8 +184,12 @@ public:
       }
       else
       {
+        // create an error messgae with the path
+        char message[1000];
+        snprintf(message, sizeof(message), "Could not open file: %s", path);
         // respond with failure
-        sendFailure(MessageId::WriteFileEndResponse, "Could not open file");
+        sendFailure(MessageId::WriteFileEndResponse, message);
+        return;
       }
     }
     else

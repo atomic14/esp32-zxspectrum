@@ -5,18 +5,43 @@
 class MakeDirectoryMessageReceiver : public MemoryMessageReciever
 {
 private:
-  IFiles *files = nullptr;
+  IFiles *sdFiles = nullptr;
+  IFiles *flashFiles = nullptr;
 public:
-  MakeDirectoryMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
+  MakeDirectoryMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) : sdFiles(sdFiles), flashFiles(flashFiles), MemoryMessageReciever(packetHandler) {};
   void messageFinished(bool isValid) override
   {
     // filename will be in the buffer
     if (isValid)
     {
-      if (files->createDirectory((const char *) getBuffer())) {
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::MakeDirectoryResponse, "Invalid JSON");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::MakeDirectoryResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      bool success = false;
+      if (isFlash)
+      {
+        success = flashFiles->createDirectory(path);
+      }
+      else
+      {
+        success = sdFiles->createDirectory(path);
+      }
+      if (success)
+      {
         sendSuccess(MessageId::MakeDirectoryResponse);
       }
-      else 
+      else
       {
         sendFailure(MessageId::MakeDirectoryResponse, "Failed to create directory");
       }

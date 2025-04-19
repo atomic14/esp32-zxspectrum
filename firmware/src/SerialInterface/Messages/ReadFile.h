@@ -5,15 +5,30 @@
 class ReadFileMessageReceiver : public MemoryMessageReciever
 {
 private:
-  IFiles *files = nullptr;
+  IFiles *sdFiles = nullptr;
+  IFiles *flashFiles = nullptr;
 public:
-  ReadFileMessageReceiver(IFiles *files, PacketHandler *packetHandler) : files(files), MemoryMessageReciever(packetHandler) {};
+  ReadFileMessageReceiver(FilesImplementation<FlashLittleFS> *flashFiles, FilesImplementation<SDCard> *sdFiles, PacketHandler *packetHandler) : sdFiles(sdFiles), flashFiles(flashFiles), MemoryMessageReciever(packetHandler) {};
   void messageFinished(bool isValid) override
   {
     // filename will be in the buffer
     if (isValid)
     {
-      FILE *file = files->open((const char *) getBuffer(), "rb");
+      JsonDocument doc;
+      auto error = deserializeJson(doc, getBuffer());
+      if (error != DeserializationError::Ok)
+      {
+        sendFailure(MessageId::ReadFileResponse, "Invalid JSON");
+        return;
+      }
+      const char *path = doc["path"];
+      if (!path)
+      {
+        sendFailure(MessageId::ReadFileResponse, "Missing path");
+        return;
+      }
+      bool isFlash = doc["isFlash"];
+      FILE *file = isFlash ? flashFiles->open(path, "rb") : sdFiles->open(path, "rb");
       if (file)
       {
         // read the file into the buffer
