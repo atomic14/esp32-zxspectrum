@@ -28,15 +28,23 @@ public:
         return;
       }
       bool isFlash = doc["isFlash"];
+      bool result = false;
       if (isFlash)
       {
-        flashFiles->remove(path);
+        result = flashFiles->remove(path);
       }
       else
       {
         sdFiles->remove(path);
       }
-      sendSuccess(MessageId::DeleteFileResponse);
+      if (result)
+      {
+        sendSuccess(MessageId::DeleteFileResponse);
+      }
+      else
+      {
+        sendFailure(MessageId::DeleteFileResponse, "Failed to delete file/folder");
+      }
     }
     else
     {

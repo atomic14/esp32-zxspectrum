@@ -347,6 +347,16 @@ public:
       return false;
     }
     std::string full_path = getPath(filename);
+    // is it a directory?
+    struct stat st;
+    if (stat(full_path.c_str(), &st) == -1)
+    {
+      return false;
+    }
+    if (S_ISDIR(st.st_mode))
+    {
+      return ::rmdir(full_path.c_str()) == 0;
+    }
     return ::remove(full_path.c_str()) == 0;
   }
   bool createDirectory(const char *folder)
