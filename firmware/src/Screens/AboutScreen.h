@@ -8,6 +8,7 @@
 #include "version_info.h"
 #include "images/rainbow_image.h"
 #include "../Files/Files.h"
+#include "TestScreen.h"
 
 class AboutScreen : public Screen
 {
@@ -124,6 +125,12 @@ public:
   
   void pressKey(SpecKeys key) override
   {
-    m_navigationStack->pop();
+    // If the 't' key is pressed, go to the test screen
+    if (key == SPECKEY_T) {
+      TestScreen *testScreen = new TestScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
+      m_navigationStack->push(testScreen);
+    } else {
+      m_navigationStack->pop();
+    }
   }
 };

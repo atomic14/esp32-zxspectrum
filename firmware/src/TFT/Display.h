@@ -41,6 +41,10 @@ class Display
 {
 public:
   Display(int width, int height) : _width(width), _height(height) {}
+  static inline uint16_t swapBytes(uint16_t val)
+  {
+    return (val >> 8) | (val << 8);
+  }
   virtual void startWrite()
   {
     // nothing to do
@@ -84,6 +88,7 @@ public:
   virtual void saveScreenshot(uint16_t borderWidth = 20, uint16_t borderColor = TFT_BLACK) {
     // not implemented here - maybe somewhere else?
   }
+  virtual void drawPixel(uint16_t color, int x, int y);
 protected:
   int _width;
   int _height;
@@ -94,7 +99,6 @@ protected:
 
   // Text rendering
   virtual Glyph getGlyphData(uint32_t unicode);
-  virtual void drawPixel(uint16_t color, int x, int y);
   virtual void drawGlyph(const Glyph &glyph, int x, int y);
 
   uint16_t textcolor;

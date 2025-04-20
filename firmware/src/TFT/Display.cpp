@@ -5,12 +5,6 @@
 #include <algorithm>
 #include <vector>
 
-// helper functions
-inline uint16_t swapBytes(uint16_t val)
-{
-  return (val >> 8) | (val << 8);
-}
-
 uint32_t swapEndian32(uint32_t val)
 {
   return ((val >> 24) & 0x000000FF) |

@@ -257,7 +257,7 @@ enum class StorageType {
 class IFiles
 {
 public:
-  virtual bool isAvailable() = 0;
+  virtual bool isAvailable(StorageType storageType = StorageType::AUTO) = 0;
   virtual bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO) = 0;
   virtual bool createDirectory(const char *folder) = 0;
   virtual FILE *open(const char *filename, const char *mode) = 0;
@@ -279,7 +279,7 @@ public:
   {
   }
 
-  bool isAvailable()
+  bool isAvailable(StorageType storageType = StorageType::AUTO)
   {
     return fileSystem && fileSystem->isMounted();
   }
@@ -461,8 +461,14 @@ public:
   UnifiedStorage(IFiles* flash, IFiles* sd) 
     : flashFiles(flash), sdFiles(sd) {}
 
-  bool isAvailable() override {
-    return (flashFiles->isAvailable()) || (sdFiles->isAvailable());
+  bool isAvailable(StorageType storageType = StorageType::AUTO) override {
+    if (storageType == StorageType::FLASH) {
+      return flashFiles->isAvailable();
+    } else if (storageType == StorageType::SD) {
+      return sdFiles->isAvailable();
+    } else {
+      return (flashFiles->isAvailable()) || (sdFiles->isAvailable());
+    }
   }
 
   bool getSpace(uint64_t &total, uint64_t &used, StorageType storageType = StorageType::AUTO) override {

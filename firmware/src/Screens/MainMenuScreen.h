@@ -8,6 +8,7 @@
 #include "VideoFilePickerScreen.h"
 #include "GameFilePickerScreen.h"
 #include "AboutScreen.h"
+#include "TestScreen.h"
 
 static const std::vector<std::string> gameValidExtensions = {".z80", ".sna", ".tap", ".tzx"};
 static const std::vector<std::string> videoValidExtensions = {".avi"};
