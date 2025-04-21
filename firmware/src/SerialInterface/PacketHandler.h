@@ -74,7 +74,7 @@ public:
 
   State processExpectingFrameByte(uint8_t data)
   {
-    receivedCrc = finalizeCRC32(receivedCrc);
+    calculatedCrc = finalizeCRC32(calculatedCrc);
     bool isValid = receivedCrcLength == 4 && calculatedCrc == receivedCrc && data == FRAME_BYTE;
     if (messageHandlers.find(messageType) != messageHandlers.end())
     {
@@ -91,7 +91,6 @@ public:
     messageLength = 0;
     receivedCrc = 0;
     receivedCrcLength = 0;
-    totalRead = 0;
     totalRead = 0;
     bufferPosition = 0;
     calculatedCrc = 0xFFFFFFFF;
@@ -233,6 +232,7 @@ public:
     totalRead = 0;
     bufferPosition = 0;
     calculatedCrc = 0xFFFFFFFF;
+    messageType = MessageId::NullResponse;
   }
 
   /**

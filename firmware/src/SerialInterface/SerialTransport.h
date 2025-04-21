@@ -6,8 +6,8 @@ class SerialTransport : public Transport
 public:
   SerialTransport() {
     Serial.setTimeout(1);
-    Serial.setTxBufferSize(16384);
-    Serial.setRxBufferSize(16384);
+    Serial.setTxBufferSize(20000);
+    Serial.setRxBufferSize(20000);
   }
 
   bool available() override {
@@ -21,6 +21,6 @@ public:
     Serial.write(data);
   }
   void flush() {
-    // Serial.flush();
+    Serial.flush();
   }
 };
