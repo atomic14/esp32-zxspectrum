@@ -35,7 +35,7 @@ public:
       }
       else
       {
-        sdFiles->remove(path);
+        result = sdFiles->remove(path);
       }
       if (result)
       {
