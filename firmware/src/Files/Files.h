@@ -77,10 +77,6 @@ public:
     extensions(extensions),
     includeDirectories(includeDirectories)
   {
-    if (!dirp)
-    {
-      throw std::runtime_error("Failed to open directory");
-    }
     ++(*this); // Load first valid entry
   }
 
@@ -110,15 +106,19 @@ public:
   // Pre-increment operator - modified to filter entries
   DirectoryIterator &operator++()
   {
-    do
-    {
-      entry = readdir(dirp);
-    } while (entry && !isValidEntry());
+    if (dirp) {
+      do
+      {
+        entry = readdir(dirp);
+      } while (entry && !isValidEntry());
+    }
 
     if (!entry)
     { // No more valid entries
-      closedir(dirp);
-      dirp = nullptr;
+      if (dirp) {
+        closedir(dirp);
+        dirp = nullptr;
+      }
     }
     return *this;
   }
