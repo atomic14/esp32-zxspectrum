@@ -1,0 +1,22 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Emulation and File Formats
+
+The project supports various ZX Spectrum file formats:
+
+## Supported Formats
+- Z80: Snapshot format (.z80 files)
+- TAP: Tape format (.tap files)
+- TZX: Advanced tape format (.tzx files)
+
+## Emulation Components
+- [firmware/src/Emulator/](mdc:firmware/src/Emulator/) - Core Z80 CPU and ZX Spectrum emulation
+- [firmware/src/TZX/](mdc:firmware/src/TZX/) - TZX format handling
+- [firmware/src/Screens/](mdc:firmware/src/Screens/) - User interface screens
+
+## Interface
+- [firmware/src/SerialInterface/](mdc:firmware/src/SerialInterface/) - Serial communication
+- [firmware/src/Serial.cpp](mdc:firmware/src/Serial.cpp) - Serial port handling

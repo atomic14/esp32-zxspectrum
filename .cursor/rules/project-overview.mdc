@@ -1,0 +1,22 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# ESP32 Rainbow - ZX Spectrum Emulator
+
+This is a ZX Spectrum emulator for ESP32 boards, particularly the ESP32 Rainbow project. The codebase is organized as follows:
+
+- [firmware/](mdc:firmware/) - Contains the main ESP32 firmware code
+  - [firmware/src/main.cpp](mdc:firmware/src/main.cpp) - Main entry point for the firmware
+  - [firmware/platformio.ini](mdc:firmware/platformio.ini) - PlatformIO configuration for supported boards
+  
+- [keyboard-server/](mdc:keyboard-server/) - Python code for using a desktop keyboard as input
+- [docs/](mdc:docs/) - Documentation and images
+- [desktop/](mdc:desktop/) - Desktop emulation applications
+
+## Supported Hardware
+- ESP32 Rainbow
+- Cheap Yellow Display (CYD)
+- LilyGo T-Deck
+- Other ESP32 boards with appropriate display and sound output

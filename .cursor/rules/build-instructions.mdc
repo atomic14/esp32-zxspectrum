@@ -1,0 +1,18 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Build and Development Setup
+
+## Required Tools
+- Visual Studio Code with PlatformIO extension
+
+## Building the Firmware
+1. Open the `firmware` directory in VS Code with PlatformIO
+2. Select your board configuration from the PlatformIO Project Tasks
+3. Build and upload the firmware
+
+## File Storage
+- SD Card: Format with FAT32 and place game files in the root directory
+- Flash Storage: Place files in [firmware/data/](mdc:firmware/data/) and use PlatformIO to upload

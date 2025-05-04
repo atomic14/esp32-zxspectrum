@@ -1,0 +1,23 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Firmware Structure
+
+The firmware is organized into several key components:
+
+## Core Components
+- [firmware/src/main.cpp](mdc:firmware/src/main.cpp) - Main entry point and setup
+- [firmware/src/Emulator/](mdc:firmware/src/Emulator/) - ZX Spectrum emulation core
+- [firmware/src/TFT/](mdc:firmware/src/TFT/) - Display handling
+- [firmware/src/AudioOutput/](mdc:firmware/src/AudioOutput/) - Audio output management
+- [firmware/src/AYSound/](mdc:firmware/src/AYSound/) - AY sound chip emulation
+- [firmware/src/Input/](mdc:firmware/src/Input/) - Input handling (keyboard, controllers)
+- [firmware/src/Files/](mdc:firmware/src/Files/) - File system operations (SD card, flash)
+
+## ROM and Game Files
+- [firmware/data/](mdc:firmware/data/) - Contains ROM files and games if not using SD card
+
+## Configuration
+- [firmware/platformio.ini](mdc:firmware/platformio.ini) - Board configurations and pin assignments
