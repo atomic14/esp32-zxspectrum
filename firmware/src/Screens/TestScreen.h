@@ -24,12 +24,13 @@ private:
     b = (uint8_t)((b1 + m) * 255);
   }
 
-  void drawHSVGradient() {
+  void drawHSVGradient(int startY = 0, int endY = 0) {
     m_tft.startWrite();
     int w = m_tft.width();
+    endY = endY - startY > 0 ? endY :  m_tft.height();
     int h = m_tft.height();
     std::vector<uint16_t> rowBuf(w);
-    for (int y = 0; y < h; ++y) {
+    for (int y = startY; y < endY; ++y) {
       float v = 1.0f;
       float s = 1.0f - (float)y / (h - 1);
       for (int x = 0; x < w; ++x) {
@@ -80,11 +81,56 @@ private:
     }
   }
 
+  void updateKeyDisplay(SpecKeys key, uint8_t state) {    
+    int keyDisplayY = m_tft.height()/2 + 20;
+    if (state == 1) {
+      // Position for key display
+      m_tft.loadFont(GillSans_25_vlw);
+    
+      // Clear previous key display
+      m_tft.fillRect(0, keyDisplayY, m_tft.width(), 40, TFT_BLACK);
+
+      std::string keyMsg = "Key Pressed: ";
+      if (key != SPECKEY_NONE) {
+        auto it = specKeyToLetter.find(key);
+        if (it != specKeyToLetter.end()) {
+          keyMsg += it->second;
+        } else {
+          // Special keys without a letter representation
+          switch (key) {
+            case SPECKEY_ENTER: keyMsg += "ENTER"; break;
+            case SPECKEY_SHIFT: keyMsg += "SHIFT"; break;
+            case SPECKEY_SPACE: keyMsg += "SPACE"; break;
+            case SPECKEY_SYMB: keyMsg += "SYMBOL"; break;
+            case SPECKEY_DEL: keyMsg += "DELETE"; break;
+            case SPECKEY_BREAK: keyMsg += "BREAK"; break;
+            case SPECKEY_MENU: keyMsg += "MENU"; break;
+            case JOYK_UP: keyMsg += "JOY UP"; break;
+            case JOYK_DOWN: keyMsg += "JOY DOWN"; break;
+            case JOYK_LEFT: keyMsg += "JOY LEFT"; break;
+            case JOYK_RIGHT: keyMsg += "JOY RIGHT"; break;
+            case JOYK_FIRE: keyMsg += "JOY FIRE"; break;
+            default: keyMsg += "UNKNOWN"; break;
+          }
+        }
+      } else {
+        keyMsg += "NONE";
+      }
+      
+      auto textSize = m_tft.measureString(keyMsg.c_str());
+      int textX = (m_tft.width() - textSize.x) / 2;
+      m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      m_tft.drawString(keyMsg.c_str(), textX, keyDisplayY + (40 - textSize.y)/2);
+    } else {
+      drawHSVGradient(keyDisplayY, keyDisplayY + 40);
+    }
+  }
+
 public:
   TestScreen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files)
     : Screen(tft, hdmiDisplay, audioOutput, files) {}
 
-  void didAppear() override {
+  void drawDisplay() {
     drawHSVGradient();
     m_tft.loadFont(GillSans_25_vlw);
     std::string msg = "Test Screen and Audio";
@@ -112,17 +158,43 @@ public:
     m_tft.setTextColor(sdColor, TFT_BLACK);
     m_tft.drawString(sdMsg.c_str(), sdX, sdY);
 
-    std::string footer = "Press any key to return";
+    std::string footer = "Press ENTER to return";
     auto footerSize = m_tft.measureString(footer.c_str());
     int footerX = (m_tft.width() - footerSize.x) / 2;
     int footerY = m_tft.height() - 40;
     m_tft.fillRect(footerX-5, footerY-5, footerSize.x+10, footerSize.y+10, TFT_BLACK);
     m_tft.setTextColor(TFT_WHITE, TFT_BLACK);
     m_tft.drawString(footer.c_str(), footerX, footerY);
+    
+    // Area for displaying pressed keys
+    updateKeyDisplay(lastKey, lastState);
+  }
+
+  void didAppear() override {    
+    drawDisplay();
     playNotes();
   }
 
+  SpecKeys lastKey = SPECKEY_NONE;
+  uint8_t lastState = 0;
+
+  void updateKey(SpecKeys key, uint8_t state) override {
+    if (lastKey != key || lastState != state) {
+      lastKey = key;
+      lastState = state;
+      // Play click sound if key is pressed
+      if (state == 1 && key != SPECKEY_ENTER) {
+        playKeyClick();
+      }
+      // Update the display to show the currently pressed key
+      updateKeyDisplay(key, state);
+    }
+  }
+
   void pressKey(SpecKeys key) override {
-    m_navigationStack->pop();
+    // Exit only if ENTER key is pressed
+    if (key == SPECKEY_ENTER) {
+      m_navigationStack->pop();
+    }
   }
 }; 
