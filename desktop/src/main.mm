@@ -4,8 +4,11 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 #endif
-#ifndef __EMSCRIPTEN__
+#ifdef __APPLE__
 #import <Cocoa/Cocoa.h>
+#endif
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+#include <gtk/gtk.h>
 #endif
 #include <iostream>
 #include <cstdint>
@@ -43,7 +46,7 @@ SDL_Renderer *renderer = nullptr;
 AudioOutput *audioOutput = nullptr;
 SDL_Texture *texture = nullptr;
 
-#ifndef __EMSCRIPTEN__
+#ifdef __APPLE__
 std::string OpenFileDialog() {
     @autoreleasepool {
         NSOpenPanel* openPanel = [NSOpenPanel openPanel];
@@ -57,6 +60,43 @@ std::string OpenFileDialog() {
         }
     }
     return "";
+}
+#elif defined(__linux__) && !defined(__EMSCRIPTEN__)
+std::string OpenFileDialog() {
+    std::string filename = "";
+    
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+    gint res;
+
+    dialog = gtk_file_chooser_dialog_new("Open File",
+                                         NULL,
+                                         action,
+                                         "_Cancel",
+                                         GTK_RESPONSE_CANCEL,
+                                         "_Open",
+                                         GTK_RESPONSE_ACCEPT,
+                                         NULL);
+
+    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (res == GTK_RESPONSE_ACCEPT) {
+        char *filepath;
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+        filepath = gtk_file_chooser_get_filename(chooser);
+        filename = std::string(filepath);
+        g_free(filepath);
+    }
+
+    gtk_widget_destroy(dialog);
+    return filename;
+}
+#elif !defined(__EMSCRIPTEN__)
+// Fallback for other systems - simple console input
+std::string OpenFileDialog() {
+    std::string filename;
+    std::cout << "Enter file path: ";
+    std::getline(std::cin, filename);
+    return filename;
 }
 #endif
 
@@ -74,7 +114,7 @@ void enforceAspectRatio(SDL_Window* window, int newWidth, int newHeight) {
 }
 
 // Initializes SDL, creating a window and renderer
-bool initSDL(SDL_Window *&window, SDL_Renderer *&renderer)
+bool initSDL(SDL_Window *&window, SDL_Renderer *&renderer, const std::string& title)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
     {
@@ -82,7 +122,7 @@ bool initSDL(SDL_Window *&window, SDL_Renderer *&renderer)
         return false;
     }
 
-    window = SDL_CreateWindow("16-Bit Frame Buffer Display",
+    window = SDL_CreateWindow(title.c_str(),
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               WIDTH * 2, HEIGHT * 2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (!window)
@@ -150,6 +190,7 @@ void updateAndRender(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *fra
 // Handles SDL events, including quit and keyboard input
 void handleEvents(bool &isRunning)
 {
+    (void)isRunning;
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0)
     {
@@ -402,16 +443,75 @@ void stop() {
 }
 
 
+// Command line argument parsing
+struct ProgramOptions {
+    models_enum machineType = SPECMDL_128K; // Default to 128K
+    std::string gameFile = "";
+    bool showHelp = false;
+};
+
+ProgramOptions parseArguments(int argc, char* argv[]) {
+    ProgramOptions options;
+    
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        
+        if (arg == "--48k" || arg == "-4") {
+            options.machineType = SPECMDL_48K;
+        } else if (arg == "--128k" || arg == "-1") {
+            options.machineType = SPECMDL_128K;
+        } else if (arg == "--help" || arg == "-h") {
+            options.showHelp = true;
+        } else if (arg.find(".") != std::string::npos) {
+            // Assume it's a game file
+            options.gameFile = arg;
+        }
+    }
+    
+    return options;
+}
+
+void printUsage(const char* programName) {
+    std::cout << "ESP32 ZX Spectrum Desktop Emulator\n";
+    std::cout << "Usage: " << programName << " [options] [game_file]\n\n";
+    std::cout << "Options:\n";
+    std::cout << "  --48k, -4        Start in 48K ZX Spectrum mode\n";
+    std::cout << "  --128k, -1       Start in 128K ZX Spectrum mode (default)\n";
+    std::cout << "  --help, -h       Show this help message\n\n";
+    std::cout << "Examples:\n";
+    std::cout << "  " << programName << " --48k\n";
+    std::cout << "  " << programName << " --128k game.z80\n";
+    std::cout << "  " << programName << " manic.tap\n";
+}
+
 // Main function
-int main()
+int main(int argc, char* argv[])
 {
+    ProgramOptions options = parseArguments(argc, argv);
+    
+    if (options.showHelp) {
+        printUsage(argv[0]);
+        return 0;
+    }
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+    // Initialize GTK - will be called again in OpenFileDialog if needed
+    gtk_init_check(NULL, NULL);
+#endif
+
     // start the emulator
     machine = new ZXSpectrum();
     machine->reset();
-    machine->init_spectrum(SPECMDL_128K);
+    machine->init_spectrum(options.machineType);
     machine->reset_spectrum(machine->z80Regs);
+    
+    // Update window title to show machine type
+    std::string windowTitle = "ESP32 ZX Spectrum Desktop - ";
+    windowTitle += (options.machineType == SPECMDL_48K) ? "48K" : "128K";
+    if (!options.gameFile.empty()) {
+        windowTitle += " - " + options.gameFile;
+    }
 
-    if (!initSDL(window, renderer))
+    if (!initSDL(window, renderer, windowTitle))
     {
         return -1;
     }
@@ -442,15 +542,22 @@ int main()
     }
     int end = SDL_GetTicks();
     std::cout << "Time to boot spectrum: " << end - start << "ms" << std::endl;
-    // load a tap file
-    std::string filename = OpenFileDialog();
-    isLoading = true;
-    if (filename.find(".z80")) {
-        Load(machine, filename.c_str());
-    } else {
-        loadGame(filename, machine);
+    
+    // Load game file if provided, otherwise show file dialog
+    std::string filename = options.gameFile;
+    if (filename.empty()) {
+        filename = OpenFileDialog();
     }
-    isLoading = false;
+    
+    if (!filename.empty()) {
+        isLoading = true;
+        if (filename.find(".z80") != std::string::npos) {
+            Load(machine, filename.c_str());
+        } else {
+            loadGame(filename, machine);
+        }
+        isLoading = false;
+    }
     audioOutput = new SDLAudioOutput(machine);
     isRunning = true;
     audioOutput->start(15600);

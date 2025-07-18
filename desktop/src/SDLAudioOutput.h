@@ -41,7 +41,7 @@ protected:
   }
   uint8_t audioBuffer[INPUT_SIZE] = {0};
 public:
-  SDLAudioOutput(ZXSpectrum *machine) : mMachine(machine), AudioOutput(nullptr)
+  SDLAudioOutput(ZXSpectrum *machine) : AudioOutput(nullptr), mMachine(machine)
   {
   };
   virtual ~SDLAudioOutput() {
@@ -58,6 +58,7 @@ public:
     memcpy(stream, resampledBuffer, len);
   }
   virtual void start(uint32_t dummy) {
+    (void)dummy;
     SDL_AudioSpec desiredSpec;
     SDL_zero(desiredSpec);
     desiredSpec.freq = OUTPUT_RATE;

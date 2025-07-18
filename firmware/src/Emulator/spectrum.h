@@ -2,6 +2,7 @@
 #define SPECTRUM_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include "z80/z80.h"
 #include "keyboard_defs.h"
 #include <string.h>
