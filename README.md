@@ -1,7 +1,9 @@
 
 [![Build Firmware](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml)
 
-[![Build Emscripten Desktop Apps](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml)
+[![Build Emscripten Apps](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml)
+
+[![Build Desktop App](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml)
 
 # ESP32 Rainbow
 
