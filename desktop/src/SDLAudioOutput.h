@@ -41,7 +41,7 @@ protected:
   }
   uint8_t audioBuffer[INPUT_SIZE] = {0};
 public:
-  SDLAudioOutput(ZXSpectrum *machine) : AudioOutput(nullptr), mMachine(machine)
+  SDLAudioOutput(ZXSpectrum *machine) : AudioOutput(nullptr), mMachine(machine), audioDevice(0), buffer_size(0)
   {
   };
   virtual ~SDLAudioOutput() {

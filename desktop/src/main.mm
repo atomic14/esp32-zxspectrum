@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cstdint>
 #include <unordered_map>
+#include <algorithm>
 #include "spectrum.h"
 #include "tzx_cas.h"
 #include "snaps.h"
@@ -64,6 +65,13 @@ std::string OpenFileDialog() {
 #elif defined(__linux__) && !defined(__EMSCRIPTEN__)
 std::string OpenFileDialog() {
     std::string filename = "";
+    
+    // Check if GTK is available
+    if (!gtk_init_check(NULL, NULL)) {
+        std::cout << "GTK not available. Enter file path: ";
+        std::getline(std::cin, filename);
+        return filename;
+    }
     
     GtkWidget *dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
@@ -443,6 +451,29 @@ void stop() {
 }
 
 
+// Valid game file extensions
+const std::vector<std::string> validGameExtensions = {".z80", ".sna", ".tap", ".tzx", ".Z80", ".SNA", ".TAP", ".TZX"};
+
+// Check if a file has a valid game extension
+bool isValidGameFile(const std::string& filename) {
+    // Find the last dot in the filename
+    size_t dotPos = filename.find_last_of('.');
+    if (dotPos == std::string::npos) {
+        return false; // No extension found
+    }
+    
+    std::string extension = filename.substr(dotPos);
+    
+    // Check if extension matches any valid game extension
+    for (const auto& validExt : validGameExtensions) {
+        if (extension == validExt) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // Command line argument parsing
 struct ProgramOptions {
     models_enum machineType = SPECMDL_128K; // Default to 128K
@@ -462,9 +493,11 @@ ProgramOptions parseArguments(int argc, char* argv[]) {
             options.machineType = SPECMDL_128K;
         } else if (arg == "--help" || arg == "-h") {
             options.showHelp = true;
-        } else if (arg.find(".") != std::string::npos) {
-            // Assume it's a game file
+        } else if (isValidGameFile(arg)) {
             options.gameFile = arg;
+        } else {
+            std::cerr << "Warning: Unknown argument or unsupported file type: " << arg << std::endl;
+            std::cerr << "Use --help for usage information." << std::endl;
         }
     }
     
@@ -478,10 +511,12 @@ void printUsage(const char* programName) {
     std::cout << "  --48k, -4        Start in 48K ZX Spectrum mode\n";
     std::cout << "  --128k, -1       Start in 128K ZX Spectrum mode (default)\n";
     std::cout << "  --help, -h       Show this help message\n\n";
+    std::cout << "Supported file types: .z80, .sna, .tap, .tzx (case insensitive)\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " --48k\n";
     std::cout << "  " << programName << " --128k game.z80\n";
     std::cout << "  " << programName << " manic.tap\n";
+    std::cout << "  " << programName << " JETSET.SNA\n";
 }
 
 // Main function
@@ -494,8 +529,10 @@ int main(int argc, char* argv[])
         return 0;
     }
 #if defined(__linux__) && !defined(__EMSCRIPTEN__)
-    // Initialize GTK - will be called again in OpenFileDialog if needed
-    gtk_init_check(NULL, NULL);
+    // Try to initialize GTK for file dialogs (non-fatal if it fails)
+    if (!gtk_init_check(NULL, NULL)) {
+        std::cerr << "Warning: Failed to initialize GTK. File dialogs will use console input." << std::endl;
+    }
 #endif
 
     // start the emulator
@@ -551,10 +588,21 @@ int main(int argc, char* argv[])
     
     if (!filename.empty()) {
         isLoading = true;
-        if (filename.find(".z80") != std::string::npos) {
+        // Check file extension to determine loading method
+        std::string ext = "";
+        size_t dotPos = filename.find_last_of('.');
+        if (dotPos != std::string::npos) {
+            ext = filename.substr(dotPos);
+            // Convert to lowercase for comparison
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        }
+        
+        if (ext == ".z80" || ext == ".sna") {
             Load(machine, filename.c_str());
-        } else {
+        } else if (ext == ".tap" || ext == ".tzx") {
             loadGame(filename, machine);
+        } else {
+            std::cerr << "Unsupported file type: " << filename << std::endl;
         }
         isLoading = false;
     }
