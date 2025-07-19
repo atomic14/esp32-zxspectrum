@@ -1,0 +1,59 @@
+name: Build Desktop App
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build_desktop.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build_desktop.yml'
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Need full git history for version info
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Build Desktop App
+        working-directory: desktop
+        run: |
+          make -f Makefile.emu
+
+      - name: Upload desktop builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-builds
+          path: |
+            desktop/zx_emulator
+          if-no-files-found: warn
+
+  upload-to-release:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download desktop builds
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-builds
+          path: desktop-builds
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            desktop-builds/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
