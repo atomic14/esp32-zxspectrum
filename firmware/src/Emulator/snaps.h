@@ -24,8 +24,12 @@
 #ifndef DOSSEP
 #define DOSSEP '/'
 #endif
+#ifndef TRUE
 #define TRUE 1
+#endif
+#ifndef FALSE
 #define FALSE 0
+#endif
 #include "./z80/z80.h"
 #include "./spectrum.h"
 

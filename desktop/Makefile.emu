@@ -1,14 +1,20 @@
-# Compiler
-CXX = clang++
+# Detect platform
+UNAME_S := $(shell uname -s)
 
-# Compiler flags
+# Compiler
+ifeq ($(UNAME_S),Darwin)
+    CXX = clang++
+else
+    CXX = g++
+endif
+
+# Base compiler flags
 CXXFLAGS = \
   -g \
 	-Wall \
 	-Wextra \
 	-std=c++17 \
 	`sdl2-config --cflags` \
-	-I/opt/homebrew/Cellar/sdl2/2.30.8/include \
 	-I../firmware/src/Emulator \
 	-I../firmware/src/AudioOutput \
 	-I../firmware/src/Emulator/z80 \
@@ -16,8 +22,18 @@ CXXFLAGS = \
 	-I../firmware/src \
 	-D__DESKTOP__
 
-# Linker flags (including Cocoa framework for macOS file picker support)
-LDFLAGS = -L/usr/local/lib -framework Cocoa
+# Platform-specific flags
+ifeq ($(UNAME_S),Darwin)
+    # macOS
+    CXXFLAGS += -I/opt/homebrew/Cellar/sdl2/2.30.8/include
+    LDFLAGS = -L/usr/local/lib -framework Cocoa
+endif
+
+ifeq ($(UNAME_S),Linux)
+    # Linux
+    CXXFLAGS += `pkg-config --cflags gtk+-3.0`
+    LDFLAGS = `pkg-config --libs gtk+-3.0`
+endif
 
 # Target executable name
 TARGET = zx_emulator
@@ -53,9 +69,13 @@ $(TARGET): $(OBJS) Makefile.emu
 %.o: %.cpp Makefile.emu
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-# Rules for .mm files (for Objective-C++)
+# Rules for .mm files (for Objective-C++ on macOS, C++ on Linux)
 %.o: %.mm Makefile.emu
+ifeq ($(UNAME_S),Darwin)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+else
+	$(CXX) $(CXXFLAGS) -MMD -x c++ -c $< -o $@
+endif
 
 # Include dependency files
 -include $(DEPS)
