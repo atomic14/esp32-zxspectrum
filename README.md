@@ -1,11 +1,7 @@
-
-[![Build Firmware](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml)
-
-[![Build Emscripten Apps](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml)
-
-[![Build Desktop App](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml)
-
 # ESP32 Rainbow
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![Build Firmware](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_firmware.yml) [![Build Emscripten Apps](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_emscripten.yml) [![Build Desktop App](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml/badge.svg)](https://github.com/atomic14/esp32-zxspectrum/actions/workflows/build_desktop.yml)
 
 This repository contains the software for the [ESP32 Rainbow project](https://www.crowdsupply.com/atomic14/esp32-rainbow).
 
@@ -15,15 +11,15 @@ The code is designed for my board, but will run on pretty much any ESP32 board.
 
 This is currently a work in progress and is under active development. So, I can't guarantee that the code will be stable.
 
-# Bulding the firmware
+## Building the firmware
 
 You will need to install [Visual Studio Code](https://code.visualstudio.com/download) and [PlatformIO](https://platformio.org/install) to build the code.
 
 The firmware lives in the `firmware` directory. Open this folder in [Visual Studio Code](https://code.visualstudio.com/download) and PlatformIO will take care of the rest.
 
-# Supported boards
+## Supported boards
 
-Check the `platformio.ini` file for the complete list of suppoted boards.
+Check the [`platformio.ini` file](firmware/platformio.ini) for the complete list of supported boards.
 
 To add a new board make a copy of an existing board section in the file and modify the pins to match your board.
 
@@ -33,9 +29,9 @@ To add a new board make a copy of an existing board section in the file and modi
 
 Pretty much any ESP32 board should work, you just need a 320x240 TFT display and either an I2S amplifier or speaker driven with a transistor. If you don't have any sound output options, then just specify a dummy pin for the buzzer.
 
-# Input
+## Input
 
-My board (the [ESP32 Rainbow](https://www.crowdsupply.com/atomic14/esp32-rainbow) has a built in keyboard and has 2xQWIIC connectors which can be used to connect a wide range of controllers (e.g. Wii Nunchucks).
+My board (the [ESP32 Rainbow](https://www.crowdsupply.com/atomic14/esp32-rainbow) has a built-in keyboard and has 2 x QWIIC connectors which can be used to connect a wide range of controllers (e.g. Wii Nunchucks).
 
 The LilyGo T-Deck has a keyboard, but the firmware for the keyboard is pretty terrible making it very hard to use.
 
@@ -51,7 +47,7 @@ pip install -r requirements.txt
 python serial_keyboard.py
 ```
 
-# SDCard/Flash Storage
+## SD Card/Flash Storage
 
 The CYD and my board have an SD card slot that is independent of the SPI bus used by the TFT display. This means you can use the SD card slot to store games.
 
@@ -61,7 +57,7 @@ If you can't use the SD card then drop any games (z80 or tzx/tap) into the `data
 
 For anyone using an SD card, make sure it is formatted with the FAT32 filesystem and drop any games (z80 or tzx/tap) into the root of the card.
 
-# Help Support Development
+## Help Support Development
 
 If you find this project useful and want to help support further development then please consider buying a board from my [Crowd Supply](https://www.crowdsupply.com/atomic14) page.
 
