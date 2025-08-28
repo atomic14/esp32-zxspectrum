@@ -89,6 +89,18 @@ public:
     // not implemented here - maybe somewhere else?
   }
   virtual void drawPixel(uint16_t color, int x, int y);
+  // Draw a centered string at y
+  void drawCenterString(const char *string, int16_t y){
+    Point menuSize = measureString(string);
+    int centerX = (_width - menuSize.x) / 2;
+    drawString(string, centerX, y);
+  }
+  // Draw a string and return the rightmost x
+  int16_t drawStringAndMeasure(const char *string, int16_t x, int16_t y){
+    Point size = measureString(string);
+    drawString(string, x, y);
+    return x + size.x;
+  }
 protected:
   int _width;
   int _height;
