@@ -9,6 +9,7 @@
 #include "AlphabetPicker.h"
 #include "GameFilePickerScreen.h"
 #include "NavigationStack.h"
+#include "PokeScreen.h"
 #include "SaveSnapshotScreen.h"
 #include "EmulatorScreen/Renderer.h"
 #include "EmulatorScreen/Machine.h"
@@ -170,6 +171,9 @@ void EmulatorScreen::pressKey(SpecKeys key)
       renderer->isShowingMenu = false;
       // show the save snapshot UI
       m_navigationStack->push(new SaveSnapshotScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine(), m_files));
+    } else if (key == SPECKEY_P) {
+      renderer->isShowingMenu = false;
+      m_navigationStack->push(new PokeScreen(m_tft, m_hdmiDisplay, m_audioOutput, machine->getMachine()));
     } else if (key == SPECKEY_SPACE || key == SPECKEY_ENTER) {
       renderer->isShowingMenu = false;
       machine->resume();
