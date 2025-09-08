@@ -145,33 +145,52 @@ void Renderer::drawSpectrumScreen() {
       }
       uint16_t tftInkColor = specpal565[inkColor];
       uint16_t tftPaperColor = specpal565[paperColor];
+      const uint32_t u32Lookup[4] = {
+        tftPaperColor | (tftPaperColor << 16), // 00
+        tftInkColor | (tftPaperColor << 16), // 01
+        tftPaperColor | (tftInkColor << 16), // 10
+        tftInkColor | (tftInkColor << 16) // 11
+      };
       for (int y = 0; y < 8; y++)
       {
         // read the value of the pixels
-        int screenY = attrY * 8 + y;
-        int col = ((attrX * 8) & B11111000) >> 3;
-        int scan = (screenY & B11000000) + ((screenY & B111) << 3) + ((screenY & B111000) >> 3);
-        uint8_t row = *(pixelBase + 32 * scan + col);
-        uint8_t rowCopy = *(pixelBaseCopy + 32 * scan + col);
+        int screenY = attrY * 8;
+        int scan = (screenY & B11000000) + (y << 3) + ((screenY & B111000) >> 3);
+        uint8_t row = *(pixelBase + 32 * scan + attrX);
+        uint8_t rowCopy = *(pixelBaseCopy + 32 * scan + attrX);
         // check for changes in the pixel data
         if (row != rowCopy)
         {
           dirty = true;
-          *(pixelBaseCopy + 32 * scan + col) = row;
+          *(pixelBaseCopy + 32 * scan + attrX) = row;
         }
         uint16_t *pixelAddress = pixelBuffer + 256 * y + attrX * 8;
-        for (int x = 0; x < 8; x++)
-        {
-          if (row & 128)
-          {
-            *pixelAddress = tftInkColor;
-          }
-          else
-          {
-            *pixelAddress = tftPaperColor;
-          }
-          pixelAddress++;
-          row = row << 1;
+        // Since the ESP32 is a 32-bit processor with a 32-bit memory bus,
+        // it's more efficient to write 32-bits at a time. So...calculate
+        // pairs of pixels and avoid conditional tests and branches.
+        // Check for the 2 optimal cases of pure foreground or background
+        if (row == 0) {
+          uint32_t u32Clr = tftPaperColor | (tftPaperColor << 16);
+          uint32_t *d32 = (uint32_t *)pixelAddress;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          pixelAddress += 8;
+        } else if (row == 0xff) {
+          uint32_t u32Clr = tftInkColor | (tftInkColor << 16);
+          uint32_t *d32 = (uint32_t *)pixelAddress;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          *d32++ = u32Clr;
+          pixelAddress += 8;
+        } else { // Otherwise use a lookup table to write pairs of pixels
+          uint32_t *d32 = (uint32_t *)pixelAddress;
+          *d32++ = u32Lookup[row >> 6];
+          *d32++ = u32Lookup[(row >> 4) & 3];
+          *d32++ = u32Lookup[(row >> 2) & 3];
+          *d32++ = u32Lookup[row & 3];
         }
       }
     }
