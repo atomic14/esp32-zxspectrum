@@ -147,8 +147,8 @@ void Renderer::drawSpectrumScreen() {
       uint16_t tftPaperColor = specpal565[paperColor];
       const uint32_t u32Lookup[4] = {
         tftPaperColor | (tftPaperColor << 16), // 00
-        tftInkColor | (tftPaperColor << 16), // 01
-        tftPaperColor | (tftInkColor << 16), // 10
+        tftPaperColor | (tftInkColor << 16), // 01
+        tftInkColor | (tftPaperColor << 16), // 10
         tftInkColor | (tftInkColor << 16) // 11
       };
       for (int y = 0; y < 8; y++)
