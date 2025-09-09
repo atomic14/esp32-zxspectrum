@@ -16,10 +16,14 @@
 #define ST7789_CMD_RASET 0x2B
 #define ST7789_CMD_RAMWR 0x2C
 
-#define TFT_WHITE 0xFFFF
-#define TFT_BLACK 0x0000
-#define TFT_RED 0xF800
-#define TFT_GREEN 0x07E0
+#define TFT_WHITE   0xFFFF
+#define TFT_BLACK   0x0000
+#define TFT_RED     0xF800
+#define TFT_GREEN   0x07E0
+#define TFT_BLUE    0x001F
+#define TFT_CYAN    0x07FF
+#define TFT_YELLOW  0xFFE0
+#define TFT_MAGENTA 0xF81F
 
 #define TFT_NOP     0x00
 #define TFT_SWRST   0x01
