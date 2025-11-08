@@ -20,6 +20,9 @@
 #include "../spectrum.h"
 #include "tables.h"
 #include "z80.h"
+#include "../../Config.h"
+#include "../../FileLog.h"
+#include "../../Debugger/DebuggerData.h"
 
 #define Z80ReadMem(where) (mappedMemory[(where) >> 14]->data[(where) & 0x3FFF])
 #define Z80WriteMem(where, A, regs) ({              \
@@ -84,6 +87,8 @@ void Z80Reset(Z80Regs *regs)
   regs->IRequest = INT_NOINT;
   regs->we_are_on_ddfd = regs->dobreak = 0;
   regs->cycles = 0;
+  regs->bkp_stop = false;
+  regs->debugging = false;
 }
 
 /*====================================================================
@@ -140,6 +145,16 @@ uint16_t Z80Run(Z80Regs *regs, int numcycles)
       r_PC--;
       AddCycles(4);
     }
+    // Check if we have a virtual breakpoint
+    if (regs->virtual_breakpoint){
+      // Don't set if we're at the same address
+      if (regs->PC.W != regs->virtual_breakpoint){
+        // Set the breakpoint
+        Z80WriteMem(regs->virtual_breakpoint, BKP_INST, regs);
+        // Reset the value
+        regs->virtual_breakpoint = 0;
+      }
+    }
     /* read the opcode from memory (pointed by PC) */
     opcode = Z80ReadMem(regs->PC.W);
     regs->PC.W++;
@@ -183,6 +198,9 @@ uint16_t Z80Run(Z80Regs *regs, int numcycles)
     // printf("ROM loading routine hit\n");
     } else {
       spectrum->romLoadingRoutineHit = false;
+    }
+    if (regs->bkp_stop){
+      break;
     }
   }
   return micValue;

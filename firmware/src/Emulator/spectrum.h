@@ -7,6 +7,7 @@
 #include "keyboard_defs.h"
 #include <string.h>
 #include "../AYSound/AySound.h"
+#include "../log.h"
 
 extern uint8_t speckey[8];
 
@@ -82,14 +83,14 @@ class Memory {
       for (int i = 0; i < 2; i++) {
         rom[i] = new MemoryPage();
         if (rom[i] == nullptr || rom[i]->data == nullptr) {
-          printf("Failed to allocate ROM");
+          LOG_E("Failed to allocate ROM");
         }
       }
       // allocate space for the memory banks
       for (int i = 0; i < 8; i++) {
         banks[i] = new MemoryPage();
         if (banks[i] == nullptr || banks[i]->data == nullptr) {
-          printf("Failed to allocate RAM");
+          LOG_E("Failed to allocate RAM");
         }
       }
       // wire up the default memory configuration - this will work for the 48k model and is the default for the 128k model
@@ -129,10 +130,10 @@ class Memory {
       }
     }
     void loadRom(const uint8_t *rom_data, int rom_len) {
-      printf("Loading ROM %d\n", rom_len);
+      LOG_I("Loading ROM %d\n", rom_len);
       int romCount = rom_len / 0x4000;
       for (int i = 0; i < romCount; i++) {
-        printf("Copying ROM %d\n", i);
+        LOG_I("Copying ROM %d\n", i);
         memcpy(rom[i]->data, rom_data + (i * 0x4000), 0x4000);
       }
     }

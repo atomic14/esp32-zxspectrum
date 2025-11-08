@@ -2,6 +2,7 @@
 #include <freertos/FreeRTOS.h>
 #include <string.h>
 #include "../../TFT/Display.h"
+#include "../../log.h"
 #include "../../Serial.h"
 
 void displayTask(void *pvParameters);
@@ -63,13 +64,13 @@ public:
       screenBuffer = (uint8_t *)malloc(6912);
       if (screenBuffer == NULL)
       {
-        Serial.println("Failed to allocate screen buffer");
+        LOG_E("Renderer", "Failed to allocate screen buffer");
       }
       memset(screenBuffer, 0, 6912);
       currentScreenBuffer = (uint8_t *)malloc(6912);
       if (currentScreenBuffer == NULL)
       {
-        Serial.println("Failed to allocate current screen buffer");
+        LOG_E("Renderer", "Failed to allocate current screen buffer");
       }
       memset(currentScreenBuffer, 0, 6912);
       m_displaySemaphore = xSemaphoreCreateBinary();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "log.h"
 #include "PickerScreen.h"
 #include "../Files/Files.h"
 #include "ErrorScreen.h"
@@ -9,6 +10,7 @@
 #include "GameFilePickerScreen.h"
 #include "AboutScreen.h"
 #include "TestScreen.h"
+#include "../FileLog.h"
 
 static const std::vector<std::string> gameValidExtensions = {".z80", ".sna", ".tap", ".tzx"};
 static const std::vector<std::string> videoValidExtensions = {".avi"};
@@ -45,6 +47,8 @@ public:
                                    { this->showGames(); }),
         std::make_shared<MenuItem>("Snapshots", [&]()
                                    { this->showSnapshots(); }),
+        std::make_shared<MenuItem>("Debugger", [&]()
+                                   { this->runDebugger(); }),
         std::make_shared<MenuItem>("Video Player", [&]()
                                    { this->showVideos(); }),
         std::make_shared<MenuItem>("About", [&]()
@@ -75,6 +79,26 @@ public:
     emulatorScreen->run("", models_enum::SPECMDL_128K);
     // touchKeyboard->setToggleMode(true);
     m_navigationStack->push(emulatorScreen);
+  }
+  void runDebugger()
+  {
+    // Clear the log
+    FileLog fl;
+    fl.clear();
+    // Turn debugging marker on
+    config.m_serialDebugging = true;
+
+    EmulatorScreen *emulatorScreen = new EmulatorScreen(m_tft, m_hdmiDisplay, m_audioOutput, m_files);
+    // For now will start as 48K. Later figure out what to do for the others
+    emulatorScreen->run("", models_enum::SPECMDL_48K);
+    m_navigationStack->push(emulatorScreen);
+
+    // Save the screen in config for easy access
+    config.emulatorScreen = emulatorScreen;
+
+    // Disable logging, so we can use the serial only for debugging
+    LOG_I("Entering debug mode - logging disabled");
+    master_log_level = ESP_LOG_NONE;
   }
 
   template <class FilterPickerScreen_T> void showAlphabetPicker(

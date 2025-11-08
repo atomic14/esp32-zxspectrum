@@ -83,6 +83,12 @@ int ZXSpectrum::runForFrame(AudioOutput *audioOutput, FILE *audioFile)
     // run for 224 cycles
     c += 224;
     uint16_t speakerValue = runForCycles(224);
+    if (z80Regs->debugging){
+      if (z80Regs->bkp_stop){
+        // TODO return or break here?
+        return c;
+      }
+    }
     borderColors[i] = hwopt.BorderColor & 0b00000111;
     audioBuffer[i] = speakerValue/4;
   }

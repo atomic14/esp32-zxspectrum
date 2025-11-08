@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "../Config.h"
 #include "Emulator/keyboard_defs.h"
 #include "AudioOutput/AudioOutput.h"
 #include "sounds/bell.h"
@@ -26,6 +27,8 @@ class Screen {
     HDMIDisplay *m_hdmiDisplay = nullptr;
     AudioOutput *m_audioOutput;
     IFiles *m_files;
+    // Configuration
+    Config& config = Config::getConfig();
   public:
   Screen(Display &tft, HDMIDisplay *hdmiDisplay, AudioOutput *audioOutput, IFiles *files) 
   : m_tft(tft), m_hdmiDisplay(hdmiDisplay), m_audioOutput(audioOutput), m_files(files) {}

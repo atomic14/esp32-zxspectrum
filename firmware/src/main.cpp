@@ -14,10 +14,12 @@
  */
 #include "Serial.h"
 #include <esp_err.h>
+#include <log.h>
 #include <map>
 #include <vector>
 #include <sstream>
 #include "SPI.h"
+#include "Config.h"
 #include "AudioOutput/I2SOutput.h"
 #include "AudioOutput/PDMOutput.h"
 #include "AudioOutput/DACOutput.h"
@@ -67,22 +69,23 @@ void setup(void)
   digitalWrite(BOARD_POWERON, HIGH);
   #endif
   Serial.begin(115200);
+  master_log_level = ESP_LOG_VERBOSE;
   // for(int i = 0; i < 5; i++) {
   //   BusyLight bl;
   //   vTaskDelay(pdMS_TO_TICKS(1000));
   //   Serial.println("Booting...");
   // }
   // print out avialable ram
-  Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-  Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
+  LOG_V("Free heap: %d\n", ESP.getFreeHeap());
+  LOG_V("Free PSRAM: %d\n", ESP.getFreePsram());
   #ifdef POWER_PIN
   pinMode(POWER_PIN, OUTPUT);
   digitalWrite(POWER_PIN, POWER_PIN_ON);
   vTaskDelay(100);
   #endif
-  Serial.println("Starting up");
+  LOG_I("Starting up");
   #ifdef TFT_MOSI
-  Serial.println("Starting up SPI");
+  LOG_I("Starting up SPI");
   // Initialize SPI
   spi_bus_config_t buscfg = {
       .mosi_io_num = TFT_MOSI,
@@ -100,7 +103,7 @@ void setup(void)
       .intr_flags = 0,
   };
   ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
-  Serial.println("SPI initialized");
+  LOG_I("SPI initialized");
   #endif
   // Files
   SDCard *sdFileSystem = nullptr;
@@ -196,7 +199,7 @@ void setup(void)
   // create the directory structure
   if (!files->createDirectory("/snapshots"))
   {
-    Serial.println("Failed to create /snapshots directory");
+    LOG_E("Failed to create /snapshots directory");
   }
   MainMenuScreen menuPicker(*tft, hdmiDisplay, audioOutput, files);
   navigationStack->push(&menuPicker);
@@ -242,7 +245,14 @@ void setup(void)
     1
   );
 
-  Serial.println("Running on core: " + String(xPortGetCoreID()));
+  LOG_I("Running on core: %d", xPortGetCoreID());
+
+  // Save important variables into config
+  Config& cfg = Config::getConfig();
+  cfg.sdfiles = (IFiles*)sdFiles;
+  cfg.navigationStack = navigationStack;
+  cfg.packetHandler = packetHandler;
+
   // use the boot pin to open the emulator menu
   pinMode(0, INPUT_PULLUP);
   // just keep running

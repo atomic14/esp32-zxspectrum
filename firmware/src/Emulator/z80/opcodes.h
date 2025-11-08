@@ -1506,8 +1506,13 @@ RST (0x00);
 AddCycles (11);
 break;
 case RST_08:
-RST (0x08);
-AddCycles (11);
+if (regs->debugging){
+  regs->bkp_stop = true;
+  regs->PC.W--;
+} else {
+  RST (0x08);
+  AddCycles (11);
+}
 break;
 case RST_10:
 RST (0x10);

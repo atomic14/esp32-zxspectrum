@@ -261,15 +261,15 @@ switch (opcode)
   default:
     AddCycles (15);
 //    exit(1);
-    if (regs->DecodingErrors)
-      {
-	printf ("z80 core: Unknown instruction: ");
-	if (regs->we_are_on_ddfd == WE_ARE_ON_DD)
-	  printf ("DD");
-	else
-	  printf ("FD");
-	printf ("CB %02Xh %02Xh at PC=%04Xh.\n",
-		Z80ReadMem(r_PC - 2), Z80ReadMem(r_PC - 1), r_PC - 4);
-      }
+//    if (regs->DecodingErrors)
+//      {
+//	printf ("z80 core: Unknown instruction: ");
+//	if (regs->we_are_on_ddfd == WE_ARE_ON_DD)
+//	  printf ("DD");
+//	else
+//	  printf ("FD");
+//	printf ("CB %02Xh %02Xh at PC=%04Xh.\n",
+//		Z80ReadMem(r_PC - 2), Z80ReadMem(r_PC - 1), r_PC - 4);
+//      }
     break;
   }

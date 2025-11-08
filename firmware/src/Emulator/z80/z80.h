@@ -129,6 +129,18 @@ typedef struct {
   int we_are_on_ddfd;
   /* the following is to take care of cycle counting */ 
   int cycles;
+  /* Stop from breakpoint */
+  bool bkp_stop;
+  /* True if we are connected to the debugger */
+  bool debugging;
+  /** 
+   * This will be set if there is a breakpoint at the current PC address.
+   * Since having a breakpoint at the current address will mean 
+   * stopping immediately, we're just making it a virtual breakpoint until
+   * we're clear of this address
+   * 0 = nothing set
+   */
+  uint16_t virtual_breakpoint = 0;
   /* DecodingErrors = set this to 1 for debugging purposes in order
    *    to trap undocumented or non implemented opcodes.
    *    Trace          = set this to 1 to start tracing. It's also set

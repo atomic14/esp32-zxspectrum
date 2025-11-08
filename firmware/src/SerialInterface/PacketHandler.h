@@ -2,8 +2,11 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <map>
+#include "Config.h"
+#include "FileLog.h"
 #include "Messages/Message.h"
 #include "Transport.h"
+#include "Files/Files.h"
 
 #define FRAME_BYTE 0x7E
 #define ESCAPE_BYTE 0x7D
@@ -32,7 +35,8 @@ private:
     EXPECTING_FRAME_BYTE
   };
 
-  static constexpr uint16_t PACKET_DATA_BUFFER_SIZE = 1024;
+  // Increased number to accomodate larger data for DeZog
+  static constexpr uint16_t PACKET_DATA_BUFFER_SIZE = 0xC000;
 
   State state = State::WAITING_FOR_START_BYTE;
 
@@ -50,7 +54,13 @@ private:
   // packet handlers by packet type
   std::map<MessageId, MessageReciever *> messageHandlers;
 
+  // Configuration
+  Config& config = Config::getConfig();
+
 public:
+  // The DeZog message sequence no
+  uint8_t m_debuggerSeqNo = 0;
+
   PacketHandler(Transport &transport)
       : transport(transport)
   {
@@ -160,8 +170,17 @@ public:
     // we've got the CRC - now we expect the frame byte
     return State::EXPECTING_FRAME_BYTE;
   }
-
+  
   void loop()
+  {
+    if (config.m_serialDebugging){
+      loop_dezog();
+    } else {
+      loop_hdlc();
+    }
+  }
+
+  void loop_hdlc()
   {
     while (transport.available())
     {
@@ -375,4 +394,28 @@ private:
    * The underlying transport layer
    */
   Transport &transport;
+
+  // Functions used for the DeZog debugger
+  void loop_dezog();
+  void debuggerSendPacket(uint8_t seq_no, uint8_t *data, uint16_t data_length);
+  void debuggerSendMessage(uint8_t *data, uint16_t length);
+  void debuggerSendNotification(uint8_t *data, uint16_t length);
+  void debuggerWrite(uint8_t byte);
+  void debuggerWrite(uint8_t *data, uint16_t length);
+  void cmdInit();
+  void cmdClose();
+  void cmdGetRegisters();
+  void cmdSetRegister();
+  void cmdWriteBank();
+  void cmdContinue();
+  void cmdPause();
+  void cmdReadMem();
+  void cmdWriteMem();
+  void cmdSetSlot();
+
+  void cmdSetBorder();
+  void cmdSetBreakpoints();
+  void cmdRestoreMem();
+
+  void cmdIntOnOff();
 };

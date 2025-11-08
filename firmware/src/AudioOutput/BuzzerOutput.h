@@ -30,7 +30,7 @@ public:
   {
     // set up the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_12);
     mBuzzerPin = buzzerPin;
     mBufferSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(mBufferSemaphore);
